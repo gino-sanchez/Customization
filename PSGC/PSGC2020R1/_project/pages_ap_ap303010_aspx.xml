@@ -1,0 +1,158 @@
+﻿<Page path="~/pages/ap/ap303010.aspx" ControlId="21" pageSource="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">
+    <PXFormView ID="Address" ParentId="phG_tab_Items#0_Address" TypeFullName="PX.Web.UI.PXFormView">
+        <Children Key="Template">
+            <AddItem>
+                <PXSelector TypeFullName="PX.Web.UI.PXSelector">
+                    <Prop Key="Virtual:ApplyStylesheetSkin" />
+                    <Prop Key="ID" Value="CstPXSelector11" />
+                    <Prop Key="DataField" Value="UsrRegion" />
+                    <Prop Key="CommitChanges" Value="True" />
+                    <Prop Key="AutoRefresh" Value="True" />
+                    <Prop Key="FilterByAllFields" Value="True" />
+                </PXSelector>
+            </AddItem>
+            <AddItem>
+                <PXSelector TypeFullName="PX.Web.UI.PXSelector">
+                    <Prop Key="Virtual:ApplyStylesheetSkin" />
+                    <Prop Key="ID" Value="CstPXSelector10" />
+                    <Prop Key="DataField" Value="UsrProvince" />
+                    <Prop Key="CommitChanges" Value="True" />
+                    <Prop Key="AutoRefresh" Value="True" />
+                    <Prop Key="FilterByAllFields" Value="True" />
+                </PXSelector>
+            </AddItem>
+            <AddItem>
+                <PXSelector TypeFullName="PX.Web.UI.PXSelector">
+                    <Prop Key="Virtual:ApplyStylesheetSkin" />
+                    <Prop Key="ID" Value="CstPXSelector9" />
+                    <Prop Key="DataField" Value="UsrCity" />
+                    <Prop Key="CommitChanges" Value="True" />
+                    <Prop Key="AutoRefresh" Value="True" />
+                    <Prop Key="FilterByAllFields" Value="True" />
+                </PXSelector>
+            </AddItem>
+            <AddItem>
+                <PXSelector TypeFullName="PX.Web.UI.PXSelector">
+                    <Prop Key="Virtual:ApplyStylesheetSkin" />
+                    <Prop Key="ID" Value="CstPXSelector13" />
+                    <Prop Key="DataField" Value="UsrSubCity" />
+                    <Prop Key="FilterByAllFields" Value="True" />
+                    <Prop Key="AutoRefresh" Value="True" />
+                    <Prop Key="CommitChanges" Value="True" />
+                </PXSelector>
+            </AddItem>
+            <AddItem>
+                <PXSelector TypeFullName="PX.Web.UI.PXSelector">
+                    <Prop Key="Virtual:ApplyStylesheetSkin" />
+                    <Prop Key="ID" Value="CstPXSelector8" />
+                    <Prop Key="DataField" Value="UsrBrgy" />
+                    <Prop Key="FilterByAllFields" Value="True" />
+                    <Prop Key="AutoRefresh" Value="True" />
+                    <Prop Key="CommitChanges" Value="True" />
+                </PXSelector>
+            </AddItem>
+            <AddItem>
+                <PXTextEdit TypeFullName="PX.Web.UI.PXTextEdit">
+                    <Prop Key="Virtual:ApplyStylesheetSkin" />
+                    <Prop Key="ID" Value="CstPXTextEdit12" />
+                    <Prop Key="DataField" Value="UsrStrBldgNoUnitFlr" />
+                    <Prop Key="CommitChanges" Value="True" />
+                </PXTextEdit>
+            </AddItem>
+            <AddItem>
+                <PXNumberEdit TypeFullName="PX.Web.UI.PXNumberEdit">
+                    <Prop Key="Virtual:ApplyStylesheetSkin" />
+                    <Prop Key="ID" Value="CstPXNumberEdit14" />
+                    <Prop Key="DataField" Value="UsrZoneCode" />
+                    <Prop Key="CommitChanges" Value="True" />
+                </PXNumberEdit>
+            </AddItem>
+            <PXTextEdit DataField="City" OriginalIndex="4" />
+        </Children>
+    </PXFormView>
+    <PXFormView ID="RemitAddress" ParentId="phG_tab_Items#1_APPaymentInfoLocation_RemitAddress" TypeFullName="PX.Web.UI.PXFormView">
+        <Children Key="Template">
+            <AddItem>
+                <PXSelector TypeFullName="PX.Web.UI.PXSelector">
+                    <Prop Key="Virtual:ApplyStylesheetSkin" />
+                    <Prop Key="ID" Value="CstPXSelector18" />
+                    <Prop Key="DataField" Value="UsrRegion" />
+                    <Prop Key="CommitChanges" Value="True" />
+                    <Prop Key="AutoRefresh" Value="True" />
+                    <Prop Key="FilterByAllFields" Value="True" />
+                </PXSelector>
+            </AddItem>
+            <AddItem>
+                <PXSelector TypeFullName="PX.Web.UI.PXSelector">
+                    <Prop Key="Virtual:ApplyStylesheetSkin" />
+                    <Prop Key="ID" Value="CstPXSelector17" />
+                    <Prop Key="DataField" Value="UsrProvince" />
+                    <Prop Key="CommitChanges" Value="True" />
+                    <Prop Key="AutoRefresh" Value="True" />
+                    <Prop Key="FilterByAllFields" Value="True" />
+                </PXSelector>
+            </AddItem>
+            <AddItem>
+                <PXSelector TypeFullName="PX.Web.UI.PXSelector">
+                    <Prop Key="Virtual:ApplyStylesheetSkin" />
+                    <Prop Key="ID" Value="CstPXSelector16" />
+                    <Prop Key="DataField" Value="UsrCity" />
+                    <Prop Key="CommitChanges" Value="True" />
+                    <Prop Key="AutoRefresh" Value="True" />
+                    <Prop Key="FilterByAllFields" Value="True" />
+                </PXSelector>
+            </AddItem>
+            <AddItem>
+                <PXSelector TypeFullName="PX.Web.UI.PXSelector">
+                    <Prop Key="Virtual:ApplyStylesheetSkin" />
+                    <Prop Key="ID" Value="CstPXSelector20" />
+                    <Prop Key="DataField" Value="UsrSubCity" />
+                    <Prop Key="CommitChanges" Value="True" />
+                    <Prop Key="AutoRefresh" Value="True" />
+                    <Prop Key="FilterByAllFields" Value="True" />
+                </PXSelector>
+            </AddItem>
+            <AddItem>
+                <PXSelector TypeFullName="PX.Web.UI.PXSelector">
+                    <Prop Key="Virtual:ApplyStylesheetSkin" />
+                    <Prop Key="ID" Value="CstPXSelector15" />
+                    <Prop Key="DataField" Value="UsrBrgy" />
+                    <Prop Key="CommitChanges" Value="True" />
+                    <Prop Key="AutoRefresh" Value="True" />
+                    <Prop Key="FilterByAllFields" Value="True" />
+                </PXSelector>
+            </AddItem>
+            <AddItem>
+                <PXTextEdit TypeFullName="PX.Web.UI.PXTextEdit">
+                    <Prop Key="Virtual:ApplyStylesheetSkin" />
+                    <Prop Key="ID" Value="CstPXTextEdit19" />
+                    <Prop Key="DataField" Value="UsrStrBldgNoUnitFlr" />
+                    <Prop Key="CommitChanges" Value="True" />
+                </PXTextEdit>
+            </AddItem>
+            <AddItem>
+                <PXNumberEdit TypeFullName="PX.Web.UI.PXNumberEdit">
+                    <Prop Key="Virtual:ApplyStylesheetSkin" />
+                    <Prop Key="ID" Value="CstPXNumberEdit21" />
+                    <Prop Key="DataField" Value="UsrZoneCode" />
+                    <Prop Key="CommitChanges" Value="True" />
+                </PXNumberEdit>
+            </AddItem>
+            <PXTextEdit DataField="City" OriginalIndex="4" />
+        </Children>
+    </PXFormView>
+    <PXTextEdit DataField="City" ParentId="phG_tab_Items#1_APPaymentInfoLocation_RemitAddress_edCity" TypeFullName="PX.Web.UI.PXTextEdit">
+        <Prop Key="Enabled" Value="False" />
+    </PXTextEdit>
+    <PXSelector DataField="State" ParentId="phG_tab_Items#1_APPaymentInfoLocation_RemitAddress_edState" TypeFullName="PX.Web.UI.PXSelector">
+        <Prop Key="AutoRefresh" Value="True" />
+        <Prop Key="Enabled" Value="False" />
+        <Prop Key="CommitChanges" />
+    </PXSelector>
+    <PXButton Text="View on Map" ParentId="phG_tab_Items#1_APPaymentInfoLocation_RemitAddress_btnViewRemitOnMap" TypeFullName="PX.Web.UI.PXButton">
+        <Prop Key="Visible" Value="False" />
+    </PXButton>
+    <PXButton Text="View On Map" ParentId="phG_tab_Items#0_Address_btnViewOnMap" TypeFullName="PX.Web.UI.PXButton">
+        <Prop Key="Visible" Value="False" />
+    </PXButton>
+</Page>

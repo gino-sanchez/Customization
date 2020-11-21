@@ -1,0 +1,160 @@
+﻿<Graph ClassName="PSGCBrgyMaint" Source="#CDATA" IsNew="True" FileType="NewGraph">
+    <CDATA name="Source"><![CDATA[using System;
+using System.Collections;
+using PX.Data;
+
+namespace PSGC
+{
+	public class PSGCBrgyMaint : PXGraph<PSGCBrgyMaint>
+	{
+        
+		public PXSave<Brgy> Save;
+		public PXCancel<Brgy> Cancel;
+
+        
+
+		public PXFilter<FilterTable> MasterView;
+        [PXImport(typeof(Brgy))]
+		public PXSelect<Brgy> AdditionalView;
+
+        public class Value : IBqlField
+        {
+            public const int IntValue = 130000000;
+            public const int CityValue = 133900000;
+
+            public class intValue : Constant<int>
+            {
+                public intValue() : base(IntValue) { }
+            }
+            public class cityValue : Constant<int>
+            {
+                public cityValue() : base(CityValue) { }
+            }
+        }
+        #region FilterFields
+        [Serializable]
+		public class FilterTable : IBqlTable
+		{
+            public abstract class region : IBqlField { }
+            [PXInt()]
+            [PXUIField(DisplayName = "Region")]
+            [PXSelector(typeof(Search<PRegion.regionCode>), SubstituteKey = typeof(PRegion.regionName))]
+            public virtual int? Region { get; set; }
+
+            public abstract class province : IBqlField { }
+            [PXInt()]
+            [PXUIField(DisplayName = "Province")]
+            [PXSelector(typeof(Search<
+                Province.provinceCode,
+                Where<Province.regionCode, Equal<Current<FilterTable.region>>,
+                    Or<FilterTable.region, IsNotNull>>>), SubstituteKey = typeof(Province.provinceName))]
+            public virtual int? Province { get; set; }
+
+            public abstract class city : IBqlField { }
+            [PXInt()]
+            [PXUIField(DisplayName = "City")]
+            [PXSelector(typeof(Search<
+            CityMunicipality.cityMunCode,
+            Where2<Where<CityMunicipality.provinceCode, Equal<Current<FilterTable.province>>,
+                Or<Current<FilterTable.province>, IsNull>>,
+                And<Where<CityMunicipality.regionCode, Equal<Current<FilterTable.region>>,
+                    And<Current<FilterTable.region>, IsNotNull>>>>>), SubstituteKey = typeof(CityMunicipality.cityMunName), ValidateValue = false)]
+            public virtual int? City { get; set; }
+
+            public abstract class subCity : IBqlField { }
+            [PXInt()]
+            [PXUIField(DisplayName = "Sub City")]
+            [PXSelector(typeof(Search<SubMun.subMunCode>), SubstituteKey = typeof(SubMun.subMunName), ValidateValue = false)]
+            public virtual int? SubCity { get; set; }
+
+        }
+        #endregion
+
+        #region IEnumerable
+
+        public virtual IEnumerable additionalView()
+        {
+            var mastCurrent = MasterView.Current;
+            PXSelectBase<Brgy> query = new PXSelect<Brgy>(this);
+            var enabledInsert = (mastCurrent.Region != null && ((mastCurrent.Province != null || mastCurrent.Region == Value.IntValue) && mastCurrent.City != null || mastCurrent.City == Value.CityValue));
+
+            AdditionalView.AllowInsert = enabledInsert;
+
+            query.WhereAnd<Where<Brgy.regionCode, Equal<Current<FilterTable.region>>>>();
+            if (mastCurrent.Province != null)
+            {
+                query.WhereAnd<Where<Brgy.provinceCode, Equal<Current<FilterTable.province>>>>();
+            }
+            if (mastCurrent.City != null)
+            {
+                query.WhereAnd<Where<Brgy.cityMunCode, Equal<Current<FilterTable.city>>>>();
+            }
+            if(mastCurrent.SubCity != null)
+            {
+                query.WhereAnd<Where<Brgy.cityMunCode, Equal<Current<FilterTable.city>>>>();
+            }
+            return query.Select();
+        }
+
+        #endregion
+
+        #region eventHandlers
+
+        public virtual void Brgy_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+            var row = e.Row as Brgy;
+            if (row == null) return;
+            var mastCurrent = MasterView.Current;
+            
+            PXUIFieldAttribute.SetEnabled(sender, row, false);
+            PXUIFieldAttribute.SetEnabled<Brgy.brgyCode>(sender, row,true);
+            PXUIFieldAttribute.SetEnabled<Brgy.brgyCode>(sender, row,true);
+        }
+
+
+        public virtual void Brgy_RegionCode_FieldDefaulting(PXCache sender, PXFieldDefaultingEventArgs e)
+        {
+            var row = e.Row as Brgy;
+            if (row == null) return;
+            var mastCurrent = MasterView.Current;
+            if(mastCurrent.Region != null)
+            {
+                sender.SetValue<Brgy.regionCode>(row, mastCurrent.Region);
+            }
+        }
+        public virtual void Brgy_ProvinceCode_FieldDefaulting(PXCache sender, PXFieldDefaultingEventArgs e)
+        {
+            var row = e.Row as Brgy;
+            if (row == null) return;
+            var mastCurrent = MasterView.Current;
+            if (mastCurrent.Province != null)
+            {
+                sender.SetValue<Brgy.provinceCode>(row, mastCurrent.Province);
+            }
+        }
+        public virtual void Brgy_CityMunCode_FieldDefaulting(PXCache sender, PXFieldDefaultingEventArgs e)
+        {
+            var row = e.Row as Brgy;
+            if (row == null) return;
+            var mastCurrent = MasterView.Current;
+            if (mastCurrent.City != null)
+            {
+                sender.SetValue<Brgy.cityMunCode>(row, mastCurrent.City);
+            }
+        }
+        public virtual void Brgy_SubMunCode_FieldDefaulting(PXCache sender, PXFieldDefaultingEventArgs e)
+        {
+            var row = e.Row as Brgy;
+            if (row == null) return;
+            var mastCurrent = MasterView.Current;
+            if (mastCurrent.SubCity != null)
+            {
+                sender.SetValue<Brgy.subMunCode>(row, mastCurrent.SubCity);
+            }
+        }
+
+        #endregion
+
+    }
+}]]></CDATA>
+</Graph>

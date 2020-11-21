@@ -1,0 +1,4 @@
+﻿<Fields ScreenID="AR303020">
+    <Field IsActive="True" FieldName="CITY" DisableCondition="True" ObjectName="PX.OBJECTS.CR.ADDRESS" />
+    <Field IsActive="True" FieldName="STATE" DisableCondition="True" ObjectName="PX.OBJECTS.CR.ADDRESS" />
+</Fields>

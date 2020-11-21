@@ -1,0 +1,14 @@
+﻿<Fields ScreenID="SO303000">
+    <Field IsActive="True" FieldName="ADDRESSLINE1" DisableCondition="True" ObjectName="PX.OBJECTS.AR.ARADDRESS" />
+    <Field IsActive="True" FieldName="ADDRESSLINE2" DisableCondition="True" ObjectName="PX.OBJECTS.AR.ARADDRESS" />
+    <Field IsActive="True" FieldName="CITY" DisableCondition="True" ObjectName="PX.OBJECTS.AR.ARADDRESS" />
+    <Field IsActive="True" FieldName="POSTALCODE" HideCondition="True" ObjectName="PX.OBJECTS.AR.ARADDRESS" />
+    <Field IsActive="True" FieldName="STATE" DisableCondition="True" ObjectName="PX.OBJECTS.AR.ARADDRESS" />
+    <Field IsActive="True" FieldName="ADDRESSLINE1" DisableCondition="True" ObjectName="PX.OBJECTS.AR.ARSHIPPINGADDRESS" />
+    <Field IsActive="True" FieldName="ADDRESSLINE2" DisableCondition="True" ObjectName="PX.OBJECTS.AR.ARSHIPPINGADDRESS" />
+    <Field IsActive="True" FieldName="CITY" DisableCondition="True" ObjectName="PX.OBJECTS.AR.ARSHIPPINGADDRESS" />
+    <Field IsActive="True" FieldName="POSTALCODE" HideCondition="True" ObjectName="PX.OBJECTS.AR.ARSHIPPINGADDRESS" />
+    <Field IsActive="True" FieldName="STATE" DisableCondition="True" ObjectName="PX.OBJECTS.AR.ARSHIPPINGADDRESS" />
+    <Field IsActive="True" FieldName="USRCUSTZONECODE" DisableCondition="True" ObjectName="PX.OBJECTS.AR.ARSHIPPINGADDRESS" />
+    <Field IsActive="True" FieldName="USRZONECODE" DisableCondition="True" ObjectName="PX.OBJECTS.AR.ARSHIPPINGADDRESS" />
+</Fields>

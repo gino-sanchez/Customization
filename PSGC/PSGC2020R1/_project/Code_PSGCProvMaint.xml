@@ -1,0 +1,64 @@
+﻿<Graph ClassName="PSGCProvMaint" Source="#CDATA" IsNew="True" FileType="NewGraph">
+    <CDATA name="Source"><![CDATA[using System;
+using System.Collections;
+using PX.Data;
+
+namespace PSGC
+{
+  public class PSGCProvMaint : PXGraph<PSGCProvMaint>
+  {
+        public PXSave<Province> Save;
+        public PXCancel<Province> Cancel;
+        public PXFilter<FilterTable> MasterView;
+        [PXImport(typeof(Province))]
+        public PXSelect<Province> AdditionalView;
+        #region IEnumerable
+        public IEnumerable additionalView()
+        {
+
+            PXSelectBase<Province> query = new PXSelect<Province>(this);
+            var allowable = MasterView.Current.RegionField != null;
+            AdditionalView.AllowInsert = allowable;
+            query.WhereAnd<Where<Province.regionCode, Equal<Current<FilterTable.regionField>>>>();
+            return query.Select();
+        }
+
+        #endregion
+
+        #region Eventhandler
+        public void Province_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+            var row = e.Row as Province;
+
+            if (row == null) return;
+
+
+            PXUIFieldAttribute.SetEnabled<Province.regionCode>(sender, row, false);
+        }
+
+        public void Province_RegionCode_FieldDefaulting(PXCache sender, PXFieldDefaultingEventArgs e)
+        {
+            var row = e.Row as Province;
+            if (row == null) return;
+            var currentFilt = MasterView.Current;
+            if (currentFilt.RegionField != null)
+            {
+                sender.SetValueExt<Province.regionCode>(row, currentFilt.RegionField);
+            }
+        }
+        #endregion
+
+        [Serializable]
+        public class FilterTable : IBqlTable
+        {
+            public abstract class regionField : IBqlField { }
+            [PXInt()]
+            [PXUIField(DisplayName = "Region")]
+            [PXSelector(typeof(Search<PRegion.regionCode>), SubstituteKey = typeof(PRegion.regionName))]
+            public virtual int? RegionField { get; set; }
+        }
+
+
+    }
+}]]></CDATA>
+</Graph>

@@ -1,0 +1,34 @@
+﻿<Graph ClassName="PSGCRegionMaint" Source="#CDATA" IsNew="True" FileType="NewGraph">
+    <CDATA name="Source"><![CDATA[using System;
+using PX.Data;
+
+namespace PSGC
+{
+    
+	public class PSGCRegionMaint : PXGraph<PSGCRegionMaint>
+	{
+
+		public PXSave<PRegion> Save;
+		public PXCancel<PRegion> Cancel;
+
+
+		public PXFilter<MasterTable> MasterView;
+        [PXImport(typeof(PRegion))]
+		public PXSelect<PRegion> AdditionalView;
+
+		[Serializable]
+		public class MasterTable : IBqlTable
+		{
+
+		}
+
+		[Serializable]
+		public class DetailsTable : IBqlTable
+		{
+
+		}
+
+
+	}
+}]]></CDATA>
+</Graph>

@@ -1,0 +1,7 @@
+﻿<DAC type="PX.Objects.CR.Contact">
+    <Field FieldName="UsrBusinessStyle" TypeName="string" MapDbTable="Contact" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBString(60)]
+[PXUIField(DisplayName="Business Style")]
+]]></CDATA>
+    </Field>
+</DAC>

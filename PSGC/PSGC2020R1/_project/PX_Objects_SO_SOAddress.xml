@@ -1,0 +1,54 @@
+﻿<DAC type="PX.Objects.SO.SOAddress">
+    <Field FieldName="UsrRegion" TypeName="int" MapDbTable="SOAddress" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBInt]
+[PXUIField(DisplayName="Region")]
+using PSGC;
+[PXSelector(typeof(Search<PRegion.regionCode>),SubstituteKey= typeof(PRegion.regionName))]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrProvince" TypeName="int" MapDbTable="SOAddress" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBInt]
+[PXUIField(DisplayName="Province")]
+using PSGC;
+[PXSelector(typeof(Search<Province.provinceCode,Where<Province.regionCode,Equal<Current<UnboundTable.unboundRegion>>>>),SubstituteKey= typeof(Province.provinceName),ValidateValue = false)]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrCity" TypeName="int" MapDbTable="SOAddress" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBInt]
+[PXUIField(DisplayName="City")]
+   [PXSelector(typeof(Search<
+           CityMunicipality.cityMunCode,
+           Where2<
+               Where<CityMunicipality.provinceCode, Equal<Current<UnboundTable.unboundProvince>>,
+                   Or<Current<UnboundTable.unboundProvince>, IsNull>>,
+               And<Where<CityMunicipality.regionCode, Equal<Current<UnboundTable.unboundRegion>>,
+                   And<Current<UnboundTable.unboundRegion>, IsNotNull>>>>>), SubstituteKey = typeof(CityMunicipality.cityMunName), ValidateValue = false)]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrSubCity" TypeName="int" MapDbTable="SOAddress" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBInt]
+[PXUIField(DisplayName="Sub City")]
+[PXSelector(typeof(Search<SubMun.subMunCode>),SubstituteKey = typeof(SubMun.subMunName),ValidateValue=false)]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrBrgy" TypeName="int" MapDbTable="SOAddress" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBInt]
+[PXUIField(DisplayName="Brgy")]
+using PSGC;
+           [PXSelector(typeof(Search<
+            Brgy.brgyCode,
+            Where2<
+                Where<Brgy.cityMunCode, Equal<Current<UnboundTable.unboundCity>>,
+                    And<Current<UnboundTable.unboundCity>, IsNotNull>>,
+                And2<
+                    Where<Brgy.provinceCode, Equal<Current<UnboundTable.unboundProvince>>,
+                        Or<Current<UnboundTable.unboundProvince>, IsNull>>,
+                    And<Where<Brgy.subMunCode, Equal<Current<UnboundTable.unboundSubCity>>,
+                        Or<Current<UnboundTable.unboundSubCity>, IsNull>>>>>>), SubstituteKey = typeof(Brgy.brgyName),ValidateValue = false)]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrStrBldgNoUnitFlr" TypeName="string" MapDbTable="SOAddress" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBString(500)]
+[PXUIField(DisplayName="HouseNo/Street/Bldg/Unit/Floor")]
+]]></CDATA>
+    </Field>
+    <Field FieldName="UsrZoneCode" TypeName="int" MapDbTable="SOAddress" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBInt]
+[PXUIField(DisplayName="Zone Code",Enabled = false)]]]></CDATA>
+    </Field>
+</DAC>

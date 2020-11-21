@@ -1,0 +1,10 @@
+﻿<Table TableName="Contact">
+    <Column TableName="Contact" ColumnName="UsrRegion" ColumnType="int" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="Contact" ColumnName="UsrCustomField" ColumnType="int" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="Contact" ColumnName="UsrProvince" ColumnType="int" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="Contact" ColumnName="UsrCity" ColumnType="int" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="Contact" ColumnName="UsrSubCity" ColumnType="int" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="Contact" ColumnName="UsrBrgy" ColumnType="int" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="Contact" ColumnName="UsrStrBldgNoUnitFlr" ColumnType="string" AllowNull="True" MaxLength="500" DecimalPrecision="2" DecimalLength="500" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="Contact" ColumnName="UsrBusinessStyle" ColumnType="string" AllowNull="True" MaxLength="60" DecimalPrecision="2" DecimalLength="60" IsNewColumn="True" IsUnicode="True" />
+</Table>

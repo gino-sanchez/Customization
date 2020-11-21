@@ -1,0 +1,25 @@
+﻿<Sql TableName="Brgy" TableSchemaXml="#CDATA">
+    <CDATA name="TableSchemaXml"><![CDATA[<table name="Brgy">
+  <col name="CompanyID" type="Int" default="Zero" />
+  <col name="ID" type="Int" identity="true" />
+  <col name="BrgyCode" type="Int" />
+  <col name="BrgyName" type="NVarChar(100)" nullable="true" />
+  <col name="CityMunCode" type="Int" nullable="true" />
+  <col name="SubMunCode" type="Int" nullable="true" />
+  <col name="DistrictCode" type="Int" nullable="true" />
+  <col name="ProvinceCode" type="Int" nullable="true" />
+  <col name="RegionCode" type="Int" nullable="true" />
+  <col name="tstamp" type="Timestamp" />
+  <col name="CreatedByID" type="UniqueIdentifier" />
+  <col name="CreatedByScreenID" type="Char(8)" />
+  <col name="CreatedDateTime" type="DateTime" />
+  <col name="LastModifiedByID" type="UniqueIdentifier" />
+  <col name="LastModifiedByScreenID" type="Char(8)" />
+  <col name="LastModifiedDateTime" type="DateTime" />
+  <index name="PK_Brgy" clustered="true" primary="true" unique="true">
+    <col name="ID" />
+    <col name="BrgyCode" />
+    <col name="CompanyID" />
+  </index>
+</table>]]></CDATA>
+</Sql>

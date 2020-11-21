@@ -1,0 +1,510 @@
+﻿<Graph ClassName="DispatchCustomerMaint" Source="#CDATA" IsNew="True" FileType="NewGraph">
+    <CDATA name="Source"><![CDATA[using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.Serialization;
+using PX.Common;
+using PX.Data;
+using PX.SM;
+using PX.Objects.AR.CCPaymentProcessing;
+using PX.Objects.AR.Repositories;
+using PX.Objects.Common;
+using PX.Objects.Common.Discount;
+using PX.Objects.CA;
+using PX.Objects.CM;
+using PX.Objects.CR;
+using PX.Objects.CS;
+using PX.Objects.SO;
+using PX.Objects.AR.CCPaymentProcessing.Helpers;
+using PX.Data.BQL.Fluent;
+using PX.Data.BQL;
+using CashAccountAttribute = PX.Objects.GL.CashAccountAttribute;
+using PX.Objects.GL.Helpers;
+using PX.Objects;
+using PX.Objects.AR;
+using PSGC;
+
+namespace PX.Objects.AR
+{
+    #region UnboundDac
+
+    [Serializable]
+    public class UnboundFilter : IBqlTable
+    {
+        #region RegionFilter
+        public abstract class regionFilter : IBqlField { }
+        [PXInt()]
+        public virtual int? RegionFilter { get; set; }
+        #endregion
+
+        #region FilterProvince
+        public abstract class filterProvince : IBqlField { }
+        [PXInt()]
+        public virtual int? FilterProvince { get; set; }
+        #endregion
+        #region CityFilter
+        public abstract class filterCity : IBqlField { }
+        [PXInt()]
+        public virtual int? FilterCity { get; set; }
+        #endregion
+        #region SubCityFilter
+        public abstract class subCityFilter : IBqlField { }
+        [PXInt()]
+        public virtual int? SubCityFilter { get; set; }
+        #endregion
+
+        #region IsClicked
+        public abstract class isClicked : IBqlField { }
+        [PXBool()]
+        public virtual bool? IsClicked { get; set; }
+
+        #endregion
+
+    }
+    #endregion
+    public class PSGCCustomerMaint_Extension : PXGraphExtension<CustomerMaint>
+      {
+        #region Selects
+
+        public PXFilter<UnboundFilter> MyFilter;
+
+        #endregion
+        // Please Avoid reading my If statements Code here its a mess -Gino 
+        
+        #region Address DAC Event Handlers
+        protected void Address_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+            var row = e.Row as Address;
+            if (row == null) { return; }
+            AddressExt rowExt = sender.GetExtension<AddressExt>(row);
+            bool myRegion = rowExt.UsrRegion == null;
+            bool myCity = rowExt.UsrCity == null;
+            bool myProvince = rowExt.UsrProvince == null;
+            bool myStrAddress = rowExt.UsrBrgy == null;
+            PXUIFieldAttribute.SetEnabled<AddressExt.usrZoneCode>(sender, row, false);
+            PXUIFieldAttribute.SetEnabled<Address.addressLine1>(sender, row, false);
+            PXUIFieldAttribute.SetEnabled<Address.addressLine2>(sender, row, false);
+
+
+
+            if (rowExt.UsrRegion == null)
+            {
+                sender.SetValueExt<AddressExt.usrProvince>(row, null);
+                sender.SetValueExt<AddressExt.usrCity>(row, null);
+                sender.SetValueExt<AddressExt.usrBrgy>(row, null);
+                sender.SetValueExt<Address.city>(row, null);
+                sender.SetValueExt<Address.state>(row, null);
+            }
+            if (rowExt.UsrProvince == null && rowExt.UsrCity == null)
+            {
+                sender.SetValueExt<AddressExt.usrBrgy>(row, null);
+                sender.SetValueExt<Address.city>(row, null);
+                sender.SetValueExt<Address.state>(row, null);
+                sender.SetValueExt<AddressExt.usrSubCity>(row, null);
+                
+            }
+            if (rowExt.UsrBrgy == null)
+            {
+                sender.SetValueExt<AddressExt.usrStrBldgNoUnitFlr>(row, null);
+            }
+            
+            if (rowExt.UsrCity != null) {
+                if (rowExt.UsrCity == 133900000)
+                {
+                    PXUIFieldAttribute.SetVisible<AddressExt.usrSubCity>(sender, row, true);
+                }
+                else
+                {
+                    PXUIFieldAttribute.SetVisible<AddressExt.usrSubCity>(sender, row, false);
+                }
+            }
+            else
+            {
+                PXUIFieldAttribute.SetVisible<AddressExt.usrSubCity>(sender, row, false);
+            }
+        }
+       
+        protected void Address_UsrBrgy_FieldUpdated(PXCache sender, PXFieldUpdatedEventArgs e)
+        {
+            var row = e.Row as Address;
+            AddressExt rowExt = sender.GetExtension<AddressExt>(row);
+            if (row == null) { return; }
+            
+            Brgy mySelect = PXSelect<
+                Brgy, 
+                Where<Brgy.brgyCode, Equal<Required<Brgy.brgyCode>>>>
+                .Select(Base, rowExt.UsrBrgy);
+            if (mySelect == null) { sender.SetValue<AddressExt.usrZoneCode>(row, null); }
+            else
+            {
+                sender.SetValue<AddressExt.usrZoneCode>(row, mySelect.BrgyCode);
+            }
+        }
+        
+        protected void Address_RowUpdated(PXCache sender, PXRowUpdatedEventArgs e)
+        {
+            var oldRow = e.OldRow as Address;
+            var row = e.Row as Address;
+            var rowExt = sender.GetExtension<AddressExt>(row);
+            var oldRowExt = sender.GetExtension<AddressExt>(oldRow);
+            if (row == null) { return; }
+            
+            Province selectProvince = PXSelect<
+                Province, 
+                Where<Province.provinceCode, Equal<Required<Province.provinceCode>>>>
+                .Select(Base, rowExt.UsrProvince);
+            CityMunicipality selectCity = PXSelect<
+                CityMunicipality, 
+                Where<CityMunicipality.cityMunCode, Equal<Required<CityMunicipality.cityMunCode>>>>
+                .Select(Base, rowExt.UsrCity);
+            Brgy selectBrgy = PXSelect<
+                Brgy, 
+                Where<Brgy.brgyCode, Equal<Required<Brgy.brgyCode>>>>
+                .Select(Base, rowExt.UsrBrgy);
+            SubMun selectSubMun = PXSelect<
+                SubMun, 
+                Where<SubMun.subMunCode, Equal<Required<SubMun.subMunCode>>>>
+                .Select(Base, rowExt.UsrSubCity);
+            if(rowExt.UsrCity != null)
+            {
+                sender.SetValueExt<Address.city>(row,selectCity.CityMunName);
+            }
+            if(rowExt.UsrProvince != null)
+            {
+                sender.SetValue<Address.state>(row,selectProvince.ProvinceName);
+            }
+            if (oldRowExt.UsrRegion != rowExt.UsrRegion)
+            {
+                sender.SetValueExt<AddressExt.usrProvince>(row, null);
+                sender.SetValueExt<AddressExt.usrCity>(row, null);
+                sender.SetValueExt<Address.addressLine1>(row, null);
+            }
+            if(oldRowExt.UsrProvince != rowExt.UsrProvince)
+            {
+                sender.SetValueExt<AddressExt.usrCity>(row, null);
+                sender.SetValueExt<Address.addressLine1>(row, null);
+            }
+            if(oldRowExt.UsrCity != rowExt.UsrCity)
+            {
+                sender.SetValueExt<AddressExt.usrBrgy>(row,null);
+                sender.SetValueExt<Address.addressLine1>(row, null);
+                sender.SetValueExt<AddressExt.usrSubCity>(row, null);
+            }
+            if(oldRowExt.UsrSubCity != rowExt.UsrSubCity)
+            {
+                sender.SetValueExt<AddressExt.usrBrgy>(row, null);
+                sender.SetValueExt<AddressExt.usrStrBldgNoUnitFlr>(row, null);
+            }
+            if (rowExt.UsrStrBldgNoUnitFlr == null)
+            {
+                sender.SetValue<LocationExtAddress.addressLine1>(row, null);
+                return;
+            }
+            if (selectProvince == null)
+            {
+                if (selectSubMun != null)
+                {
+                    var concat = rowExt.UsrStrBldgNoUnitFlr + " " + selectBrgy.BrgyName + " " + selectSubMun.SubMunName + "," + " " + selectCity.CityMunName;
+                    row.AddressLine1 = concat;
+                }
+                else
+                {
+                    var concat = rowExt.UsrStrBldgNoUnitFlr + " " + selectBrgy.BrgyName + "," + " " + selectCity.CityMunName;
+                    row.AddressLine1 = concat;
+                }
+            }
+
+            else if (selectCity == null)
+            {
+                var concat = rowExt.UsrStrBldgNoUnitFlr + " " + selectBrgy.BrgyName + " " + selectProvince.ProvinceName;
+                row.AddressLine1 = concat;
+            }
+            else if (selectSubMun == null)
+            { 
+                var concat = rowExt.UsrStrBldgNoUnitFlr + " " + selectBrgy.BrgyName + "," + selectCity.CityMunName + " " + selectProvince.ProvinceName;
+                row.AddressLine1 = concat;
+            }
+            else
+            {
+                var concat = rowExt.UsrStrBldgNoUnitFlr + " " + selectBrgy.BrgyName + "," + selectSubMun.SubMunName + "," + selectCity.CityMunName + " " + selectProvince.ProvinceName;
+                row.AddressLine1 = concat;
+            }
+            if (rowExt.UsrProvince == null) {
+                return; }
+            if (rowExt.UsrRegion == null) {
+                return; }
+            if (rowExt.UsrCity == null) {
+                
+                return; }
+            if (rowExt.UsrBrgy == null) { return; }
+            if (rowExt.UsrSubCity == null) { return; }
+        }
+        #endregion
+        #region LocationExtAddress Event Handlers
+        protected void LocationExtAddress_UsrCustBrgy_FieldUpdated(PXCache sender, PXFieldUpdatedEventArgs e)
+        {
+            var row = e.Row as Address;
+            var rowExt = PXCache<Address>.GetExtension<AddressExt>(row);
+            if (row == null) { return; }
+            Brgy mySelect = PXSelect<
+                Brgy,
+                Where<Brgy.brgyCode, Equal<Required<Brgy.brgyCode>>>>
+                .Select(Base, rowExt.UsrCustBrgy);
+            
+            if (mySelect == null) { sender.SetValue<AddressExt.usrZoneCode>(row, null); }
+            else
+            {
+                sender.SetValue<AddressExt.usrZoneCode>(row, mySelect.BrgyCode);
+            }
+        }
+       
+        protected void LocationExtAddress_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+            var row = e.Row as Address;
+            var rowLocationExtAddress = e.Row as LocationExtAddress;
+            var rowExt = PXCache<Address>.GetExtension<AddressExt>(row);
+            if (row == null) { return; }
+                MyFilter.Current.RegionFilter = rowExt.UsrCustRegion;
+                MyFilter.Current.FilterProvince = rowExt.UsrCustProvince;
+                MyFilter.Current.FilterCity = rowExt.UsrCustCity;
+                MyFilter.Current.SubCityFilter = rowExt.UsrCustSubCity;
+            if(rowExt.UsrCustCity != null)
+            {
+                if (rowExt.UsrCustCity == 133900000)
+                {
+                    PXUIFieldAttribute.SetVisible<AddressExt.usrCustSubCity>(sender, row, true);
+                }
+                else
+                {
+                    PXUIFieldAttribute.SetVisible<AddressExt.usrCustSubCity>(sender, row, false);
+                }
+                
+            }else 
+            {
+                PXUIFieldAttribute.SetVisible<AddressExt.usrCustSubCity>(sender, row, false); 
+            }
+            if (rowLocationExtAddress.IsAddressSameAsMain == true)
+            {
+                PXUIFieldAttribute.SetEnabled<AddressExt.usrCustRegion>(sender, row, false);
+                PXUIFieldAttribute.SetEnabled<AddressExt.usrCustProvince>(sender, row, false);
+                PXUIFieldAttribute.SetEnabled<AddressExt.usrCustCity>(sender, row, false);
+                PXUIFieldAttribute.SetEnabled<AddressExt.usrCustBrgy>(sender, row, false);
+                PXUIFieldAttribute.SetEnabled<AddressExt.usrStrBldgNoUnitFlr>(sender, row, false);
+                PXUIFieldAttribute.SetEnabled<AddressExt.usrCustSubCity>(sender, row, false);
+                foreach (Address myAdd in Base.DefAddress.Select())
+                {
+                    var myAddExt = PXCache<Address>.GetExtension<AddressExt>(myAdd);
+                    sender.SetValueExt<LocationExtAddress.addressLine1>(row, myAdd.AddressLine1);
+                    sender.SetValueExt<AddressExt.usrCustRegion>(row, myAddExt.UsrRegion);
+                    sender.SetValueExt<AddressExt.usrCustProvince>(row, myAddExt.UsrProvince);
+                    sender.SetValueExt<AddressExt.usrCustCity>(row, myAddExt.UsrCity);
+                    sender.SetValueExt<AddressExt.usrCustBrgy>(row, myAddExt.UsrBrgy);
+                    sender.SetValueExt<AddressExt.usrStrBldgNoUnitFlr>(row, myAddExt.UsrStrBldgNoUnitFlr);
+                    sender.SetValueExt<AddressExt.usrCustSubCity>(row, myAddExt.UsrSubCity);
+                }
+            }
+            else
+            {
+                PXUIFieldAttribute.SetEnabled<AddressExt.usrCustRegion>(sender, row, true);
+                PXUIFieldAttribute.SetEnabled<AddressExt.usrCustProvince>(sender, row, true);
+                PXUIFieldAttribute.SetEnabled<AddressExt.usrCustCity>(sender, row, true);
+                PXUIFieldAttribute.SetEnabled<AddressExt.usrCustBrgy>(sender, row, true);
+                PXUIFieldAttribute.SetEnabled<AddressExt.usrStrBldgNoUnitFlr>(sender, row, true);
+                PXUIFieldAttribute.SetEnabled<AddressExt.usrCustSubCity>(sender, row, true);
+            }
+           
+        }
+        protected void LocationExtAddress_RowUpdated(PXCache sender, PXRowUpdatedEventArgs e)
+        {
+            var rowLocationExtAdd = e.Row as LocationExtAddress;
+            var rowLocationExtAddOld = e.OldRow as LocationExtAddress;
+            var rowOld = e.OldRow as Address;
+            var oldRowExt = PXCache<Address>.GetExtension<AddressExt>(rowOld);
+            var row = e.Row as Address;
+            var rowExt = PXCache<Address>.GetExtension<AddressExt>(row);
+            Province selectProvince = PXSelect<
+                Province,
+                Where<Province.provinceCode, Equal<Required<Province.provinceCode>>>>
+                .Select(Base, rowExt.UsrCustProvince);
+            CityMunicipality selectCity = PXSelect<
+                CityMunicipality,
+                Where<CityMunicipality.cityMunCode, Equal<Required<CityMunicipality.cityMunCode>>>>
+                .Select(Base, rowExt.UsrCustCity);
+            Brgy selectBrgy = PXSelect<
+                Brgy,
+                Where<Brgy.brgyCode, Equal<Required<Brgy.brgyCode>>>>
+                .Select(Base, rowExt.UsrCustBrgy);
+            SubMun selectSubMun = PXSelect<
+                SubMun,
+                Where<SubMun.subMunCode, Equal<Required<SubMun.subMunCode>>>>
+                .Select(Base, rowExt.UsrCustSubCity);
+            if (row == null) { return; }
+            
+            else
+            {
+                if (rowExt.UsrCustRegion == null)
+                    {
+                        sender.SetValueExt<AddressExt.usrCustProvince>(row, null);
+                        sender.SetValueExt<AddressExt.usrCustCity>(row, null);
+                        sender.SetValueExt<AddressExt.usrCustBrgy>(row, null);
+                        row.State = null;
+                        row.City = null;
+                    }
+                if (rowExt.UsrCustCity != null)
+                {
+                    sender.SetValueExt<LocationExtAddress.city>(row, selectCity.CityMunName);
+                }
+                if (rowExt.UsrCustProvince != null)
+                {
+                    sender.SetValue<LocationExtAddress.state>(row, selectProvince.ProvinceName);
+                }
+                if (oldRowExt.UsrCustRegion != rowExt.UsrCustRegion)
+                {
+                        sender.SetValueExt<AddressExt.usrCustProvince>(row, null);
+                        sender.SetValueExt<AddressExt.usrCustCity>(row, null);
+                        sender.SetValueExt<LocationExtAddress.addressLine1>(row, null);
+                        sender.SetValueExt<LocationExtAddress.city>(row, null);
+                        sender.SetValueExt<LocationExtAddress.state>(row, null);
+                }
+                if (oldRowExt.UsrCustProvince != rowExt.UsrCustProvince)
+                 {
+                 sender.SetValueExt<AddressExt.usrCustCity>(row, null);
+                 sender.SetValueExt<LocationExtAddress.addressLine1>(row, null);
+                 }
+                if (oldRowExt.UsrCustCity != rowExt.UsrCustCity)
+                 {
+                 sender.SetValueExt<AddressExt.usrCustBrgy>(row, null);
+                 sender.SetValueExt<LocationExtAddress.addressLine1>(row, null);
+                 sender.SetValueExt<AddressExt.usrCustSubCity>(row, null);
+                }
+                if (oldRowExt.UsrCustSubCity != rowExt.UsrCustSubCity)
+                 {
+                 sender.SetValueExt<AddressExt.usrCustBrgy>(row, null);
+                 sender.SetValueExt<AddressExt.usrStrBldgNoUnitFlr>(row, null);
+                 }
+                 if (rowExt.UsrStrBldgNoUnitFlr == null)
+                  {
+                  sender.SetValueExt<LocationExtAddress.addressLine1>(row,null);
+                  return;
+                  }
+                  if(rowExt.UsrStrBldgNoUnitFlr != null && rowExt.UsrCustRegion != null && 
+                    rowExt.UsrCustBrgy != null && (rowExt.UsrCustCity != null || rowExt.UsrCustProvince != null))
+                       {
+                            if (selectProvince == null)
+                            {
+                            
+                                if (selectSubMun != null)
+                                {
+                                    var concat = rowExt.UsrStrBldgNoUnitFlr + " " + selectBrgy.BrgyName + " " + selectSubMun.SubMunName + "," + " " + selectCity.CityMunName;
+                                    row.AddressLine1 = concat;
+                                }   
+                                else
+                                {
+                                    var concat = rowExt.UsrStrBldgNoUnitFlr + " " + selectBrgy.BrgyName + "," + " " + selectCity.CityMunName;
+                                    row.AddressLine1 = concat;
+                                }
+                            }
+                            else if (selectCity == null)
+                            {
+                                var concat = rowExt.UsrStrBldgNoUnitFlr + " " + selectBrgy.BrgyName + "," + " " + selectProvince.ProvinceName;
+                                rowLocationExtAdd.AddressLine1 = concat;
+                            }
+                            else if (selectSubMun == null)
+                            {
+                                var concat = rowExt.UsrStrBldgNoUnitFlr + " " + selectBrgy.BrgyName + "," + selectCity.CityMunName + " " + selectProvince.ProvinceName;
+                                row.AddressLine1 = concat;
+                            }
+                            else
+                             {
+                                 var concat = rowExt.UsrStrBldgNoUnitFlr + " " + selectBrgy.BrgyName + "," + selectSubMun.SubMunName + "," + selectCity.CityMunName + " " + selectProvince.ProvinceName;
+                                 row.AddressLine1 = concat;
+                             }
+                   }
+                    if (rowLocationExtAdd.IsAddressSameAsMain == false && rowLocationExtAddOld.IsAddressSameAsMain == true)
+                    {
+                        LocationExtAddress loc = Base.DefLocation.Current;
+                        Address select = Base.DefAddress.Current;
+                        AddressExt selectExt = PXCache<Address>.GetExtension<AddressExt>(select);
+                        AddressExt locExt = PXCache<Address>.GetExtension<AddressExt>(loc as Address);
+
+                        loc.AddressLine1 = select.AddressLine1;
+                        sender.SetValueExt<AddressExt.usrCustRegion>(row, selectExt.UsrRegion);
+                        sender.SetValueExt<AddressExt.usrCustProvince>(row, selectExt.UsrProvince);
+                        sender.SetValueExt<AddressExt.usrCustCity>(row, selectExt.UsrCity);
+                        sender.SetValueExt<AddressExt.usrCustBrgy>(row, selectExt.UsrBrgy);
+                    sender.SetValueExt<AddressExt.usrCustSubCity>(row, selectExt.UsrSubCity);
+                    sender.SetValue<LocationExtAddress.city>(row, select.City);
+                    sender.SetValue<LocationExtAddress.state>(row, select.State);
+                    }
+                if (rowExt.UsrCustProvince == null)
+                {
+                    sender.SetValueExt<LocationExtAddress.state>(row, null);
+                    return;
+                }
+                if (rowExt.UsrCustRegion == null)
+                {
+                    return;
+                }
+                if (rowExt.UsrCustCity == null)
+                {
+                    sender.SetValueExt<LocationExtAddress.city>(row, null);
+                    return;
+                }
+                if (rowExt.UsrCustBrgy == null)
+                {
+                    sender.SetValueExt<AddressExt.usrStrBldgNoUnitFlr>(row, null);
+                    return;
+                }
+            }
+        }
+        #endregion
+    }
+
+    #region Custom Selector
+
+    public class CustProvince : PXCustomSelectorAttribute
+    {
+        public CustProvince() : base(typeof(Province.provinceCode),
+            typeof(Province.provinceName))
+        { SubstituteKey = typeof(Province.provinceName);
+            ValidateValue = false;
+        }
+
+        protected virtual IEnumerable GetRecords()
+        {
+            PXSelectBase<Province> query = new PXSelect<Province>(this._Graph);
+
+            PXSelectBase<Address> queryAdd = new PXSelect<Address, 
+                                            Where<Address.addressID, Equal<Current<LocationExtAddress.addressID>>>>(this._Graph);
+            var queryAddExt = PXCache<Address>.GetExtension<AddressExt>(queryAdd.SelectSingle());
+
+            query
+                .WhereAnd<
+                Where<Province.regionCode, Equal<Required<Province.regionCode>>>>();
+
+            return query.Select(queryAddExt.UsrCustRegion);
+        }
+        
+    }
+
+    public class CustRegion : PXCustomSelectorAttribute
+    {
+        public CustRegion() : base(typeof(PRegion.regionCode),
+            typeof(PRegion.regionName))
+         {
+            SubstituteKey = typeof(PRegion.regionName);
+            ValidateValue = false;
+         }
+
+        protected virtual IEnumerable GetRecords()
+        {
+            PXSelectBase<PRegion> query = new PXSelect<PRegion>(this._Graph);
+            return query.Select();
+        }
+    }
+
+    #endregion
+
+}]]></CDATA>
+</Graph>

@@ -1,0 +1,9 @@
+﻿<Table TableName="ARRegister">
+    <Column TableName="ARRegister" ColumnName="UsrRegion" ColumnType="int" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="ARRegister" ColumnName="UsrProvince" ColumnType="int" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="ARRegister" ColumnName="UsrCity" ColumnType="int" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="ARRegister" ColumnName="UsrSubCity" ColumnType="int" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="ARRegister" ColumnName="UsrBrgy" ColumnType="int" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="ARRegister" ColumnName="UsrZoneCode" ColumnType="int" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="ARRegister" ColumnName="UsrStrBldgNoUnitFlr" ColumnType="string" AllowNull="True" MaxLength="500" DecimalPrecision="2" DecimalLength="500" IsNewColumn="True" IsUnicode="True" />
+</Table>

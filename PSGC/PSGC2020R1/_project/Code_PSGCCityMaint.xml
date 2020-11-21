@@ -1,0 +1,108 @@
+﻿<Graph ClassName="PSGCCityMaint" Source="#CDATA" IsNew="True" FileType="NewGraph">
+    <CDATA name="Source"><![CDATA[using System;
+using System.Collections;
+using PX.Data;
+
+namespace PSGC
+{
+	public class PSGCCityMaint : PXGraph<PSGCCityMaint>
+	{
+        public PXSave<CityMunicipality> Save;
+        public PXCancel<CityMunicipality> Cancel;
+
+        [Serializable]
+        public class FilterTable : IBqlTable
+        {
+            public abstract class region : IBqlField { }
+            [PXInt()]
+            [PXUIField(DisplayName = "Region")]
+            [PXSelector(typeof(Search<PRegion.regionCode>), SubstituteKey = typeof(PRegion.regionName))]
+            public virtual int? Region { get; set; }
+
+            public abstract class province : IBqlField { }
+            [PXInt()]
+            [PXUIField(DisplayName = "Province")]
+            [PXSelector(typeof(Search<
+                Province.provinceCode,
+                Where<Province.regionCode, Equal<Current<FilterTable.region>>,
+                    Or<FilterTable.region, IsNotNull>>>), SubstituteKey = typeof(Province.provinceName))]
+
+            public virtual int? Province { get; set; }
+        }
+        public PXFilter<FilterTable> MasterView;
+        [PXImport(typeof(CityMunicipality))]
+        public PXSelect<CityMunicipality> AdditionalView;
+
+        #region IEnumerable
+
+        public virtual IEnumerable additionalView()
+        {
+            var filter = MasterView.Current;
+            var enabledAdd = AdditionalView.AllowInsert = (filter.Region != null && filter.Province != null) || filter.Region == 130000000;
+            PXSelectBase<CityMunicipality> query = new PXSelect<CityMunicipality>(this);
+
+            query
+                .WhereAnd<
+                Where<CityMunicipality.regionCode, Equal<Current<FilterTable.region>>>>();
+            if (filter.Province != null)
+            {
+                query.WhereAnd<Where<CityMunicipality.provinceCode, Equal<Current<FilterTable.province>>>>();
+            }
+
+            foreach (CityMunicipality list in query.Select())
+            {
+
+                if (filter.Region == 130000000 && list.ProvinceCode == null)
+                {
+                    yield return list;
+                }
+                else
+                {
+                    yield return list;
+                }
+            }
+            //return query.Select();
+        }
+
+        #endregion
+
+        #region EventHandler
+
+        public void CityMunicipality_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+            var row = e.Row as CityMunicipality;
+            if (row == null) return;
+            var mastCurrent = MasterView.Current;
+            var enabledField = (mastCurrent.Region != null && mastCurrent.Province != null) || mastCurrent.Region == 130000000;
+
+            PXUIFieldAttribute.SetEnabled(sender, row, false);
+            PXUIFieldAttribute.SetEnabled<CityMunicipality.cityMunCode>(sender, row, enabledField);
+            PXUIFieldAttribute.SetEnabled<CityMunicipality.cityMunName>(sender, row, enabledField);
+        }
+
+        public void CityMunicipality_RegionCode_FieldDefaulting(PXCache sender, PXFieldDefaultingEventArgs e)
+        {
+            var row = e.Row as CityMunicipality;
+            if (row == null) return;
+            var current = MasterView.Current;
+            if (current.Region != null)
+            {
+                sender.SetValueExt<CityMunicipality.regionCode>(row, current.Region);
+            }
+        }
+        public void CityMunicipality_ProvinceCode_FieldDefaulting(PXCache sender, PXFieldDefaultingEventArgs e)
+        {
+            var row = e.Row as CityMunicipality;
+            if (row == null) return;
+            var current = MasterView.Current;
+            if (current.Province != null)
+            {
+                sender.SetValueExt<CityMunicipality.provinceCode>(row, current.Province);
+            }
+        }
+
+        #endregion
+
+    }
+}]]></CDATA>
+</Graph>

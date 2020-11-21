@@ -1,0 +1,233 @@
+﻿<Page path="~/pages/ap/ap303000.aspx" ControlId="21" pageSource="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">
+    <PXFormView ID="DefAddress" ParentId="phG_tab_Items#0_DefAddress" TypeFullName="PX.Web.UI.PXFormView">
+        <Children Key="Template">
+            <AddItem>
+                <PXSelector TypeFullName="PX.Web.UI.PXSelector">
+                    <Prop Key="Virtual:ApplyStylesheetSkin" />
+                    <Prop Key="ID" Value="CstPXSelector4" />
+                    <Prop Key="DataField" Value="UsrRegion" />
+                    <Prop Key="CommitChanges" Value="True" />
+                    <Prop Key="AutoRefresh" Value="True" />
+                    <Prop Key="FilterByAllFields" Value="True" />
+                </PXSelector>
+            </AddItem>
+            <AddItem>
+                <PXSelector TypeFullName="PX.Web.UI.PXSelector">
+                    <Prop Key="Virtual:ApplyStylesheetSkin" />
+                    <Prop Key="ID" Value="CstPXSelector3" />
+                    <Prop Key="DataField" Value="UsrProvince" />
+                    <Prop Key="CommitChanges" Value="True" />
+                    <Prop Key="AutoRefresh" Value="True" />
+                    <Prop Key="FilterByAllFields" Value="True" />
+                </PXSelector>
+            </AddItem>
+            <AddItem>
+                <PXSelector TypeFullName="PX.Web.UI.PXSelector">
+                    <Prop Key="Virtual:ApplyStylesheetSkin" />
+                    <Prop Key="ID" Value="CstPXSelector2" />
+                    <Prop Key="DataField" Value="UsrCity" />
+                    <Prop Key="CommitChanges" Value="True" />
+                    <Prop Key="AutoRefresh" Value="True" />
+                    <Prop Key="FilterByAllFields" Value="True" />
+                </PXSelector>
+            </AddItem>
+            <AddItem>
+                <PXSelector TypeFullName="PX.Web.UI.PXSelector">
+                    <Prop Key="Virtual:ApplyStylesheetSkin" />
+                    <Prop Key="ID" Value="CstPXSelector6" />
+                    <Prop Key="DataField" Value="UsrSubCity" />
+                    <Prop Key="CommitChanges" Value="True" />
+                    <Prop Key="AutoRefresh" Value="True" />
+                    <Prop Key="FilterByAllFields" Value="True" />
+                </PXSelector>
+            </AddItem>
+            <AddItem>
+                <PXSelector TypeFullName="PX.Web.UI.PXSelector">
+                    <Prop Key="Virtual:ApplyStylesheetSkin" />
+                    <Prop Key="ID" Value="CstPXSelector1" />
+                    <Prop Key="DataField" Value="UsrBrgy" />
+                    <Prop Key="CommitChanges" Value="True" />
+                    <Prop Key="AutoRefresh" Value="True" />
+                    <Prop Key="FilterByAllFields" Value="True" />
+                </PXSelector>
+            </AddItem>
+            <AddItem>
+                <PXTextEdit TypeFullName="PX.Web.UI.PXTextEdit">
+                    <Prop Key="Virtual:ApplyStylesheetSkin" />
+                    <Prop Key="ID" Value="CstPXTextEdit5" />
+                    <Prop Key="DataField" Value="UsrStrBldgNoUnitFlr" />
+                    <Prop Key="CommitChanges" Value="True" />
+                </PXTextEdit>
+            </AddItem>
+            <AddItem>
+                <PXNumberEdit TypeFullName="PX.Web.UI.PXNumberEdit">
+                    <Prop Key="Virtual:ApplyStylesheetSkin" />
+                    <Prop Key="ID" Value="CstPXNumberEdit7" />
+                    <Prop Key="DataField" Value="UsrZoneCode" />
+                    <Prop Key="CommitChanges" Value="True" />
+                </PXNumberEdit>
+            </AddItem>
+            <PXTextEdit DataField="City" OriginalIndex="4" />
+        </Children>
+    </PXFormView>
+    <PXFormView ID="RemitAddress" ParentId="phG_tab_Items#1_DefLocationPayment_RemitAddress" TypeFullName="PX.Web.UI.PXFormView">
+        <Children Key="Template">
+            <AddItem>
+                <PXSelector TypeFullName="PX.Web.UI.PXSelector">
+                    <Prop Key="Virtual:ApplyStylesheetSkin" />
+                    <Prop Key="ID" Value="CstPXSelector11" />
+                    <Prop Key="DataField" Value="UsrRegion" />
+                    <Prop Key="AutoRefresh" Value="True" />
+                    <Prop Key="FilterByAllFields" Value="True" />
+                    <Prop Key="CommitChanges" Value="True" />
+                </PXSelector>
+            </AddItem>
+            <AddItem>
+                <PXSelector TypeFullName="PX.Web.UI.PXSelector">
+                    <Prop Key="Virtual:ApplyStylesheetSkin" />
+                    <Prop Key="ID" Value="CstPXSelector10" />
+                    <Prop Key="DataField" Value="UsrProvince" />
+                    <Prop Key="AutoRefresh" Value="True" />
+                    <Prop Key="FilterByAllFields" Value="True" />
+                    <Prop Key="CommitChanges" Value="True" />
+                </PXSelector>
+            </AddItem>
+            <AddItem>
+                <PXSelector TypeFullName="PX.Web.UI.PXSelector">
+                    <Prop Key="Virtual:ApplyStylesheetSkin" />
+                    <Prop Key="ID" Value="CstPXSelector9" />
+                    <Prop Key="DataField" Value="UsrCity" />
+                    <Prop Key="AutoRefresh" Value="True" />
+                    <Prop Key="FilterByAllFields" Value="True" />
+                    <Prop Key="CommitChanges" Value="True" />
+                </PXSelector>
+            </AddItem>
+            <AddItem>
+                <PXSelector TypeFullName="PX.Web.UI.PXSelector">
+                    <Prop Key="Virtual:ApplyStylesheetSkin" />
+                    <Prop Key="ID" Value="CstPXSelector13" />
+                    <Prop Key="DataField" Value="UsrSubCity" />
+                    <Prop Key="AutoRefresh" Value="True" />
+                    <Prop Key="FilterByAllFields" Value="True" />
+                    <Prop Key="CommitChanges" Value="True" />
+                </PXSelector>
+            </AddItem>
+            <AddItem>
+                <PXSelector TypeFullName="PX.Web.UI.PXSelector">
+                    <Prop Key="Virtual:ApplyStylesheetSkin" />
+                    <Prop Key="ID" Value="CstPXSelector8" />
+                    <Prop Key="DataField" Value="UsrBrgy" />
+                    <Prop Key="AutoRefresh" Value="True" />
+                    <Prop Key="FilterByAllFields" Value="True" />
+                    <Prop Key="CommitChanges" Value="True" />
+                </PXSelector>
+            </AddItem>
+            <AddItem>
+                <PXTextEdit TypeFullName="PX.Web.UI.PXTextEdit">
+                    <Prop Key="Virtual:ApplyStylesheetSkin" />
+                    <Prop Key="ID" Value="CstPXTextEdit12" />
+                    <Prop Key="DataField" Value="UsrStrBldgNoUnitFlr" />
+                    <Prop Key="CommitChanges" Value="True" />
+                </PXTextEdit>
+            </AddItem>
+            <AddItem>
+                <PXNumberEdit TypeFullName="PX.Web.UI.PXNumberEdit">
+                    <Prop Key="Virtual:ApplyStylesheetSkin" />
+                    <Prop Key="ID" Value="CstPXNumberEdit14" />
+                    <Prop Key="DataField" Value="UsrZoneCode" />
+                    <Prop Key="CommitChanges" Value="True" />
+                </PXNumberEdit>
+            </AddItem>
+            <PXTextEdit DataField="City" OriginalIndex="4" />
+        </Children>
+    </PXFormView>
+    <PXTextEdit DataField="City" ParentId="phG_tab_Items#1_DefLocationPayment_RemitAddress_edCity" TypeFullName="PX.Web.UI.PXTextEdit">
+        <Prop Key="Enabled" Value="False" />
+    </PXTextEdit>
+    <PXSelector DataField="State" ParentId="phG_tab_Items#1_DefLocationPayment_RemitAddress_edState" TypeFullName="PX.Web.UI.PXSelector">
+        <Prop Key="Enabled" Value="False" />
+    </PXSelector>
+    <PXFormView ID="DefLocation" ParentId="phG_tab_Items#2_DefLocation" TypeFullName="PX.Web.UI.PXFormView">
+        <Children Key="Template">
+            <AddItem>
+                <PXSelector TypeFullName="PX.Web.UI.PXSelector">
+                    <Prop Key="Virtual:ApplyStylesheetSkin" />
+                    <Prop Key="ID" Value="CstPXSelector18" />
+                    <Prop Key="DataField" Value="UsrCustRegion" />
+                    <Prop Key="CommitChanges" Value="True" />
+                    <Prop Key="AutoRefresh" Value="True" />
+                    <Prop Key="FilterByAllFields" Value="True" />
+                </PXSelector>
+            </AddItem>
+            <AddItem>
+                <PXSelector TypeFullName="PX.Web.UI.PXSelector">
+                    <Prop Key="Virtual:ApplyStylesheetSkin" />
+                    <Prop Key="ID" Value="CstPXSelector17" />
+                    <Prop Key="DataField" Value="UsrCustProvince" />
+                    <Prop Key="CommitChanges" Value="True" />
+                    <Prop Key="AutoRefresh" Value="True" />
+                    <Prop Key="FilterByAllFields" Value="True" />
+                </PXSelector>
+            </AddItem>
+            <AddItem>
+                <PXSelector TypeFullName="PX.Web.UI.PXSelector">
+                    <Prop Key="Virtual:ApplyStylesheetSkin" />
+                    <Prop Key="ID" Value="CstPXSelector16" />
+                    <Prop Key="DataField" Value="UsrCustCity" />
+                    <Prop Key="CommitChanges" Value="True" />
+                    <Prop Key="AutoRefresh" Value="True" />
+                    <Prop Key="FilterByAllFields" Value="True" />
+                </PXSelector>
+            </AddItem>
+            <AddItem>
+                <PXSelector TypeFullName="PX.Web.UI.PXSelector">
+                    <Prop Key="Virtual:ApplyStylesheetSkin" />
+                    <Prop Key="ID" Value="CstPXSelector19" />
+                    <Prop Key="DataField" Value="UsrCustSubCity" />
+                    <Prop Key="CommitChanges" Value="True" />
+                    <Prop Key="AutoRefresh" Value="True" />
+                    <Prop Key="FilterByAllFields" Value="True" />
+                </PXSelector>
+            </AddItem>
+            <AddItem>
+                <PXSelector TypeFullName="PX.Web.UI.PXSelector">
+                    <Prop Key="Virtual:ApplyStylesheetSkin" />
+                    <Prop Key="ID" Value="CstPXSelector15" />
+                    <Prop Key="DataField" Value="UsrCustBrgy" />
+                    <Prop Key="CommitChanges" Value="True" />
+                    <Prop Key="AutoRefresh" Value="True" />
+                    <Prop Key="FilterByAllFields" Value="True" />
+                </PXSelector>
+            </AddItem>
+            <AddItem>
+                <PXTextEdit TypeFullName="PX.Web.UI.PXTextEdit">
+                    <Prop Key="Virtual:ApplyStylesheetSkin" />
+                    <Prop Key="ID" Value="CstPXTextEdit20" />
+                    <Prop Key="DataField" Value="UsrStrBldgNoUnitFlr" />
+                    <Prop Key="CommitChanges" Value="True" />
+                </PXTextEdit>
+            </AddItem>
+            <AddItem>
+                <PXNumberEdit TypeFullName="PX.Web.UI.PXNumberEdit">
+                    <Prop Key="Virtual:ApplyStylesheetSkin" />
+                    <Prop Key="ID" Value="CstPXNumberEdit21" />
+                    <Prop Key="DataField" Value="UsrZoneCode" />
+                    <Prop Key="CommitChanges" Value="True" />
+                </PXNumberEdit>
+            </AddItem>
+            <PXTextEdit DataField="City" OriginalIndex="9" />
+        </Children>
+    </PXFormView>
+    <PXSelector DataField="State" ParentId="phG_tab_Items#2_DefLocation_edState" TypeFullName="PX.Web.UI.PXSelector">
+        <Prop Key="Enabled" Value="False" />
+    </PXSelector>
+    <PXTextEdit DataField="City" ParentId="phG_tab_Items#2_DefLocation_edCity" TypeFullName="PX.Web.UI.PXTextEdit">
+        <Prop Key="Enabled" Value="False" />
+    </PXTextEdit>
+    <PXTextEdit DataField="AddressLine1" ParentId="phG_tab_Items#2_DefLocation_edAddressLine1" TypeFullName="PX.Web.UI.PXTextEdit">
+        <Prop Key="Enabled" Value="False" />
+    </PXTextEdit>
+    <PXTextEdit DataField="AddressLine2" ParentId="phG_tab_Items#2_DefLocation_edAddressLine2" TypeFullName="PX.Web.UI.PXTextEdit">
+        <Prop Key="Enabled" Value="False" />
+    </PXTextEdit>
+</Page>

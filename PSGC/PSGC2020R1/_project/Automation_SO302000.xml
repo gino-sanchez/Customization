@@ -1,0 +1,10 @@
+﻿<Automation screen="SO302000">
+    <Fields ScreenID="SO302000">
+        <Field IsActive="True" FieldName="ADDRESSLINE1" DisableCondition="True" ObjectName="PX.OBJECTS.SO.SOSHIPMENTADDRESS" />
+        <Field IsActive="True" FieldName="ADDRESSLINE2" DisableCondition="True" ObjectName="PX.OBJECTS.SO.SOSHIPMENTADDRESS" />
+        <Field IsActive="True" FieldName="CITY" DisableCondition="True" ObjectName="PX.OBJECTS.SO.SOSHIPMENTADDRESS" />
+        <Field IsActive="True" FieldName="POSTALCODE" HideCondition="True" ObjectName="PX.OBJECTS.SO.SOSHIPMENTADDRESS" />
+        <Field IsActive="True" FieldName="STATE" DisableCondition="True" ObjectName="PX.OBJECTS.SO.SOSHIPMENTADDRESS" />
+        <Field IsActive="True" FieldName="USRZONECODE" DisableCondition="True" ObjectName="PX.OBJECTS.SO.SOSHIPMENTADDRESS" />
+    </Fields>
+</Automation>

@@ -1,0 +1,105 @@
+﻿<Graph ClassName="SubMunicipalityMaint" Source="#CDATA" IsNew="True" FileType="NewGraph">
+    <CDATA name="Source"><![CDATA[using System;
+using System.Collections;
+using System.Collections.Generic;
+using PX.Data;
+
+namespace PSGC
+{
+    [Serializable]
+    public class SubCityFilter : IBqlTable
+    {
+        public abstract class pRegion : IBqlField { }
+        [PXInt()]
+        [PXUIField(DisplayName = "Region")]
+        [PXSelector(typeof(Search<PRegion.regionCode>), SubstituteKey = typeof(PRegion.regionName))]
+        public virtual int? PRegion { get; set; }
+
+        public abstract class province : IBqlField { }
+        [PXInt()]
+        [PXUIField(DisplayName = "Province")]
+        [PXSelector(typeof(Search<
+            Province.provinceCode,
+            Where<Province.regionCode, Equal<Current<SubCityFilter.pRegion>>,
+                Or<SubCityFilter.pRegion, IsNotNull>>>), SubstituteKey = typeof(Province.provinceName))]
+        public virtual int? Province { get; set; }
+
+        public abstract class city : IBqlField { }
+        [PXInt()]
+        [PXUIField(DisplayName = "City")]
+        [PXSelector(typeof(Search<
+        CityMunicipality.cityMunCode,
+        Where2<Where<CityMunicipality.provinceCode, Equal<Current<SubCityFilter.province>>,
+            Or<Current<SubCityFilter.province>, IsNull>>,
+            And<Where<CityMunicipality.regionCode, Equal<Current<SubCityFilter.pRegion>>,
+                And<Current<SubCityFilter.pRegion>, IsNotNull>>>>>), SubstituteKey = typeof(CityMunicipality.cityMunName), ValidateValue = false)]
+        public virtual int? City { get; set; }
+    }
+	public class SubMunicipalityMaint : PXGraph<SubMunicipalityMaint>
+	{
+
+		public PXSave<SubMun> Save;
+		public PXCancel<SubMun> Cancel;
+        public PXFilter<SubCityFilter> SubCityFilters;
+        [PXImport(typeof(SubMun))]
+        public PXSelect<SubMun> SubCityView;
+
+
+        #region IEnumerable
+
+        public IEnumerable subCityView()
+        {
+            PXSelectBase<SubMun> query = new PXSelect<SubMun>(this);
+            
+            var filter = SubCityFilters.Current;
+            SubCityView.AllowInsert = filter.PRegion != null && filter.City != null;
+            query.WhereAnd<Where<SubMun.regionCode, Equal<Current<SubCityFilter.pRegion>>>>();
+
+            
+            if(filter.City != null)
+            {
+                query.WhereAnd<Where<SubMun.cityMunCode, Equal<Current<SubCityFilter.city>>>>();
+            }
+
+            return query.Select();
+        }
+
+        #endregion
+        #region Events
+
+        public void SubMun_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+            var row = e.Row as SubMun;
+            if (row == null) return;
+            var filter = SubCityFilters.Current;
+            PXUIFieldAttribute.SetEnabled(sender, row, false);
+            PXUIFieldAttribute.SetVisible<SubMun.districtCode>(sender, null, false);
+            PXUIFieldAttribute.SetEnabled<SubMun.subMunCode>(sender, row, filter.PRegion != null && filter.City != null);
+            PXUIFieldAttribute.SetEnabled<SubMun.subMunName>(sender, row, filter.PRegion != null && filter.City != null);
+        }
+
+        public void SubMun_CityMunCode_FieldDefaulting(PXCache sender, PXFieldDefaultingEventArgs e)
+        {
+            var row = e.Row as SubMun;
+            if (row == null) return;
+            var filter = SubCityFilters.Current;
+            if(filter.City != null)
+            {
+                sender.SetValueExt<SubMun.cityMunCode>(row, filter.City);
+            }
+        }
+        public void SubMun_RegionCode_FieldDefaulting(PXCache sender, PXFieldDefaultingEventArgs e)
+        {
+            var row = e.Row as SubMun;
+            if (row == null) return;
+            var filter = SubCityFilters.Current;
+            if(filter.PRegion != null)
+            {
+                sender.SetValueExt<SubMun.regionCode>(row, filter.PRegion);
+            }
+        }
+        #endregion
+
+    }
+}]]></CDATA>
+</Graph>

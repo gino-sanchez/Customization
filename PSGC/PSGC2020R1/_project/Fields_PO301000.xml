@@ -1,0 +1,14 @@
+﻿<Fields ScreenID="PO301000">
+    <Field IsActive="True" FieldName="ADDRESSLINE1" DisableCondition="True" ObjectName="PX.OBJECTS.PO.POREMITADDRESS" />
+    <Field IsActive="True" FieldName="ADDRESSLINE2" DisableCondition="True" ObjectName="PX.OBJECTS.PO.POREMITADDRESS" />
+    <Field IsActive="True" FieldName="CITY" DisableCondition="True" ObjectName="PX.OBJECTS.PO.POREMITADDRESS" />
+    <Field IsActive="True" FieldName="POSTALCODE" HideCondition="True" ObjectName="PX.OBJECTS.PO.POREMITADDRESS" />
+    <Field IsActive="True" FieldName="STATE" DisableCondition="True" ObjectName="PX.OBJECTS.PO.POREMITADDRESS" />
+    <Field IsActive="True" FieldName="USRZONECODE" DisableCondition="True" ObjectName="PX.OBJECTS.PO.POREMITADDRESS" />
+    <Field IsActive="True" FieldName="ADDRESSLINE1" DisableCondition="True" ObjectName="PX.OBJECTS.PO.POSHIPADDRESS" />
+    <Field IsActive="True" FieldName="ADDRESSLINE2" DisableCondition="True" ObjectName="PX.OBJECTS.PO.POSHIPADDRESS" />
+    <Field IsActive="True" FieldName="CITY" DisableCondition="True" ObjectName="PX.OBJECTS.PO.POSHIPADDRESS" />
+    <Field IsActive="True" FieldName="POSTALCODE" HideCondition="True" ObjectName="PX.OBJECTS.PO.POSHIPADDRESS" />
+    <Field IsActive="True" FieldName="STATE" DisableCondition="True" ObjectName="PX.OBJECTS.PO.POSHIPADDRESS" />
+    <Field IsActive="True" FieldName="USRCUSTZONECODE" DisableCondition="True" ObjectName="PX.OBJECTS.PO.POSHIPADDRESS" />
+</Fields>
