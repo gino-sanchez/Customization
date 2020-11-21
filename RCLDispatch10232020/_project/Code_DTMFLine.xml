@@ -1,0 +1,204 @@
+﻿<Graph ClassName="DTMFLine" Source="#CDATA" IsNew="True" FileType="NewDac">
+    <CDATA name="Source"><![CDATA[using System;
+using PX.Data;
+using PX.Objects.IN;
+using PX.Objects.EP;
+namespace Dispatch
+{
+  [Serializable]
+  public class DTMFLine : IBqlTable
+  {
+    #region RefNbr
+    [PXDBString(15, IsKey = true, IsUnicode = true, InputMask = "")]
+    [PXUIField(DisplayName = "Ref Nbr")]
+    [PXDBDefault(typeof(DTMFMaster.refNbr))]
+    [PXParent(typeof(Select<DTMFMaster,Where<DTMFMaster.refNbr,Equal<Current<refNbr>>>>))]
+    public virtual string RefNbr { get; set; }
+    public abstract class refNbr : PX.Data.BQL.BqlString.Field<refNbr> { }
+        #endregion
+
+    #region FlatChartQtyOut
+        [PXDBDecimal()]
+    [PXUIField(DisplayName = "Flat Chart Qty Out")]
+    public virtual Decimal? FlatChartQtyOut { get; set; }
+    public abstract class flatChartQtyOut : PX.Data.BQL.BqlDecimal.Field<flatChartQtyOut> { }
+    #endregion
+
+    #region FlatChartQtyIn
+    [PXDBDecimal()]
+    [PXUIField(DisplayName = "Flat Chart Qty In")]
+    public virtual Decimal? FlatChartQtyIn { get; set; }
+    public abstract class flatChartQtyIn : PX.Data.BQL.BqlDecimal.Field<flatChartQtyIn> { }
+    #endregion
+
+    #region PalletQtyOut
+    [PXDBDecimal()]
+    [PXUIField(DisplayName = "Pallet Qty Out")]
+    public virtual Decimal? PalletQtyOut { get; set; }
+    public abstract class palletQtyOut : PX.Data.BQL.BqlDecimal.Field<palletQtyOut> { }
+    #endregion
+
+    #region PalletQtyIn
+    [PXDBDecimal()]
+    [PXUIField(DisplayName = "Pallet Qty In")]
+    public virtual Decimal? PalletQtyIn { get; set; }
+    public abstract class palletQtyIn : PX.Data.BQL.BqlDecimal.Field<palletQtyIn> { }
+    #endregion
+
+    #region OdometerReadingOut
+    [PXDBDecimal()]
+    [PXUIField(DisplayName = "Odometer Reading Out")]
+    public virtual Decimal? OdometerReadingOut { get; set; }
+    public abstract class odometerReadingOut : PX.Data.BQL.BqlDecimal.Field<odometerReadingOut> { }
+    #endregion
+
+    #region OdometerReadingIn
+    [PXDBDecimal()]
+    [PXUIField(DisplayName = "Odometer Reading In")]
+    public virtual Decimal? OdometerReadingIn { get; set; }
+    public abstract class odometerReadingIn : PX.Data.BQL.BqlDecimal.Field<odometerReadingIn> { }
+    #endregion
+
+    #region OdometerReaderOut
+    [PXDBBool()]
+    [PXUIField(DisplayName = "Odometer Reader Out")]
+    public virtual bool? OdometerReaderOut { get; set; }
+    public abstract class odometerReaderOut : PX.Data.BQL.BqlBool.Field<odometerReaderOut> { }
+    #endregion
+
+    #region OdometerReaderIn
+    [PXDBBool()]
+    [PXUIField(DisplayName = "Odometer Reader In")]
+    public virtual bool? OdometerReaderIn { get; set; }
+    public abstract class odometerReaderIn : PX.Data.BQL.BqlBool.Field<odometerReaderIn> { }
+    #endregion
+
+    #region DetailsIn
+    [PXDBString(100, IsUnicode = true, InputMask = "")]
+    [PXUIField(DisplayName = "Details")]
+    public virtual string DetailsIn { get; set; }
+    public abstract class detailsIn : PX.Data.BQL.BqlString.Field<detailsIn> { }
+    #endregion
+
+    #region DetailsOut
+    [PXDBString(100, IsUnicode = true, InputMask = "")]
+    [PXUIField(DisplayName = "Details")]
+    public virtual string DetailsOut { get; set; }
+    public abstract class detailsOut : PX.Data.BQL.BqlString.Field<detailsOut> { }
+    #endregion
+
+    #region ActualDepartureDate
+    [PXDBDate()]
+    [PXUIField(DisplayName = "Actual Departure Date")]
+    public virtual DateTime? ActualDepartureDate { get; set; }
+    public abstract class actualDepartureDate : PX.Data.BQL.BqlDateTime.Field<actualDepartureDate> { }
+    #endregion
+
+    #region ActualDispatchOutTime
+    [PXDBTime(InputMask = "t", DisplayMask = "t")]
+    [PXUIField(DisplayName = "Actual Dispatch Out Time")]
+    
+    public virtual DateTime? ActualDispatchOutTime { get; set; }
+    public abstract class actualDispatchOutTime : PX.Data.BQL.BqlDateTime.Field<actualDispatchOutTime> { }
+    #endregion
+
+    #region ActualOutInspector
+    [PXDBInt()]
+    [PXUIField(DisplayName = "Actual Out Inspector")]
+    [EmployeeRaw]
+    public virtual int? ActualOutInspector { get; set; }
+    public abstract class actualOutInspector : PX.Data.BQL.BqlInt.Field<actualOutInspector> { }
+    #endregion
+
+    #region ActualReturnDate
+    [PXDBDate()]
+    [PXUIField(DisplayName = "Actual Return Date")]
+    public virtual DateTime? ActualReturnDate { get; set; }
+    public abstract class actualReturnDate : PX.Data.BQL.BqlDateTime.Field<actualReturnDate> { }
+    #endregion
+
+    #region ActualDispatchInTime
+    [PXDBTime(InputMask = "t" , DisplayMask = "t")]
+    [PXUIField(DisplayName = "Actual Dispatch In Time")]
+    public virtual DateTime? ActualDispatchInTime { get; set; }
+    public abstract class actualDispatchInTime : PX.Data.BQL.BqlDateTime.Field<actualDispatchInTime> { }
+    #endregion
+
+    #region ActualInInspector
+    [PXDBInt()]
+    [PXUIField(DisplayName = "Actual In Inspector" )]
+    [EmployeeRaw]
+    public virtual int? ActualInInspector { get; set; }
+    public abstract class actualInInspector : PX.Data.BQL.BqlInt.Field<actualInInspector> { }
+    #endregion
+
+    #region WithoutBackLoad
+    [PXDBBool()]
+    [PXUIField(DisplayName = "Without Back Load")]
+    [PXDefault(false,PersistingCheck = PXPersistingCheck.Nothing)]
+    public virtual bool? WithoutBackLoad { get; set; }
+    public abstract class withoutBackLoad : PX.Data.BQL.BqlBool.Field<withoutBackLoad> { }
+    #endregion
+
+    #region WithBackLoad
+    [PXDBBool()]
+    [PXUIField(DisplayName = "With Back Load")]
+    [PXDefault(false,PersistingCheck = PXPersistingCheck.Nothing)]
+    public virtual bool? WithBackLoad { get; set; }
+    public abstract class withBackLoad : PX.Data.BQL.BqlBool.Field<withBackLoad> { }
+    #endregion
+
+    #region BackLoadFormRefNo
+    [PXDBString(15, IsUnicode = true, InputMask = "")]
+    [PXUIField(DisplayName = "Back Load Form Ref No")]
+    public virtual string BackLoadFormRefNo { get; set; }
+    public abstract class backLoadFormRefNo : PX.Data.BQL.BqlString.Field<backLoadFormRefNo> { }
+    #endregion
+
+    #region Tstamp
+    [PXDBTimestamp()]
+    [PXUIField(DisplayName = "Tstamp")]
+    public virtual byte[] Tstamp { get; set; }
+    public abstract class tstamp : PX.Data.BQL.BqlByteArray.Field<tstamp> { }
+    #endregion
+
+    #region CreatedByID
+    [PXDBCreatedByID()]
+    public virtual Guid? CreatedByID { get; set; }
+    public abstract class createdByID : PX.Data.BQL.BqlGuid.Field<createdByID> { }
+    #endregion
+
+    #region CreatedByScreenID
+    [PXDBCreatedByScreenID()]
+    public virtual string CreatedByScreenID { get; set; }
+    public abstract class createdByScreenID : PX.Data.BQL.BqlString.Field<createdByScreenID> { }
+    #endregion
+
+    #region CreatedDateTime
+    [PXDBCreatedDateTime()]
+    [PXUIField(DisplayName = "Created Date Time")]
+    public virtual DateTime? CreatedDateTime { get; set; }
+    public abstract class createdDateTime : PX.Data.BQL.BqlDateTime.Field<createdDateTime> { }
+    #endregion
+
+    #region LastModifiedByID
+    [PXDBLastModifiedByID()]
+    public virtual Guid? LastModifiedByID { get; set; }
+    public abstract class lastModifiedByID : PX.Data.BQL.BqlGuid.Field<lastModifiedByID> { }
+    #endregion
+
+    #region LastModifiedByScreenID
+    [PXDBLastModifiedByScreenID()]
+    public virtual string LastModifiedByScreenID { get; set; }
+    public abstract class lastModifiedByScreenID : PX.Data.BQL.BqlString.Field<lastModifiedByScreenID> { }
+    #endregion
+
+    #region LastModifiedDateTime
+    [PXDBLastModifiedDateTime()]
+    [PXUIField(DisplayName = "Last Modified Date Time")]
+    public virtual DateTime? LastModifiedDateTime { get; set; }
+    public abstract class lastModifiedDateTime : PX.Data.BQL.BqlDateTime.Field<lastModifiedDateTime> { }
+    #endregion
+  }
+}]]></CDATA>
+</Graph>

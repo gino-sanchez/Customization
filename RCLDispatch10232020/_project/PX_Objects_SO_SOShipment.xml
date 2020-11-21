@@ -1,0 +1,8 @@
+﻿<DAC type="PX.Objects.SO.SOShipment">
+    <Field FieldName="UsrShippingType" TypeName="string" MapDbTable="SOShipment" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBString(10)]
+[PXUIField(DisplayName="Shipping Type")]
+using DispatchExtension;
+[DispatchAttrib.List]]]></CDATA>
+    </Field>
+</DAC>

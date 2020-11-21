@@ -1,0 +1,3 @@
+﻿<DAC type="PX.Objects.SO.SOAddress">
+    <Field FieldName="City" TypeName="string" OverrideClassName="PX.Objects.SO.SOAddress" StorageName="ExistingColumn" />
+</DAC>

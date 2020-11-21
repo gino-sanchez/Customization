@@ -1,0 +1,44 @@
+﻿<ScreenWithRights>
+    <data-set>
+        <relations format-version="3" relations-version="20160101" main-table="SiteMap">
+            <link from="RolesInCache (ScreenID)" to="SiteMap (ScreenID)" />
+            <link from="RolesInGraph (ScreenID)" to="SiteMap (ScreenID)" />
+            <link from="RolesInMember (ScreenID)" to="SiteMap (ScreenID)" />
+            <link from="Roles (Rolename, ApplicationName)" to="RolesInCache (Rolename, ApplicationName)" type="FromMaster" updateable="False" />
+            <link from="Roles (Rolename, ApplicationName)" to="RolesInGraph (Rolename, ApplicationName)" type="FromMaster" updateable="False" />
+            <link from="Roles (Rolename, ApplicationName)" to="RolesInMember (Rolename, ApplicationName)" type="FromMaster" updateable="False" />
+        </relations>
+        <layout>
+            <table name="SiteMap">
+                <table name="RolesInCache" uplink="(ScreenID) = (ScreenID)" />
+                <table name="RolesInGraph" uplink="(ScreenID) = (ScreenID)" />
+                <table name="RolesInMember" uplink="(ScreenID) = (ScreenID)" />
+            </table>
+            <table name="Roles" />
+        </layout>
+        <data>
+            <SiteMap>
+                <row Position="10" Title="Sales Orders" Url="~/Pages/SO/SO301000.aspx" Expanded="0" IsFolder="0" ScreenID="SO301000" NodeID="047e4dca-ffbb-4eeb-8e4a-681be8dcc7ba" ParentID="00000000-0000-0000-0000-000000000000">
+                    <RolesInCache Cachetype="PX.Objects.SO.SOOrder" Rolename="Dispatch" ApplicationName="/" Accessrights="3" />
+                    <RolesInCache Cachetype="PX.Objects.SO.SOOrder" Rolename="Administrator" ApplicationName="/" Accessrights="3" />
+                    <RolesInGraph Rolename="Wiki Author" ApplicationName="/" Accessrights="0" />
+                    <RolesInGraph Rolename="Wiki Admin" ApplicationName="/" Accessrights="0" />
+                    <RolesInGraph Rolename="Internal User" ApplicationName="/" Accessrights="0" />
+                    <RolesInGraph Rolename="Dispatch" ApplicationName="/" Accessrights="3" />
+                    <RolesInGraph Rolename="Data Privacy Controller" ApplicationName="/" Accessrights="1" />
+                    <RolesInGraph Rolename="Administrator" ApplicationName="/" Accessrights="4" />
+                    <RolesInMember Cachetype="PX.Objects.SO.SOOrder" Membername="DispatchDD" Rolename="Dispatch" ApplicationName="/" Accessrights="2" />
+                    <RolesInMember Cachetype="PX.Objects.SO.SOOrder" Membername="DispatchDD" Rolename="Administrator" ApplicationName="/" Accessrights="2" />
+                </row>
+            </SiteMap>
+            <Roles>
+                <row Rolename="Dispatch" ApplicationName="/" Descr="Dispatch User" Guest="0" />
+                <row Rolename="Administrator" ApplicationName="/" Descr="System Administrator" Guest="0" />
+                <row Rolename="Wiki Author" ApplicationName="/" Descr="Role provides access rights for creating Wiki articles" Guest="0" />
+                <row Rolename="Wiki Admin" ApplicationName="/" Descr="Wiki Administrator to set other users access rights to Wiki" Guest="0" />
+                <row Rolename="Internal User" ApplicationName="/" Descr="Allows the user to change personal  settings, and view Help" Guest="0" />
+                <row Rolename="Data Privacy Controller" ApplicationName="/" Descr="Data Privacy Controller" Guest="0" />
+            </Roles>
+        </data>
+    </data-set>
+</ScreenWithRights>

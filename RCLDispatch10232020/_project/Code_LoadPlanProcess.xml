@@ -1,0 +1,891 @@
+﻿<Graph ClassName="LoadPlanProcess" Source="#CDATA" IsNew="True" FileType="NewGraph">
+    <CDATA name="Source"><![CDATA[using System;
+using System.Collections;
+using System.Collections.Generic;
+using PX.Data;
+using PX.Objects.CS;
+using PX.Objects.IN;
+using PX.Objects.SO;
+using DispatchSetup;
+using PL;
+using System.Linq;
+using PX.Objects.CR;
+using PX.Objects.AR;
+using DispatchExtension;
+
+namespace Dispatch
+{
+    public class Status
+    {
+        public const string Confirmed = "C";
+        public const string NotSet = "N";
+        public class confirmed : Constant<string>
+        {
+            public confirmed() : base(Confirmed) { }
+        }
+        public class notSet : Constant<string>
+        {
+            public notSet() : base(NotSet) { }
+        }
+        //this is Gino
+    }
+
+    public class FilterPercent
+    {
+        public const Decimal Eighty = 0.8m;
+        public const Decimal Onehundred = 1;
+
+        public class eighty : Constant<Decimal>
+        {
+            public eighty() : base(Eighty) { }
+        }
+        public class onehundred : Constant<Decimal>
+        {
+            public onehundred() : base(Onehundred) { }
+        }
+    }
+    #region UnboundFilter
+    [Serializable]
+    public partial class FilterLoadPlan : IBqlTable
+    {
+        #region DeliveryDate
+
+        public abstract class deliveryDateFrom : IBqlField
+        {
+        }
+        [PXDate]
+        [PXUIField(DisplayName = "Delivery Date From")]
+        public virtual DateTime? DeliveryDateFrom { get; set; }
+
+        public abstract class deliveryDateTo : IBqlField { }
+        [PXDate]
+        [PXUIField(DisplayName = "Delivery Date To")]
+        public virtual DateTime? DeliveryDateTo { get; set; }
+
+
+        #endregion
+        #region Zone
+        public abstract class zoneID : IBqlField
+        {
+        }
+        [PXString(20)]
+        [PXUIField(DisplayName = "Zone")]
+        public virtual string ZoneID { get; set; }
+        #endregion
+        #region TruckID
+        public abstract class truckID : IBqlField
+        {
+        }
+        [PXInt()]
+        [PXUIField(DisplayName = "Truck")]
+        [PXSelector(typeof(Search<
+            Truck.truckID,
+            Where<Truck.status, Equal<TruckStatus.active>>>),
+                typeof(Truck.truckID), typeof(Truck.truckCD), typeof(Truck.driverID), typeof(Truck.truckCapacityCMB), typeof(Truck.truckCapacityKGS), SubstituteKey = typeof(Truck.truckCD))]
+        public virtual int? TruckID { get; set; }
+        #endregion
+        #region DriverName
+        public abstract class driverName : IBqlField { }
+        [PXString(30)]
+        [PXUIField(DisplayName = "Driver Name", Enabled = false)]
+        public virtual string DriverName { get; set; }
+        #endregion
+        #region ConfirmedStat
+        public abstract class confirmedStat : IBqlField { }
+        [PXString(2)]
+        [PXUIField(DisplayName = "Status")]
+        [PXUnboundDefault(Status.NotSet)]
+        public virtual string ConfirmedStat { get; set; }
+        #endregion
+        #region Warehouse
+        public abstract class warehouse : IBqlField { }
+        [PXInt]
+        [PXUIField(DisplayName = "Warehouse")]
+        [PXSelector(typeof(Search<INSite.siteID>), typeof(INSite.siteCD), SubstituteKey = typeof(INSite.siteCD))]
+        public virtual int? Warehouse { get; set; }
+        #endregion
+        #region TruckCapacity
+        public abstract class currentCapacityKGS : IBqlField { }
+        [PXDecimal]
+        [PXUIField(DisplayName = "Current Capacity KGS", Enabled = false)]
+        public virtual Decimal? CurrentCapacityKGS { get; set; }
+        public abstract class totalTruckCapacityKGS : IBqlField { }
+        [PXDecimal]
+        [PXUIField(DisplayName = "Total Truck Capacity KGS", Enabled = false)]
+        public virtual Decimal? TotalTruckCapacityKGS { get; set; }
+        public abstract class remTruckBalKGS : IBqlField { }
+        [PXDecimal]
+        [PXUIField(DisplayName = "Remaining Truck Balance KGS", Enabled = false)]
+        public virtual Decimal? RemTruckBalKGS { get; set; }
+        public abstract class currentCapacityCBM : IBqlField { }
+        [PXDecimal]
+        [PXUIField(DisplayName = "Current Capacity CBM", Enabled = false)]
+        public virtual Decimal? CurrentCapacityCBM { get; set; }
+        #endregion
+        #region Show80%
+        public abstract class showEightyPercent : IBqlField { }
+        [PXBool]
+        [PXUIField(DisplayName = "Show 80% Picked")]
+        [PXDefault(false, PersistingCheck = PXPersistingCheck.Nothing)]
+        public virtual bool? ShowEightyPercent { get; set; }
+        #endregion
+        #region Show100%
+        public abstract class showOneHundredPercent : IBqlField { }
+        [PXBool]
+        [PXUIField(DisplayName = "Show 100% Picked")]
+        [PXDefault(false, PersistingCheck = PXPersistingCheck.Nothing)]
+        public virtual bool? ShowOneHundredPercent { get; set; }
+        #endregion
+        #region SO #
+        public abstract class soNumber : IBqlField { }
+        [PXString(15)]
+        [PXUIField(DisplayName = "Order No.")]
+        [PXSelector(typeof(Search5<
+            SOOrder.orderNbr,
+            LeftJoin<SOLine,
+                On<SOLine.orderNbr,Equal<SOOrder.orderNbr>,
+                And<SOLine.orderType,Equal<SOOrder.orderType>>>,
+            LeftJoin<SOOrderType,
+                On<SOOrderType.orderType,Equal<SOOrder.orderType>>,
+            LeftJoin<ARTran,
+                On<ARTran.sOOrderType,Equal<SOLine.orderType>,
+                And<ARTran.sOOrderNbr,Equal<SOLine.orderNbr>,
+                And<ARTran.sOOrderLineNbr,Equal<SOLine.lineNbr>>>>,
+            LeftJoin<ARInvoice,
+                On<ARInvoice.docType,Equal<ARTran.tranType>,
+                And<ARInvoice.refNbr,Equal<ARTran.refNbr>>>>>>>,
+            Where2<
+                    Where<SOOrder.status, Equal<SOOrderStatus.open>,
+                        Or<SOOrder.status, Equal<SOOrderStatus.backOrder>>>,
+                    And<
+                        Where<SOLine.openQty, Greater<decimal0>,
+                            And<SOLineExt.usrAvailableLoadQty, Greater<decimal0>,
+                            And<SOLineExt.usrConfirmShipment, Equal<Attrib.cwStore>,
+                            And2<Where<SOOrderTypeExt.usrDispatch, Equal<True>>,
+                            And2<Where<SOOrder.requestDate, GreaterEqual<Current<FilterLoadPlan.deliveryDateFrom>>, Or<Current<FilterLoadPlan.deliveryDateFrom>, IsNull>>,
+                            And2<Where<SOOrder.requestDate, LessEqual<Current<FilterLoadPlan.deliveryDateTo>>, Or<Current<FilterLoadPlan.deliveryDateTo>, IsNull>>,
+                            And2<Where<SOLine.siteID, Equal<Current<FilterLoadPlan.warehouse>>, Or<Current<FilterLoadPlan.warehouse>, IsNull>>,
+                            And2<Where<SOOrder.customerID, Equal<Current<FilterLoadPlan.customerID>>, Or<Current<FilterLoadPlan.customerID>, IsNull>>,
+                            And<Where<ARInvoice.refNbr, Equal<Current<FilterLoadPlan.siNumber>>, Or<Current<FilterLoadPlan.siNumber>, IsNull>>>>>>>>>>>>>,
+            Aggregate<
+                GroupBy<SOOrder.orderNbr,
+                GroupBy<SOOrder.orderType>>>>))]
+        public virtual string SONumber { get; set; }
+        #endregion
+        #region SI #
+        public abstract class siNumber : IBqlField { }
+        [PXString(15)]  
+        [PXUIField(DisplayName = "Invoice No.")]
+        [PXSelector(typeof(Search5<
+            ARInvoice.refNbr,
+            LeftJoin<ARTran,
+                On<ARTran.refNbr,Equal<ARInvoice.refNbr>,
+                And<ARTran.tranType,Equal<ARInvoice.docType>>>,
+            LeftJoin<SOLine,
+                On<SOLine.orderNbr,Equal<ARTran.sOOrderNbr>,
+                And<SOLine.orderType,Equal<ARTran.sOOrderType>,
+                And<SOLine.lineNbr,Equal<ARTran.sOOrderLineNbr>>>>,
+            LeftJoin<SOOrder,
+                On<SOOrder.orderNbr,Equal<SOLine.orderNbr>,
+                And<SOLine.orderType,Equal<SOOrder.orderType>>>,
+            LeftJoin<SOOrderType,
+                On<SOOrderType.orderType,Equal<SOOrder.orderType>>>>>>,
+            Where2<
+                    Where<SOOrder.status, Equal<SOOrderStatus.open>,
+                        Or<SOOrder.status, Equal<SOOrderStatus.backOrder>>>,
+                    And<
+                        Where<SOLine.openQty, Greater<decimal0>,
+                            And<SOLineExt.usrAvailableLoadQty, Greater<decimal0>,
+                            And<SOLineExt.usrConfirmShipment, Equal<Attrib.cwStore>,
+                            And2<Where<SOOrderTypeExt.usrDispatch, Equal<True>>,
+                                And2<Where<SOOrder.requestDate, GreaterEqual<Current<FilterLoadPlan.deliveryDateFrom>>, Or<Current<FilterLoadPlan.deliveryDateFrom>, IsNull>>,
+                                And2<Where<SOOrder.requestDate, LessEqual<Current<FilterLoadPlan.deliveryDateTo>>, Or<Current<FilterLoadPlan.deliveryDateTo>, IsNull>>,
+                                And2<Where<SOLine.siteID, Equal<Current<FilterLoadPlan.warehouse>>, Or<Current<FilterLoadPlan.warehouse>, IsNull>>,
+                                And2<Where<SOOrder.orderNbr, Equal<Current<FilterLoadPlan.soNumber>>, Or<Current<FilterLoadPlan.soNumber>, IsNull>>,
+                                And<Where<SOOrder.customerID, Equal<Current<FilterLoadPlan.customerID>>, Or<Current<FilterLoadPlan.customerID>, IsNull>>>>>>>>>>>>>,
+            Aggregate<
+                GroupBy<ARInvoice.refNbr,
+                GroupBy<ARInvoice.docType>>>>))]
+        public virtual string SINumber { get; set; }
+        #endregion
+        #region CustomerLocation
+        public abstract class customerLocationID : PX.Data.BQL.BqlInt.Field<customerLocationID> { }
+        [PXInt()]
+        [PXUIField(DisplayName = "Customer Location")]
+        [PXSelector(typeof(Search<Location.locationID,Where<Location.bAccountID,Equal<Current<FilterLoadPlan.customerID>>>>),SubstituteKey = typeof(Location.locationCD),DescriptionField = typeof(Location.descr))]
+        public virtual int? CustomerLocationID { get; set; }
+        #endregion
+        #region CustomerName
+        public abstract class customerID : PX.Data.BQL.BqlInt.Field<customerID> { }
+        [PXInt()]
+        [PXUIField(DisplayName = "Customer Name")]
+        [PXSelector(typeof(Search5<
+            Customer.bAccountID,
+            LeftJoin<SOOrder,
+                On<SOOrder.customerID,Equal<Customer.bAccountID>>,
+            LeftJoin<SOLine,
+                On<SOLine.orderType,Equal<SOOrder.orderType>,
+                And<SOLine.orderNbr,Equal<SOOrder.orderNbr>>>,
+            LeftJoin<ARTran,
+                On<ARTran.sOOrderType,Equal<SOOrder.orderType>,
+                And<ARTran.sOOrderNbr,Equal<SOOrder.orderNbr>>>,
+            LeftJoin<ARInvoice,
+                On<ARInvoice.docType,Equal<ARTran.tranType>,
+                And<ARInvoice.refNbr,Equal<ARTran.refNbr>>>,
+            LeftJoin<SOOrderType,
+                On<SOOrderType.orderType,Equal<SOOrder.orderType>>>>>>>,
+            Where2<
+                    Where<SOOrder.status, Equal<SOOrderStatus.open>,
+                        Or<SOOrder.status, Equal<SOOrderStatus.backOrder>>>,
+                    And<
+                        Where<SOLine.openQty, Greater<decimal0>,
+                            And<SOLineExt.usrAvailableLoadQty, Greater<decimal0>,
+                            And<SOLineExt.usrConfirmShipment,Equal<Attrib.cwStore>,
+                            And2<Where<SOOrderTypeExt.usrDispatch,Equal<True>>,
+                            And2<Where<SOOrder.requestDate,GreaterEqual<Current<FilterLoadPlan.deliveryDateFrom>>,Or<Current<FilterLoadPlan.deliveryDateFrom>,IsNull>>,
+                            And2<Where<SOOrder.requestDate,LessEqual<Current<FilterLoadPlan.deliveryDateTo>>,Or<Current<FilterLoadPlan.deliveryDateTo>,IsNull>>,
+                            And2<Where<SOLine.siteID,Equal<Current<FilterLoadPlan.warehouse>>,Or<Current<FilterLoadPlan.warehouse>,IsNull>>,
+                            And2<Where<SOOrder.orderNbr,Equal<Current<FilterLoadPlan.soNumber>>,Or<Current<FilterLoadPlan.soNumber>,IsNull>>,
+                            And<Where<ARInvoice.refNbr,Equal<Current<FilterLoadPlan.siNumber>>,Or<Current<FilterLoadPlan.siNumber>,IsNull>>>>>>>>>>>>>,
+            Aggregate<
+                GroupBy<Customer.bAccountID>>>),typeof(Customer.acctCD),typeof(Customer.acctName), SubstituteKey = typeof(Customer.acctCD),DescriptionField = typeof(Customer.acctName))]
+        public virtual int? CustomerID { get; set; }
+        #endregion
+        #region Total Truck Capacity
+        public abstract class totalTruckCapacityCBM : IBqlField { }
+        [PXDecimal]
+        [PXUIField(DisplayName = "Total Truck Capacity CBM", Enabled = false)]
+        public virtual Decimal? TotalTruckCapacityCBM { get; set; }
+
+        public abstract class remTruckBalCBM : IBqlField { }
+        [PXDecimal]
+        [PXUIField(DisplayName = "Remaining Truck Balance CBM", Enabled = false)]
+        public virtual Decimal? RemTruckBalCBM { get; set; }
+        #endregion
+    }
+    #endregion
+    public class LoadPlanProcess : PXGraph<LoadPlanProcess>
+    {
+        #region Selects
+        public PXSetup<DispatchNumberingSetup> DispatchCurrent;
+        public PXCancel<FilterLoadPlan> Cancel;
+
+
+        public PXSelect<
+            Truck,
+            Where<Truck.truckID, Equal<Current<FilterLoadPlan.truckID>>>>
+            Trucks;
+        public PXSelectJoin<
+            SOOrder,
+            LeftJoin<ARTran,
+                On<ARTran.sOOrderNbr, Equal<SOOrder.orderNbr>,
+                And<ARTran.sOOrderType, Equal<SOOrder.orderType>>>,
+            LeftJoin<ARInvoice,
+                On<ARInvoice.refNbr, Equal<ARTran.refNbr>,
+                And<ARInvoice.docType, Equal<ARTran.tranType>>>>>>
+            SplitOrder;
+        public PXFilter<FilterLoadPlan> LoadPlan;
+        [PXFilterable()]
+        public PXFilteredProcessingJoin<
+            SOLine,FilterLoadPlan,
+            InnerJoin<SOOrder,
+                On<SOOrder.orderType, Equal<SOLine.orderType>,
+                And<SOOrder.orderNbr, Equal<SOLine.orderNbr>>>>>
+            LoadPlanProcessing;
+
+        #endregion
+        #region IEnumerable
+        public virtual IEnumerable loadPlanProcessing()
+        {
+            FilterLoadPlan filter = LoadPlan.Current;
+            
+            foreach (SOOrder order in SplitOrder.Select())
+            {
+                if (order.Selected != false)
+                {
+
+                    foreach (PXResult<SOLine, SOOrder, InventoryItem> line in PXSelectJoin<
+                        SOLine,
+                        LeftJoin<SOOrder, 
+                            On<SOOrder.orderType, Equal<SOLine.orderType>, 
+                            And<SOOrder.orderNbr, Equal<SOLine.orderNbr>>>,
+                        LeftJoin<InventoryItem,
+                            On<InventoryItem.inventoryID, Equal<SOLine.inventoryID>>>>,
+                        Where<SOLine.orderNbr, Equal<Required<SOLine.orderNbr>>,
+                            And<SOLine.orderType, Equal<Required<SOLine.orderType>>,
+                            And2<
+                                Where<SOLine.siteID, Equal<Current<FilterLoadPlan.warehouse>>,
+                                    Or<Current<FilterLoadPlan.warehouse>, IsNull>>,
+                                And<Where<InventoryItem.stkItem, Equal<True>,
+                                    And2<
+                                        Where<SOLine.openQty, Greater<decimal0>,
+                                            And<SOLineExt.usrAvailableLoadQty,Greater<decimal0>>>,
+                                        And<
+                                            Where<SOLineExt.usrConfirmShipment, Equal<Attrib.cwStore>>>>>>>>>>
+                        .Select(this, order.OrderNbr, order.OrderType))
+                    {
+                        PXResult<SOLine, SOOrder> res = line;
+
+                        yield return res;
+
+                    }
+                }
+            }
+            
+        }
+        protected IEnumerable loadPlan()
+        {
+
+            FilterLoadPlan filter = LoadPlan.Current;
+            filter.CurrentCapacityCBM = 0;
+            filter.CurrentCapacityKGS = 0;
+
+            foreach (SOLine demand in this.LoadPlanProcessing.Cache.Updated)
+            {
+                var lineExt = PXCache<SOLine>.GetExtension<SOLineExt>(demand);
+                if (lineExt.UsrSelected == true)
+                {
+                    filter.CurrentCapacityKGS += lineExt.UsrTotalKgs ?? 0m;
+                    filter.CurrentCapacityCBM += lineExt.UsrTotalCBM ?? 0m;
+                }
+            }
+            filter.RemTruckBalCBM = filter.TotalTruckCapacityCBM - filter.CurrentCapacityCBM;
+            filter.RemTruckBalKGS = ((filter.TotalTruckCapacityKGS * (decimal)0.20) + (filter.TotalTruckCapacityKGS)) - filter.CurrentCapacityKGS;
+            yield return filter;
+        }
+
+        protected IEnumerable splitOrder()
+        {
+            FilterLoadPlan filter = LoadPlan.Current;
+            var disp = DispatchCurrent.Current;
+               
+                    PXSelectBase<SOOrder> query = new PXSelectJoin<SOOrder,
+                    LeftJoin<SOLine, On<SOLine.orderNbr, Equal<SOOrder.orderNbr>, And<SOLine.orderType, Equal<SOOrder.orderType>>>,
+                    LeftJoin<ARTran, On<ARTran.sOOrderNbr, Equal<SOLine.orderNbr>, And<ARTran.sOOrderNbr, Equal<SOLine.orderNbr>, And<ARTran.sOOrderLineNbr, Equal<SOLine.lineNbr>>>>,
+                    LeftJoin<ARInvoice, On<ARInvoice.docType, Equal<ARTran.tranType>, And<ARInvoice.refNbr, Equal<ARTran.refNbr>>>,
+                    LeftJoin<SOOrderType, On<SOOrderType.orderType, Equal<SOOrder.orderType>>>>>>,
+                    Where2<
+                        Where<SOOrder.status, Equal<SOOrderStatus.open>,
+                            Or<SOOrder.status, Equal<SOOrderStatus.backOrder>>>,
+                        And2<
+                            Where<SOLine.openQty, Greater<decimal0>,
+                                And<SOLineExt.usrAvailableLoadQty,Greater<decimal0>>>,
+                            And2<
+                                Where<SOLineExt.usrConfirmShipment, Equal<Attrib.cwStore>>,
+                                And<Where<SOOrderTypeExt.usrDispatch, Equal<True>>>>>>>(this);
+            if (filter.DeliveryDateFrom != null && filter.DeliveryDateTo != null)
+            {
+                query.WhereAnd<Where2<Where<SOLineExt.usrForeCastDate,GreaterEqual<Current<FilterLoadPlan.deliveryDateFrom>>>,And<Where<SOLineExt.usrForeCastDate,LessEqual<Current<FilterLoadPlan.deliveryDateTo>>>>>>();
+            }
+            if (filter.SONumber != null)
+            {
+                query
+                    .WhereAnd<
+                    Where<SOOrder.orderNbr, Equal<Current<FilterLoadPlan.soNumber>>>>();
+            }
+            if (filter.Warehouse != null)
+            {
+                query
+                    .WhereAnd<
+                    Where<SOLine.siteID, Equal<Current<FilterLoadPlan.warehouse>>>>();
+            }
+            if(filter.CustomerID != null)
+            {
+                    query.WhereAnd<Where<SOOrder.customerID, Equal<Current<FilterLoadPlan.customerID>>>>();
+            }
+            if(filter.CustomerLocationID != null)
+            {
+                    query.WhereAnd<Where<SOOrder.customerLocationID,Equal<Current<FilterLoadPlan.customerLocationID>>>>();
+            }
+
+            List<SOOrder> myList = new List<SOOrder>();
+            var groupedList = myList.GroupBy(u => u);
+            foreach (SOOrder myOrders in query.Select())
+            {
+                var myOrdersExt = PXCache<SOOrder>.GetExtension<SOOrderExt>(myOrders);
+                    myList.Add(myOrders);
+            }
+            foreach (var grp in groupedList)
+            {
+                foreach (SOOrder order in grp)
+                {
+                    var orderExt = PXCache<SOOrder>.GetExtension<SOOrderExt>(order);
+
+                    if (filter.SINumber != null)
+                    {
+                        if (filter.SINumber == orderExt.UsrInvoiceNbr)
+                        {
+                            yield return order;
+                            break;
+                        }
+                    }
+                    else
+                    if (filter.ShowEightyPercent == true)
+                    {
+                        if ((orderExt.UsrPickQty / order.OrderQty) * 100 >= 80m)
+                        {
+                            yield return order;
+                            break;
+                        }
+
+                    }
+                    else if (filter.ShowOneHundredPercent == true)
+                    {
+                        if ((orderExt.UsrPickQty / order.OrderQty) * 100 >= 100m)
+                        {
+                            yield return order;
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        yield return order;
+                        break;
+                    }
+                }
+            }
+            
+        }
+        #endregion
+
+        #region Method
+        public static void LoadProcess(List<SOLine> lines, FilterLoadPlan filter,LoadPlanProcess thisGraph, DispatchNumberingSetup dispatchSetup)
+        {
+            var globalError = false;
+            LPLoadPlanSplit splitLoad = PXSelect<LPLoadPlanSplit>.Select(thisGraph);
+            
+            
+
+            if (filter.TruckID == null)
+            {
+                globalError = true;
+                throw new PXException("Truck cannot be empty");
+            }
+            if(dispatchSetup.RequireInvPay == true)
+            {
+                foreach(SOLine line in lines)
+                {
+                    ARTran select = PXSelectJoin<
+                        ARTran,
+                        InnerJoin<ARInvoice,
+                            On<ARInvoice.docType, Equal<ARTran.tranType>,
+                            And<ARTran.refNbr, Equal<ARInvoice.refNbr>>>>,
+                        Where<ARTran.sOOrderType, Equal<Required<ARTran.sOOrderType>>,
+                            And<ARTran.sOOrderNbr, Equal<Required<ARTran.sOOrderNbr>>, 
+                            And<ARTran.sOOrderLineNbr, Equal<Required<ARTran.sOOrderLineNbr>>, 
+                            And<Where<ARInvoice.status, Equal<ARDocStatus.closed>>>>>>>
+                        .Select(thisGraph, line.OrderType, line.OrderNbr, line.LineNbr);
+                    if (select == null)
+                    {
+                        globalError = true;
+                        PXProcessing.SetError<SOLine>(lines.IndexOf(line), "Order Nbr {0} needs to be settled on Payments" + line.OrderNbr);
+                    }
+                }
+            }
+            if (globalError)
+            {
+                throw new PXException("There are orders that needs to be settled on Payments and Application");
+            }
+                LoadPlanTicketEntry graph = PXGraph.CreateInstance<LoadPlanTicketEntry>();
+                var lpLoadPlan = graph.LoadPlanMaster.Insert(new LPLoadPlanMaster()
+                {
+                    DocDate = graph.Accessinfo.BusinessDate,
+                    TruckCapacityCBM = filter.TotalTruckCapacityCBM,
+                    TruckCapacityKGS = filter.TotalTruckCapacityKGS,
+                    ExcessTruckKGS = filter.RemTruckBalKGS,
+                    ForecastDate = DateTime.Now
+
+                });
+                graph.LoadPlanMaster.Cache.SetValueExt<LPLoadPlanMaster.truckID>(lpLoadPlan, filter.TruckID);
+                /*JOHN*/
+                var filterExt = PXCache<FilterLoadPlan>.GetExtension<DispatchExtension.FilterLoadPlanExt>(filter);
+                graph.LoadPlanMaster.Cache.SetValueExt<DispatchExtension.LPLoadPlanMasterExt.usrContainerNo>(lpLoadPlan, filterExt.ContainerNo);
+                /*END JOHN*/
+
+            foreach (SOLine line in lines)
+                {
+
+                    PLPickListLine pickLine = PXSelectJoin<PLPickListLine,
+                    LeftJoin<PLPickList,On<PLPickList.pickListNbr,Equal<PLPickListLine.pickListNbr>>>, Where<PLPickListLine.sOOrderNbr,Equal<Required<PLPickListLine.sOOrderNbr>>,
+                        And<PLPickListLine.sOOrderType,Equal<Required<PLPickListLine.sOOrderType>>,And<PLPickListLine.sOLineNbr,Equal<Required<PLPickListLine.sOLineNbr>>,
+                        And<PLPickList.status,Equal<pickListStatus.released>>>>>>.Select(thisGraph,line.OrderNbr,line.OrderType,line.LineNbr);
+                    INTran tran = PXSelect<INTran,Where<INTranExt.usrPickListNbr,Equal<Required<INTranExt.usrPickListNbr>>,
+                        And<INTranExt.usrPickListLine,Equal<Required<INTranExt.usrPickListLine>>>>>.Select(thisGraph,pickLine.PickListNbr,pickLine.LineNbr);
+                    INLocation myLoc = PXSelect<
+                        INLocation,
+                        Where<INLocationExt.usrDefaultPickingLocation, Equal<boolTrue>,
+                            And<Where<INLocation.siteID, Equal<Required<INLocation.siteID>>>>>>
+                        .Select(thisGraph, line.SiteID);
+
+                        var lineExt = PXCache<SOLine>.GetExtension<SOLineExt>(line);
+                        var LPLoadLines = graph.LoadPlanLine.Insert(new LPLoadPlanLine()
+                        {
+                            SOOrderNbr = line.OrderNbr,
+                            SOOrderType = line.OrderType,
+                            SOLineNbr = line.LineNbr,
+                            ItemQty = lineExt.UsrLoadPlanQty,
+                            CustomerID = line.CustomerID,
+                            InventoryID = line.InventoryID,
+                            SiteID = line.SiteID,
+                            UnitCBM = line.UnitVolume,
+                            UnitKGS = line.UnitWeigth,
+                            ForecastDate = lineExt.UsrForeCastDate,
+                            UOM = line.UOM
+                        });
+                        graph.LoadPlanLine.Update(LPLoadLines);
+                        graph.AddLoadContent(LPLoadLines, line, (decimal)lineExt.UsrLoadPlanQty);
+                        if (tran != null)
+                        {
+                            List<PLPickListSplit> pickSplits = new List<PLPickListSplit>();
+                            foreach (PLPickListSplit pSplits in PXSelectJoin<
+                                PLPickListSplit,
+                                InnerJoin<PLPickListLine,
+                                    On<PLPickListLine.pickListNbr, Equal<PLPickListSplit.pLPickListNbr>,
+                                    And<PLPickListSplit.pLPickListLine, Equal<PLPickListLine.lineNbr>>>,
+                                InnerJoin<PLPickList,On<PLPickList.pickListNbr,Equal<PLPickListLine.pickListNbr>>>>,
+                                Where<PLPickListLine.sOOrderNbr, Equal<Required<PLPickListLine.sOOrderNbr>>,
+                                    And<PLPickListLine.sOOrderType, Equal<Required<PLPickListLine.sOOrderType>>,
+                                    And<PLPickListLine.sOLineNbr, Equal<Required<PLPickListLine.sOLineNbr>>,
+                                    And<PLPickList.status,Equal<pickListStatus.released>,
+                                    And<PLPickListSplit.loaded,NotEqual<True>>>>>>>
+                                .Select(thisGraph, line.OrderNbr, line.OrderType, line.LineNbr))
+                            {
+                                if (!thisGraph.HasLoadPlanSplit(pSplits))
+                                {
+                                    if (!pickSplits.Contains(pSplits))
+                                    {
+                                        PXTrace.WriteInformation(pSplits.LotSerialNbr);
+                                        pickSplits.Add(pSplits);
+                                    }
+                                }
+                            }
+                            foreach (PLPickListSplit lSplit in pickSplits)
+                            {
+
+                                if (splitLoad != null)
+                                {
+                                    var inserSplit = graph.loadSplit.Insert(new LPLoadPlanSplit()
+                                    {
+                                        InventoryID = line.InventoryID,
+                                        SiteID = line.SiteID,
+                                        LocationID = myLoc.LocationID,
+                                        PickListNbr = lSplit.PLPickListNbr,
+                                        PickListLine = lSplit.PLPickListLine,
+                                        Qty = lSplit.Qty
+
+                                    });
+                                    graph.loadSplit.Cache.SetValue<LPLoadPlanSplit.lotSerialNbr>(inserSplit, lSplit.LotSerialNbr);
+                                    graph.loadSplit.Update(inserSplit);
+                                }
+                                else
+                                {
+                                    var inserSplit = graph.loadSplit.Insert(new LPLoadPlanSplit()
+                                    {
+                                        InventoryID = line.InventoryID,
+                                        SiteID = line.SiteID,
+                                        LocationID = myLoc.LocationID,
+                                        PickListNbr = lSplit.PLPickListNbr,
+                                        PickListLine = lSplit.PLPickListLine,
+                                        Qty = lSplit.Qty
+                                    });
+                                    graph.loadSplit.Cache.SetValue<LPLoadPlanSplit.lotSerialNbr>(inserSplit, lSplit.LotSerialNbr);
+                                    graph.loadSplit.Update(inserSplit);
+                                }
+                            }
+                        }
+                }
+
+
+
+
+                if (!globalError)
+                {
+                    graph.LoadPlanLine.View.RequestRefresh();
+                    PXRedirectHelper.TryRedirect(graph, PXRedirectHelper.WindowMode.Same);
+                }
+            
+            
+        }
+        #endregion
+
+        #region Function
+        public bool HasLoadPlanSplit(PLPickListSplit pSplits)
+        {
+            LPLoadPlanSplit lSplit = PXSelect<
+                LPLoadPlanSplit,
+                Where<LPLoadPlanSplit.lotSerialNbr,Equal<Required<LPLoadPlanSplit.lotSerialNbr>>,
+                And<LPLoadPlanSplit.pickListNbr,Equal<Required<LPLoadPlanSplit.pickListNbr>>,
+                And<LPLoadPlanSplit.pickListLine,Equal<Required<LPLoadPlanSplit.pickListLine>>>>>>
+                .Select(this,pSplits.LotSerialNbr,pSplits.PLPickListNbr,pSplits.PLPickListLine);
+            if (lSplit != null) return true;
+            return false;
+        }
+        #endregion
+
+        #region Constructor
+
+        public LoadPlanProcess()
+        {
+            
+            FilterLoadPlan filter = LoadPlan.Current;
+            LoadPlanProcess graph = null;
+            DispatchNumberingSetup setup = DispatchCurrent.Current;
+            LoadPlanProcessing.SetProcessCaption("Process Load Plan");
+            LoadPlanProcessing.SetProcessAllCaption("Process All Load Plan");
+            
+            LoadPlanProcessing.SetSelected<SOLineExt.usrSelected>();
+            LoadPlanProcessing.SetProcessDelegate ((List<SOLine> list) =>
+            {
+                graph = PXGraph.CreateInstance<LoadPlanProcess>();
+                LoadProcess(list, filter, graph, setup);
+
+            });
+
+            //LoadPlanProcessing.SetProcessDelegate(list => LoadProcess(list, filter, graph));
+
+
+        }
+
+
+
+        #endregion
+
+        #region EventHandler
+        public virtual void FilterLoadPlan_TruckID_FieldUpdated(PXCache sender, PXFieldUpdatedEventArgs e)
+        {
+            var row = e.Row as FilterLoadPlan;
+            if (row == null) return;
+            FilterLoadPlan myLoad = (FilterLoadPlan)e.Row;
+            Truck select = PXSelect<
+                Truck,
+                Where<Truck.truckID, Equal<Required<FilterLoadPlan.truckID>>>>
+                .Select(this, myLoad.TruckID);
+            if (row.TruckID == null)
+            {
+                sender.SetValueExt<FilterLoadPlan.driverName>(row, null);
+            }
+            if (select == null) { return; }
+            sender.SetValueExt<FilterLoadPlan.totalTruckCapacityCBM>(myLoad, select.TruckCapacityCMB);
+            sender.SetValueExt<FilterLoadPlan.totalTruckCapacityKGS>(myLoad, select.TruckCapacityKGS);
+            sender.SetValueExt<FilterLoadPlan.driverName>(myLoad, select.DriverID);
+            
+        }
+
+        public virtual void SOOrder_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+            SOOrder row = (SOOrder)e.Row;
+            var rowExt = sender.GetExtension<SOOrderExt>(row);
+            if (row == null) { return; }
+            SplitOrder.Cache.AllowInsert = false;
+            SplitOrder.Cache.AllowDelete = false;
+            PXUIFieldAttribute.SetEnabled(sender, row, false);
+            PXUIFieldAttribute.SetEnabled<SOOrder.selected>(sender, row, true);
+            sender.SetValue<SOOrderExt.usrPercentage>(row, (rowExt.UsrPickQty / row.OrderQty) * 100);
+            
+
+        }
+
+        public virtual void SOLine_UsrLoadPlanQty_FieldUpdated(PXCache sender, PXFieldUpdatedEventArgs e)
+        {
+            SOLine row = (SOLine)e.Row;
+            if (row == null) { return; }
+            var rowExt = sender.GetExtension<SOLineExt>(row);
+            if(rowExt.UsrLoadPlanQty > rowExt.UsrAvailableLoadQty)
+            {
+                throw new PXSetPropertyException("Load Qty must not be greater than available load qty");
+            }
+            
+        }
+
+        public virtual void SOLine_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+            bool tick = false;
+            SOLine row = (SOLine)e.Row;
+            FilterLoadPlan filter = LoadPlan.Current;
+            SOLineExt rowExt = sender.GetExtension<SOLineExt>(row);
+            var myTick = filter.Warehouse == null || filter.ZoneID == null;
+
+            if (row == null) return;
+
+            PXUIFieldAttribute.SetVisible<SOLineExt.usrOpenQty>(sender, row, false);
+            PXUIFieldAttribute.SetEnabled<SOLineExt.usrLoadPlanQty>(sender, row, true);
+            sender.SetValue<SOLineExt.usrPercentagePerItem>(row, (rowExt.UsrPickListQty / row.OrderQty) * 100);
+            
+        }
+
+        public virtual void FilterLoadPLan_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+
+            FilterLoadPlan filter = (FilterLoadPlan)e.Row;
+           
+            if (filter == null) { return; }
+            if (filter.RemTruckBalKGS < 0m)
+            {
+                LoadPlan.Ask("Warning", "Warning.You Have Excess the 20 % allowance overload", MessageButtons.OK, MessageIcon.Warning);
+                sender.RaiseExceptionHandling<FilterLoadPlan.remTruckBalKGS>(filter, filter.RemTruckBalKGS, new PXSetPropertyException("Warning. You Have Excess the 20% allowance overload ", PXErrorLevel.Warning));
+
+            }
+            else if (filter.TotalTruckCapacityKGS < filter.CurrentCapacityKGS)
+            {
+                sender.RaiseExceptionHandling<FilterLoadPlan.remTruckBalKGS>(filter, filter.RemTruckBalKGS, new PXSetPropertyException("Excess Load KGS", PXErrorLevel.Warning));
+            }
+            if (filter.RemTruckBalCBM < 0m)
+            {
+                sender.RaiseExceptionHandling<FilterLoadPlan.remTruckBalCBM>(filter, filter.RemTruckBalCBM, new PXSetPropertyException("Remaining balance CBM is Negative", PXErrorLevel.Warning));
+
+            }
+        }
+        public virtual void FilterLoadPlan_Warehouse_FieldUpdated(PXCache sender, PXFieldUpdatedEventArgs e)
+        {
+            LoadPlanProcessing.Cache.Clear();
+        }
+        public virtual void FilterLoadPlan_DeliveryDate_FieldUpdated(PXCache sender, PXFieldUpdatedEventArgs e)
+        {
+            LoadPlanProcessing.Cache.Clear();
+        }
+        public virtual void FilterLoadPlan_RowUpdated(PXCache sender, PXRowUpdatedEventArgs e)
+        {
+            var row = e.Row as FilterLoadPlan;
+            if (row == null) return;
+            if(row.DeliveryDateFrom != null && row.DeliveryDateTo != null)
+            {
+                if(row.TruckID == null)
+                {
+                    sender.RaiseExceptionHandling<FilterLoadPlan.truckID>(row,null,new PXSetPropertyException("Truck is required",PXErrorLevel.Warning));
+                }
+            }
+        }
+
+        
+        public virtual void SOLine_RowUpdated(PXCache sender, PXRowUpdatedEventArgs e)
+        {
+            SOLine row = (SOLine)e.Row;
+            SOLine oldRow = (SOLine)e.OldRow;
+            SOLineExt rowExt = sender.GetExtension<SOLineExt>(row);
+            SOLineExt oldRowExt = sender.GetExtension<SOLineExt>(oldRow);
+            if (row == null) { return; }
+
+            if (rowExt.UsrSelected == false)
+            {
+                sender.SetValueExt<SOLineExt.usrLoadPlanQty>(row, 0m);
+                sender.SetValueExt<SOLineExt.usrTotalKgs>(row, 0m);
+                sender.SetValueExt<SOLineExt.usrTotalCBM>(row, 0m);
+            }
+        }
+
+        #endregion
+
+        #region CacheAttached
+
+        [PXMergeAttributes(Method = MergeMethod.Append)]
+        [PXUIField(DisplayName = "KGS")]
+        protected virtual void SOLine_UnitWeigth_CacheAttached(PXCache cache)
+        {
+        }
+        [PXMergeAttributes(Method = MergeMethod.Append)]
+        [PXUIField(DisplayName = "CBM")]
+        protected virtual void SOLine_UnitVolume_CacheAttached(PXCache cache)
+        {
+        }
+
+        [PXMergeAttributes(Method = MergeMethod.Append)]
+        [PXUIField(DisplayName = "Open Picked Qty")]
+        protected virtual void SOLine_UsrPickListQty_CacheAttached(PXCache cache)
+        {
+
+        }
+        [PXMergeAttributes(Method = MergeMethod.Append)]
+        [PXUIField(DisplayName = "Order Qty")]
+        protected virtual void SOLine_OrderQty_CacheAttached(PXCache cache)
+        {
+
+        }
+        #endregion
+
+        #region LinkCommands
+
+        public PXAction<ARInvoice> MyInvoice;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "myInvoice", Visible = false)]
+        public virtual void myInvoice()
+        {
+            var graph = PXGraph.CreateInstance<SOInvoiceEntry>();
+            ARTran mySelect = PXSelect<
+                ARTran,
+                Where
+                <ARTran.sOOrderNbr, Equal<Required<ARTran.sOOrderNbr>>,
+                    And<Where<ARTran.sOOrderType, Equal<Required<ARTran.sOOrderType>>>>>>
+                .Select(this, SplitOrder.Current.OrderNbr, SplitOrder.Current.OrderType);
+
+            graph.Document.Current = graph.Document.Search<ARInvoice.refNbr>(mySelect.RefNbr, mySelect.TranType);
+            throw new PXRedirectRequiredException(graph, "Invoice Redirect")
+            {
+                Mode = PXBaseRedirectException.WindowMode.NewWindow
+            };
+        }
+
+        public PXAction<SOOrder> MySO;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "MySO")]
+
+        public virtual void mySO()
+        {
+            var graph = PXGraph.CreateInstance<SOOrderEntry>();
+            SOOrder mySelect = PXSelect<
+                SOOrder,
+                Where<SOOrder.orderNbr, Equal<Required<SOOrder.orderNbr>>,
+                    And<SOOrder.orderType, Equal<Required<SOOrder.orderType>>>>>
+                .Select(this, SplitOrder.Current.OrderNbr, SplitOrder.Current.OrderType);
+
+            graph.Document.Current = graph.Document.Search<SOOrder.orderNbr, SOOrder.orderType>(mySelect.OrderNbr, mySelect.OrderType);
+            throw new PXRedirectRequiredException(graph, "SOOrder Redirect")
+            {
+                Mode = PXBaseRedirectException.WindowMode.NewWindow
+            };
+        }
+
+        public PXAction<SOOrder> LineSO;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "MySO")]
+
+        public virtual void lineSO()
+        {
+            var graph = PXGraph.CreateInstance<SOOrderEntry>();
+            SOOrder mySelect = PXSelect<
+                SOOrder,
+                Where<SOOrder.orderNbr, Equal<Required<SOOrder.orderNbr>>,
+                    And<SOOrder.orderType, Equal<Required<SOOrder.orderType>>>>>
+                .Select(this, LoadPlanProcessing.Current.OrderNbr, LoadPlanProcessing.Current.OrderType);
+
+            graph.Document.Current = graph.Document.Search<SOOrder.orderNbr, SOOrder.orderType>(mySelect.OrderNbr, mySelect.OrderType);
+            throw new PXRedirectRequiredException(graph, "SOOrder Redirect")
+            {
+                Mode = PXBaseRedirectException.WindowMode.NewWindow
+            };
+        }
+        public PXAction<ARInvoice> LineInvoice;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "myInvoice", Visible = false)]
+        public virtual void lineInvoice()
+        {
+            var graph = PXGraph.CreateInstance<SOInvoiceEntry>();
+            ARTran mySelect = PXSelect<
+                ARTran,
+                Where
+                <ARTran.sOOrderNbr, Equal<Required<ARTran.sOOrderNbr>>,
+                    And<Where<ARTran.sOOrderType, Equal<Required<ARTran.sOOrderType>>,
+                        And<Where<ARTran.sOOrderLineNbr,Equal<Required<ARTran.sOOrderLineNbr>>>>>>>>
+                .Select(this, LoadPlanProcessing.Current.OrderNbr, LoadPlanProcessing.Current.OrderType,LoadPlanProcessing.Current.LineNbr);
+
+            graph.Document.Current = graph.Document.Search<ARInvoice.refNbr>(mySelect.RefNbr, mySelect.TranType);
+            throw new PXRedirectRequiredException(graph, "Invoice Redirect")
+            {
+                Mode = PXBaseRedirectException.WindowMode.NewWindow
+            };
+        }
+
+        #endregion
+    }
+
+}]]></CDATA>
+</Graph>

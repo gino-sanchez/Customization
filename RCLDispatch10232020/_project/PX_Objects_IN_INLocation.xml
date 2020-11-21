@@ -1,0 +1,17 @@
+﻿<DAC type="PX.Objects.IN.INLocation">
+    <Field FieldName="UsrDefaultPickingLocation" TypeName="bool" MapDbTable="INLocation" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBBool]
+[PXUIField(DisplayName="Picking Location")]
+[PXDefault(false,PersistingCheck = PXPersistingCheck.Nothing)]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrDamaged" TypeName="bool" MapDbTable="INLocation" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBBool]
+[PXUIField(DisplayName="Damage Items")]
+[PXDefault(false,PersistingCheck = PXPersistingCheck.Nothing)]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrGoods" TypeName="bool" MapDbTable="INLocation" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBBool]
+[PXUIField(DisplayName="Good Items")]
+[PXDefault(false,PersistingCheck = PXPersistingCheck.Nothing)]]]></CDATA>
+    </Field>
+</DAC>

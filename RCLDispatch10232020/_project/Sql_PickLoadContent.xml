@@ -1,0 +1,11 @@
+﻿<Sql TableName="PickLoadContent" TableSchemaXml="#CDATA">
+    <CDATA name="TableSchemaXml"><![CDATA[<table name="PickLoadContent">
+  <col name="CompanyID" type="Int" default="Zero" />
+  <col name="PLPickListNbr" type="NVarChar(15)" nullable="true" />
+  <col name="TripTicketNbr" type="NVarChar(15)" nullable="true" />
+  <col name="SOOrderNbr" type="NVarChar(15)" nullable="true" />
+  <col name="SOOrderType" type="Char(2)" nullable="true" />
+  <col name="SOLineNbr" type="Int" nullable="true" />
+  <col name="RecordID" type="Int" identity="true" />
+</table>]]></CDATA>
+</Sql>

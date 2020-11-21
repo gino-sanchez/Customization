@@ -1,0 +1,251 @@
+﻿<Graph ClassName="LPLoadPlanMaster" Source="#CDATA" IsNew="True" FileType="NewDac">
+    <CDATA name="Source"><![CDATA[using System;
+using PX.Data;
+using PX.Objects.CS;
+using DispatchSetup;
+using PX.Objects.EP;
+using PX.Data.ReferentialIntegrity.Attributes;
+
+namespace Dispatch
+{
+    public abstract class LoadPlanStatus : IBqlField
+    {
+        public class ListAttribute : PXStringListAttribute
+        {
+            public ListAttribute()
+                : base(
+                new string[] { Open, Confirmed, Printed,Cancelled,ReAssign,ReAssigned },
+                new string[] { "Open", "Confirmed", "Printed","Cancelled","Re-Assign" ,"Re-Assigned"})
+            { }
+        }
+
+        public class DocumentType : PXStringListAttribute
+        {
+            public DocumentType() : base(
+                new string[] { Transfer },
+                new string[] { "Transfer" })
+            { }
+        }
+
+        public const string Transfer = "T";
+        public const string Open = "N";
+        public const string Confirmed = "C";
+        public const string Printed = "P";
+        public const string Cancelled = "D";
+        public const string ReAssign = "R";
+        public const string ReAssigned = "F";
+
+        public class transfer : Constant<string>
+        {
+            public transfer() : base(Transfer) { }
+        }
+        public class reAssigned : Constant<string>
+        {
+            public reAssigned() : base(ReAssigned) { }
+        }
+        public class open : Constant<string>
+        {
+            public open() : base(Open) { }
+        }
+        public class confirmed : Constant<string>
+        {
+            public confirmed() : base(Confirmed) { }
+        }
+        public class printed : Constant<string>
+        {
+            public printed() : base(Printed) { }
+        }
+        public class cancelled : Constant<string>
+        {
+            public cancelled() : base(Cancelled) { }
+        }
+        public class reAssign : Constant<string>
+        {
+            public reAssign() : base(ReAssign) { }
+        }
+    }
+        [Serializable]
+  public partial class LPLoadPlanMaster : IBqlTable
+  {
+        public class PK : PrimaryKeyOf<LPLoadPlanMaster>.By<tripTIcketNbr>
+        {
+            public static LPLoadPlanMaster Find(
+                PXGraph graph, string tripTicketNbr)
+                => FindBy(graph, tripTicketNbr);
+
+        }
+
+        #region TripTIcketNbr
+        [PXDBString(15, IsKey = true, IsUnicode = true, InputMask = "")]
+    [PXUIField(DisplayName = "Trip Ticket Nbr")]
+    [PXSelector(typeof(Search<tripTIcketNbr>))]
+    [AutoNumber(typeof(DispatchNumberingSetup.tripTicketNumberingID), typeof(AccessInfo.businessDate))]
+        public virtual string TripTIcketNbr { get; set; }
+    public abstract class tripTIcketNbr : PX.Data.BQL.BqlString.Field<tripTIcketNbr> { }
+        #endregion
+
+        #region DriverName
+        [PXDBString(60)]
+        [PXUIField(DisplayName = "Driver Name")]
+        [PXSelector(typeof(Search<Truck.driverID>),typeof(Truck.driverID))]
+
+        public virtual string DriverName { get; set; }
+        public abstract class driverName : PX.Data.BQL.BqlString.Field<driverName> { }
+        #endregion
+
+        #region DocDate
+        [PXDBDate()]
+    [PXUIField(DisplayName = "Doc Date")]
+    [PXDefault(typeof(AccessInfo.businessDate))]
+    
+    public virtual DateTime? DocDate { get; set; }
+    public abstract class docDate : PX.Data.BQL.BqlDateTime.Field<docDate> { }
+        #endregion
+
+        #region ForecastDate
+
+        [PXDBDate()]
+        [PXUIField(DisplayName = "Forecast Date")]
+        public abstract class forecastDate : PX.Data.BQL.BqlDateTime.Field<forecastDate> { }
+        public virtual DateTime? ForecastDate { get; set; }
+
+        #endregion
+
+        #region TruckID
+        [PXDBInt()]
+    [PXUIField(DisplayName = "Truck ID",Enabled =false)]
+    [PXSelector(typeof(Search<Truck.truckID>),typeof(Truck.truckCD),typeof(Truck.driverID),typeof(Truck.truckCapacityKGS),typeof(Truck.truckCapacityCMB),SubstituteKey = typeof(Truck.truckCD))]
+    public virtual int? TruckID { get; set; }
+    public abstract class truckID : PX.Data.BQL.BqlInt.Field<truckID> { }
+        #endregion
+
+        #region DocType
+        [PXDBString(1)]
+        [PXUIField(DisplayName = "Doc Type")]
+        [LoadPlanStatus.DocumentType]
+        public virtual string DocType { get; set; }
+        public abstract class docType : PX.Data.BQL.BqlString.Field<docType> { }
+        #endregion
+
+        #region Zone
+        public abstract class zone : PX.Data.BQL.BqlString.Field<zone> { }
+        [PXDBString(15, IsUnicode = true)]
+        [PXUIField(DisplayName = "Zone")]
+        public virtual string Zone { get; set; }
+        #endregion
+
+        #region Line Cntr
+        [PXDBInt()]
+    [PXDefault(0)]
+    [PXUIField(DisplayName = "Line Cntr")]
+    public virtual int? LineCntr{ get; set; }
+    public abstract class lineCntr : PX.Data.BQL.BqlInt.Field<lineCntr> { }
+        #endregion
+
+        #region TruckCapcityCBM
+        [PXDBDecimal()]
+        [PXUIField(DisplayName = "Truck Capacity CBM", Enabled = false)]
+        public virtual Decimal? TruckCapacityCBM { get; set; }
+        public abstract class truckCapacityCBM : PX.Data.BQL.BqlDecimal.Field<truckCapacityCBM> { }
+        #endregion
+
+        #region TruckCapcityKGS
+        [PXDBDecimal()]
+        [PXUIField(DisplayName = "Truck Capacity KGS",Enabled = false)]
+        public virtual Decimal? TruckCapacityKGS { get; set; }
+        public abstract class truckCapacityKGS : PX.Data.BQL.BqlDecimal.Field<truckCapacityKGS> { }
+        #endregion
+
+        #region TotalLoadKGS
+        [PXDBDecimal()]
+        [PXUIField(DisplayName = "Total Load KGS", Enabled = false)]
+        public virtual Decimal? TotalLoadKGS { get; set; }
+        public abstract class totalLoadKGS : PX.Data.BQL.BqlDecimal.Field<totalLoadKGS> { }
+        #endregion
+
+        #region TotalLoadCBM
+        [PXDBDecimal()]
+        [PXUIField(DisplayName = "Total Load CBM",Enabled = false)]
+        public virtual Decimal? TotalLoadCBM { get; set; }
+        public abstract class totalLoadCBM : PX.Data.BQL.BqlDecimal.Field<totalLoadCBM> { }
+        #endregion
+
+        #region ExcessTruckKGS
+        [PXDBDecimal()]
+        [PXUIField(DisplayName = "Excess Truck KGS", Enabled = false,Visible = false)]
+        public virtual Decimal? ExcessTruckKGS { get; set; }
+        public abstract class excessTruckKGS : PX.Data.BQL.BqlDecimal.Field<excessTruckKGS> { }
+        #endregion
+
+        #region LoadStatus
+        [PXDBString(1)]
+        [PXUIField(DisplayName = "Status", Enabled = false)]
+        [LoadPlanStatus.List]
+        [PXDefault(LoadPlanStatus.Open)]
+        public virtual string LoadStatus { get; set; }
+        public abstract class loadStatus : PX.Data.BQL.BqlDecimal.Field<loadStatus> { }
+        #endregion
+        #region Tstamp
+        [PXDBTimestamp()]
+    [PXUIField(DisplayName = "Tstamp")]
+    public virtual byte[] Tstamp { get; set; }
+    public abstract class tstamp : PX.Data.BQL.BqlByteArray.Field<tstamp> { }
+        #endregion
+
+        #region IsCancelled
+        [PXDBBool()]
+        [PXUIField(DisplayName = "Cancelled",Visible = false)]
+        [PXDefault(false,PersistingCheck = PXPersistingCheck.Nothing)]
+        public virtual bool? IsCancelled { get; set; }
+        public abstract class isCancelled : PX.Data.BQL.BqlDecimal.Field<isCancelled> { }
+        #endregion
+
+        #region IsConfirmed
+        [PXDBBool()]
+        [PXUIField(DisplayName = "Confirmed",Visible = false)]
+        [PXDefault(false, PersistingCheck = PXPersistingCheck.Nothing)]
+
+        public virtual bool? IsConfirmed { get; set; }
+        public abstract class isConfirmed : PX.Data.BQL.BqlDecimal.Field<isConfirmed> { }
+        #endregion
+
+        #region CreatedByID
+        [PXDBCreatedByID()]
+    public virtual Guid? CreatedByID { get; set; }
+    public abstract class createdByID : PX.Data.BQL.BqlGuid.Field<createdByID> { }
+    #endregion
+
+    #region CreatedByScreenID
+    [PXDBCreatedByScreenID()]
+    public virtual string CreatedByScreenID { get; set; }
+    public abstract class createdByScreenID : PX.Data.BQL.BqlString.Field<createdByScreenID> { }
+    #endregion
+
+    #region CreatedDateTime
+    [PXDBCreatedDateTime()]
+    [PXUIField(DisplayName = "Created Date Time")]
+    public virtual DateTime? CreatedDateTime { get; set; }
+    public abstract class createdDateTime : PX.Data.BQL.BqlDateTime.Field<createdDateTime> { }
+    #endregion
+
+    #region LastModifiedByID
+    [PXDBLastModifiedByID()]
+    public virtual Guid? LastModifiedByID { get; set; }
+    public abstract class lastModifiedByID : PX.Data.BQL.BqlGuid.Field<lastModifiedByID> { }
+    #endregion
+
+    #region LastModifiedByScreenID
+    [PXDBLastModifiedByScreenID()]
+    public virtual string LastModifiedByScreenID { get; set; }
+    public abstract class lastModifiedByScreenID : PX.Data.BQL.BqlString.Field<lastModifiedByScreenID> { }
+    #endregion
+    
+    #region LastModifiedDateTime
+    [PXDBLastModifiedDateTime()]
+    [PXUIField(DisplayName = "Last Modified Date Time")]
+    public virtual DateTime? LastModifiedDateTime { get; set; }
+    public abstract class lastModifiedDateTime : PX.Data.BQL.BqlDateTime.Field<lastModifiedDateTime> { }
+    #endregion
+  }
+}]]></CDATA>
+</Graph>

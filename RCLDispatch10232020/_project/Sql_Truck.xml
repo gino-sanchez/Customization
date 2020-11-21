@@ -1,0 +1,24 @@
+﻿<Sql TableName="Truck" TableSchemaXml="#CDATA">
+    <CDATA name="TableSchemaXml"><![CDATA[<table name="Truck">
+  <col name="CompanyID" type="Int" default="Zero" />
+  <col name="DriverID" type="NVarChar(50)" nullable="true" />
+  <col name="AssetID" type="Int" nullable="true" />
+  <col name="TruckCapacityCMB" type="Decimal(16,9)" />
+  <col name="TruckCapacityKGS" type="Decimal(16,9)" />
+  <col name="Status" type="Char(1)" />
+  <col name="Descr" type="NVarChar(64)" nullable="true" />
+  <col name="Brand" type="NVarChar(64)" nullable="true" />
+  <col name="Model" type="NVarChar(64)" nullable="true" />
+  <col name="BranchID" type="Int" />
+  <col name="tstamp" type="Timestamp" />
+  <col name="CreatedByID" type="UniqueIdentifier" />
+  <col name="CreatedByScreenID" type="Char(8)" />
+  <col name="CreatedDateTime" type="DateTime" />
+  <col name="LastModifiedByID" type="UniqueIdentifier" />
+  <col name="LastModifiedByScreenID" type="Char(8)" />
+  <col name="LastModifiedDateTime" type="DateTime" />
+  <col name="TruckCD" type="NVarChar(30)" />
+  <col name="TruckID" type="Int" identity="true" />
+  <col name="UsrContainerNo" type="NVarChar(30)" nullable="true" />
+</table>]]></CDATA>
+</Sql>

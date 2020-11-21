@@ -1,0 +1,75 @@
+﻿<DAC type="PX.Objects.SO.SOShipLine">
+    <Field FieldName="UsrPickListNumber" TypeName="string" MapDbTable="SOShipLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[		[PXDBString(15)]
+		[PXUIField(DisplayName="PickListNumber")]
+]]></CDATA>
+    </Field>
+    <Field FieldName="UsrisLoaded" TypeName="bool" MapDbTable="SOShipLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[		[PXDBBool]
+		[PXUIField(DisplayName="isLoaded")]
+		[PXDefault(false,PersistingCheck = PXPersistingCheck.Nothing)]
+]]></CDATA>
+    </Field>
+    <Field FieldName="UsrShippingType" TypeName="string" MapDbTable="SOShipLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[		[PXDBString(10)]
+		[PXUIField(DisplayName="Shipping Type")]
+using PL;
+[Attrib.List]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrBufferQty" TypeName="decimal" MapDbTable="SOShipLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[		[PXDBDecimal]
+		[PXUIField(DisplayName="Buffer Qty")]
+		[PXDefault(TypeCode.Decimal, "0.00", PersistingCheck = PXPersistingCheck.Nothing)]
+]]></CDATA>
+    </Field>
+    <Field FieldName="UsrIsBackload" TypeName="bool" MapDbTable="SOShipLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[		[PXDBBool]
+		[PXUIField(DisplayName="Backload?")]
+		[PXDefault(false,PersistingCheck = PXPersistingCheck.Nothing)]
+]]></CDATA>
+    </Field>
+    <Field FieldName="UsrTripTicketNbr" TypeName="string" MapDbTable="SOShipLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[		[PXDBString(15)]
+		[PXUIField(DisplayName="TripTicketNbr")]
+]]></CDATA>
+    </Field>
+    <Field FieldName="UsrLPLoadPlanLine" TypeName="int" MapDbTable="SOShipLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[		[PXDBInt]
+		[PXUIField(DisplayName="LPLoadPlanLine")]
+]]></CDATA>
+    </Field>
+    <Field FieldName="UsrBackloadNbr" TypeName="string" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[		[PXString(15)]
+		[PXUIField(DisplayName="Backload Reference Nbr",Enabled = false)]
+using Dispatch;
+[PXSelector(typeof(Search<Backload.backloadNbr,Where<Backload.backloadStatus,Equal<BackloadStatus.completed>>>))]
+		[PXDBScalar(typeof(Search2<BackloadLine.backloadNbr,
+            LeftJoin<Backload,On<Backload.backloadNbr,Equal<BackloadLine.backloadNbr>>>,
+            Where<BackloadLine.shipmentNbr, Equal<SOShipLine.shipmentNbr>,
+            And<BackloadLine.shipmentType, Equal<SOShipLine.shipmentType>, And<BackloadLine.shipmentLineNbr, Equal<SOShipLine.lineNbr>,
+            And<Backload.backloadStatus,Equal<BackloadStatus.completed>>>>>>))]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrBackloadQty" TypeName="decimal" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[		[PXDecimal]
+		[PXUIField(DisplayName="Backload Qty",Enabled = false)]
+]]></CDATA>
+    </Field>
+    <Field FieldName="UsrLoadQty" TypeName="decimal" MapDbTable="SOShipLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[		[PXDBDecimal]
+		[PXUIField(DisplayName="Load Qty")]
+		[PXDefault(TypeCode.Decimal,"0.00", PersistingCheck = PXPersistingCheck.Nothing)]
+]]></CDATA>
+    </Field>
+    <Field FieldName="UsrAvailBackloadQty" TypeName="decimal" MapDbTable="SOShipLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[		[PXDBDecimal]
+		[PXUIField(DisplayName="AvailBackloadQty")]
+		[PXFormula(typeof(Sub<SOShipLineExt.usrLoadQty,SOShipLine.shippedQty>))]
+]]></CDATA>
+    </Field>
+    <Field FieldName="UsrBLQty" TypeName="decimal" MapDbTable="SOShipLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[		[PXDBDecimal]
+		[PXUIField(DisplayName="Backload Qty")]
+		[PXDefault(TypeCode.Decimal, "0.00", PersistingCheck = PXPersistingCheck.Nothing)]
+]]></CDATA>
+    </Field>
+</DAC>

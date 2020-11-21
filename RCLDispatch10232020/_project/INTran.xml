@@ -1,0 +1,9 @@
+﻿<Table TableName="INTran">
+    <Column TableName="INTran" ColumnName="UsrPickListNbr" ColumnType="string" AllowNull="True" MaxLength="15" DecimalPrecision="2" DecimalLength="15" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="INTran" ColumnName="UsrTripTicketNbr" ColumnType="string" AllowNull="True" MaxLength="15" DecimalPrecision="2" DecimalLength="15" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="INTran" ColumnName="UsrPickListLine" ColumnType="int" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="INTran" ColumnName="UsrTripTicketLine" ColumnType="int" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="INTran" ColumnName="UsrBackloadNbr" ColumnType="string" AllowNull="True" MaxLength="15" DecimalPrecision="2" DecimalLength="15" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="INTran" ColumnName="UsrBackloadType" ColumnType="string" AllowNull="True" MaxLength="10" DecimalPrecision="2" DecimalLength="10" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="INTran" ColumnName="UsrBackloadID" ColumnType="int" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+</Table>

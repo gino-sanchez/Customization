@@ -1,0 +1,11 @@
+﻿<DAC type="PX.Objects.SO.SOSetup">
+    <Field FieldName="UsrDispatchEmailTemp" TypeName="int" MapDbTable="SOSetup" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBInt]
+[PXUIField(DisplayName="Notification Template")]
+using PX.SM;
+        [PXSelector(typeof(Search<Notification.notificationID>),
+            typeof(Notification.name), typeof(Notification.subject),
+            typeof(Notification.screenID),
+            SubstituteKey = typeof(Notification.name))]]]></CDATA>
+    </Field>
+</DAC>

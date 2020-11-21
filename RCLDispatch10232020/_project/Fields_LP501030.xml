@@ -1,0 +1,6 @@
+﻿<Fields ScreenID="LP501030">
+    <Field IsActive="True" FieldName="DRIVERNAME" DisableCondition="True" ObjectName="DISPATCH.FILTERLOADPLAN" />
+    <Field IsActive="True" FieldName="USROPENQTY" ObjectName="PX.OBJECTS.SO.SOLINE" />
+    <Field IsActive="True" DisplayName="Total CBM" FieldName="USRTOTALCBM" ObjectName="PX.OBJECTS.SO.SOLINE" />
+    <Field IsActive="True" DisplayName="Total KGS" FieldName="USRTOTALKGS" ObjectName="PX.OBJECTS.SO.SOLINE" />
+</Fields>

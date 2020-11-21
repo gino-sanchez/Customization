@@ -1,0 +1,54 @@
+﻿<Graph ClassName="PickLoadContent" Source="#CDATA" IsNew="True" FileType="NewDac">
+    <CDATA name="Source"><![CDATA[using System;
+using PX.Data;
+
+namespace Dispatch
+{
+  [Serializable]
+  [PXCacheName("PickLoadContent")]
+  public class PickLoadContent : IBqlTable
+  {
+    #region PLPickListNbr
+    [PXDBString(15, IsUnicode = true, InputMask = "")]
+    [PXUIField(DisplayName = "PLPick List Nbr")]
+    public virtual string PLPickListNbr { get; set; }
+    public abstract class pLPickListNbr : PX.Data.BQL.BqlString.Field<pLPickListNbr> { }
+    #endregion
+
+    #region TripTicketNbr
+    [PXDBString(15, IsUnicode = true, InputMask = "")]
+    [PXUIField(DisplayName = "Trip Ticket Nbr")]
+    [PXDBDefault(typeof(LPLoadPlanMaster.tripTIcketNbr))]
+    public virtual string TripTicketNbr { get; set; }
+    public abstract class tripTicketNbr : PX.Data.BQL.BqlString.Field<tripTicketNbr> { }
+    #endregion
+
+    #region SOOrderNbr
+    [PXDBString(15, IsUnicode = true, InputMask = "")]
+    [PXUIField(DisplayName = "SOOrder Nbr")]
+    public virtual string SOOrderNbr { get; set; }
+    public abstract class sOOrderNbr : PX.Data.BQL.BqlString.Field<sOOrderNbr> { }
+    #endregion
+
+    #region SOOrderType
+    [PXDBString(2, IsFixed = true, InputMask = "")]
+    [PXUIField(DisplayName = "SOOrder Type")]
+    public virtual string SOOrderType { get; set; }
+    public abstract class sOOrderType : PX.Data.BQL.BqlString.Field<sOOrderType> { }
+    #endregion
+
+    #region SOLineNbr
+    [PXDBInt()]
+    [PXUIField(DisplayName = "SOLine Nbr")]
+    public virtual int? SOLineNbr { get; set; }
+    public abstract class sOLineNbr : PX.Data.BQL.BqlInt.Field<sOLineNbr> { }
+    #endregion
+
+    #region RecordID
+    [PXDBIdentity(IsKey=true)]
+    public virtual int? RecordID { get; set; }
+    public abstract class recordID : PX.Data.BQL.BqlInt.Field<recordID> { }
+    #endregion
+  }
+}]]></CDATA>
+</Graph>

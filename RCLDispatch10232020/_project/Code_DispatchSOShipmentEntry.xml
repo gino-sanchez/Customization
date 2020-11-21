@@ -1,0 +1,450 @@
+﻿<Graph ClassName="DispatchSOShipmentEntry" Source="#CDATA" IsNew="True" FileType="NewGraph">
+    <CDATA name="Source"><![CDATA[using System;
+using System.Linq;
+using System.Collections;
+using System.Collections.Generic;
+using System.Runtime.Serialization;
+using System.Text;
+using PX.Data;
+using PX.Data.BQL;
+using PX.Data.BQL.Fluent;
+using PX.Common;
+using PX.Objects.AR;
+using PX.Objects.CM;
+using PX.Objects.CR;
+using PX.Objects.CS;
+using PX.Objects.EP;
+using PX.Objects.GL;
+using PX.Objects.IN;
+using PX.SM;
+using PX.Objects.IN.Overrides.INDocumentRelease;
+using POLineType = PX.Objects.PO.POLineType;
+using POReceiptLine = PX.Objects.PO.POReceiptLine;
+using PX.CarrierService;
+using PX.Data.DependencyInjection;
+using PX.LicensePolicy;
+using PX.Objects.SO.Services;
+using PX.Objects.PO;
+using PX.Objects.AR.MigrationMode;
+using PX.Objects.Common;
+using PX.Objects.Common.Discount;
+using PX.Common.Collection;
+using PX.Objects.SO.GraphExtensions.CarrierRates;
+using PX.Api;
+using PX.Objects;
+using PX.Objects.SO;
+using Dispatch;
+using PL;
+
+namespace PX.Objects.SO
+{
+  public class DispatchSOShipmentEntry_Extension : PXGraphExtension<SOShipmentEntry>
+  {
+        #region Ovveride
+
+        public delegate IEnumerable updateINDelegate(PXAdapter adapter, List<SOShipment> shipmentList);
+        [PXOverride]
+        public IEnumerable updateIN(PXAdapter adapter, List<SOShipment> shipmentList, updateINDelegate baseMethod)
+        {
+            
+            PXLongOperation.StartOperation(this, delegate
+            {
+                foreach (SOShipLine lines in Base.Transactions.Select())
+            {
+                SOLine soLineSelect = PXSelect<
+                    SOLine, 
+                    Where<SOLine.orderType, Equal<Required<SOLine.orderType>>, 
+                        And<SOLine.orderNbr, Equal<Required<SOLine.orderNbr>>, 
+                        And<SOLine.lineNbr, Equal<Required<SOLine.lineNbr>>>>>>
+                    .Select(Base, lines.OrigOrderType, lines.OrigOrderNbr, lines.OrigLineNbr);
+                SOLineExt soLineSelectExt = PXCache<SOLine>.GetExtension<SOLineExt>(soLineSelect);
+
+                if(soLineSelectExt.UsrConfirmShipment == Attrib.Pickup)
+                {
+
+                    if(soLineSelectExt.UsrPickListStatus == pickStatusList.Open)
+                    {
+                        PXDatabase.Update<SOLine>(
+                    new PXDataFieldAssign<SOLineExt.usrPickListStatus>(pickStatusList.Closed),
+                    new PXDataFieldRestrict<SOLine.orderType>(lines.OrigOrderType),
+                    new PXDataFieldRestrict<SOLine.orderNbr>(lines.OrigOrderNbr),
+                    new PXDataFieldRestrict<SOLine.lineNbr>(lines.OrigLineNbr));
+                    }
+                    if (lines.OpenOrderQty == 0m)
+                    {
+                            PXDatabase.Update<SOLine>(
+                         new PXDataFieldAssign<SOLineExt.usrShippingStatus>(ShippingStatus.CustomerClaimed),
+                         new PXDataFieldRestrict<SOLine.orderType>(lines.OrigOrderType),
+                         new PXDataFieldRestrict<SOLine.orderNbr>(lines.OrigOrderNbr),
+                         new PXDataFieldRestrict<SOLine.lineNbr>(lines.OrigLineNbr));
+                    }
+                    else if(lines.OpenOrderQty != 0m)
+                    {
+                    PXDatabase.Update<SOLine>(
+                        new PXDataFieldAssign<SOLineExt.usrShippingStatus>(ShippingStatus.PartialCustomerClaimed),
+                        new PXDataFieldRestrict<SOLine.orderType>(lines.OrigOrderType),
+                        new PXDataFieldRestrict<SOLine.orderNbr>(lines.OrigOrderNbr),
+                        new PXDataFieldRestrict<SOLine.lineNbr>(lines.OrigLineNbr));
+                    }
+                }else if(soLineSelectExt.UsrConfirmShipment == Attrib.CWStore)
+                {
+                        if (soLineSelectExt.UsrPickListStatus == pickStatusList.Open)
+                        {
+                            PXDatabase.Update<SOLine>(
+                        new PXDataFieldAssign<SOLineExt.usrPickListStatus>(pickStatusList.Closed),
+                        new PXDataFieldRestrict<SOLine.orderType>(lines.OrigOrderType),
+                        new PXDataFieldRestrict<SOLine.orderNbr>(lines.OrigOrderNbr),
+                        new PXDataFieldRestrict<SOLine.lineNbr>(lines.OrigLineNbr));
+                        }
+                        if (lines.OpenOrderQty == 0m)
+                        {
+                            PXDatabase.Update<SOLine>(
+                             new PXDataFieldAssign<SOLineExt.usrShippingStatus>(ShippingStatus.Delivered),
+                             new PXDataFieldRestrict<SOLine.orderType>(lines.OrigOrderType),
+                             new PXDataFieldRestrict<SOLine.orderNbr>(lines.OrigOrderNbr),
+                             new PXDataFieldRestrict<SOLine.lineNbr>(lines.OrigLineNbr));
+                        }
+                        else if(lines.OpenOrderQty != 0m && lines.ShippedQty != 0)
+                        {
+                            PXDatabase.Update<SOLine>(
+                             new PXDataFieldAssign<SOLineExt.usrShippingStatus>(ShippingStatus.PartialDelivered),
+                             new PXDataFieldRestrict<SOLine.orderType>(lines.OrigOrderType),
+                             new PXDataFieldRestrict<SOLine.orderNbr>(lines.OrigOrderNbr),
+                             new PXDataFieldRestrict<SOLine.lineNbr>(lines.OrigLineNbr));
+                        }
+                }
+            }
+            });
+            return baseMethod(adapter, shipmentList);
+        }
+
+        public override void Initialize()
+        {
+            base.Initialize();
+            Base.report.AddMenuAction(ReleasingReceipt);
+            Base.action.AddMenuAction(BackloadBtn);
+            Base.report.AddMenuAction(DeliveryReceipt);
+            Base.action.AddMenuAction(BackloadCM);
+        }
+
+        #endregion
+        #region Selects
+
+        public PXSelect<BackLoadCMTable,Where<BackLoadCMTable.shipmentNbr,Equal<Current<SOShipment.shipmentNbr>>,And<BackLoadCMTable.shipmentType,Equal<Current<SOShipment.shipmentType>>>>> ShipmentBackload;
+
+        [PXProjection(typeof(Select5<SOShipLine,
+            LeftJoin<InventoryItem,On<InventoryItem.inventoryID,Equal<SOShipLine.inventoryID>>,
+            LeftJoin<SOShipment,On<SOShipment.shipmentNbr,Equal<SOShipLine.shipmentNbr>,And<SOShipment.shipmentType,Equal<SOShipLine.shipmentType>>>,
+            LeftJoin<SOOrderShipment, On<SOOrderShipment.shipmentNbr, Equal<SOShipment.shipmentNbr>,And<SOOrderShipment.shipmentType,Equal<SOShipment.shipmentType>>>>>>,
+            Where<InventoryItem.stkItem,Equal<True>>,
+            Aggregate<GroupBy<SOShipLine.shipmentType,GroupBy<SOShipLine.shipmentNbr,GroupBy<SOShipLine.lineNbr>>>>>))]
+        [Serializable]
+        public class BackLoadCMTable : IBqlTable
+        {
+            public abstract class selected : IBqlField { }
+            [PXBool()]
+            [PXUIField(DisplayName = "Selected")]
+            [PXDefault(false,PersistingCheck = PXPersistingCheck.Nothing)]
+            public virtual bool? Selected { get; set; }
+            #region ShipmentNbr
+            public abstract class shipmentNbr : IBqlField { }
+            [PXDBString(15,IsUnicode = true,IsKey = true,BqlField = typeof(SOShipLine.shipmentNbr))]
+            [PXUIField(DisplayName = "Shipment Nbr")]
+            public virtual string ShipmentNbr { get; set; }
+            #region InvoiceNbr
+            public abstract class invoiceNbr : IBqlField { }
+            [PXDBString(15, IsUnicode = true, BqlField = typeof(SOOrderShipment.invoiceNbr))]
+            [PXUIField(DisplayName = "invoice Nbr")]
+            public virtual string InvoiceNbr { get; set; }
+            #endregion
+            #endregion
+            #region ShipmentType
+            public abstract class shipmentType : PX.Data.BQL.BqlString.Field<shipmentType> { }
+            protected String _ShipmentType;
+            [PXDBString(1, IsFixed = true, IsKey = true,BqlField = typeof(SOShipLine.shipmentType))]
+            public virtual String ShipmentType
+            {
+                get
+                {
+                    return this._ShipmentType;
+                }
+                set
+                {
+                    this._ShipmentType = value;
+                }
+            }
+            #endregion
+            #region ShipmentLineNbr
+            public abstract class lineNbr : PX.Data.BQL.BqlInt.Field<lineNbr> { }
+            protected Int32? _LineNbr;
+            [PXDBInt(IsKey = true,BqlField = typeof(SOShipLine.lineNbr))]
+            [PXUIField(DisplayName = "Line Nbr.", Visible = false)]
+            public virtual Int32? LineNbr
+            {
+                get
+                {
+                    return this._LineNbr;
+                }
+                set
+                {
+                    this._LineNbr = value;
+                }
+            }
+            #endregion
+            #region InventoryID
+            public abstract class inventoryID : IBqlField { }
+            [StockItem(BqlField = typeof(SOShipLine.inventoryID),DisplayName = "Inventory ID")]
+            public virtual int? InventoryID { get; set; }
+            #endregion
+            #region SiteID
+            public abstract class siteID : PX.Data.BQL.BqlInt.Field<siteID> { }
+            protected Int32? _SiteID;
+            [SiteAvail(typeof(SOShipLine.inventoryID), typeof(SOShipLine.subItemID),BqlField = typeof(SOShipLine.siteID))]
+            public virtual Int32? SiteID
+            {
+                get
+                {
+                    return this._SiteID;
+                }
+                set
+                {
+                    this._SiteID = value;
+                }
+            }
+            #endregion
+            #region LocationID
+            public abstract class locationID : PX.Data.BQL.BqlInt.Field<locationID> { }
+            protected Int32? _LocationID;
+            [SOLocationAvail(typeof(SOShipLine.inventoryID), typeof(SOShipLine.subItemID), typeof(SOShipLine.siteID), typeof(SOShipLine.tranType), typeof(SOShipLine.invtMult), BqlField = typeof(SOShipLine.locationID))]
+            public virtual Int32? LocationID
+            {
+                get
+                {
+                    return this._LocationID;
+                }
+                set
+                {
+                    this._LocationID = value;
+                }
+            }
+            #endregion
+            #region ShippedQty
+            public abstract class shippedQty : IBqlField { }
+            [PXDBQuantity(typeof(SOShipLine.uOM),typeof(SOShipLine.baseShippedQty),BqlField = typeof(SOShipLine.shippedQty))]
+            [PXUIField(DisplayName = "Shipped Qty")]
+            [PXDefault(TypeCode.Decimal, "0.00", PersistingCheck = PXPersistingCheck.Nothing)]
+            public virtual decimal? ShippedQty { get; set; }
+            #endregion
+            #region OrderQty
+            public abstract class orderQty : IBqlField { }
+            [PXDBQuantity(BqlField = typeof(SOShipLine.origOrderQty))]
+            [PXUIField(DisplayName = "Order Qty")]
+            [PXDefault(TypeCode.Decimal, "0.00", PersistingCheck = PXPersistingCheck.Nothing)]
+            public virtual decimal? OrderQty { get; set; }
+            #endregion
+            #region OpenOrderQty
+            public abstract class openQty : IBqlField { }
+            [PXDBQuantity(BqlField = typeof(SOShipLine.openOrderQty))]
+            [PXUIField(DisplayName = "Open Qty")]
+            [PXDefault(TypeCode.Decimal, "0.00",PersistingCheck = PXPersistingCheck.Nothing)]
+            public virtual decimal? OpenQty { get; set; }
+            #endregion
+            #region UOM
+            public abstract class uOM : PX.Data.BQL.BqlString.Field<uOM> { }
+            protected String _UOM;
+            [INUnit(typeof(inventoryID), DisplayName = "UOM", Enabled = false,BqlField = typeof(SOShipLine.uOM))]
+            public virtual String UOM
+            {
+                get
+                {
+                    return this._UOM;
+                }
+                set
+                {
+                    this._UOM = value;
+                }
+            }
+            #endregion
+        }
+
+        #endregion
+
+        #region Actions
+
+        public PXAction<SOShipment> ReleasingReceipt;
+        [PXButton()]
+        [PXUIField(DisplayName = "Releasing Receipt")]
+        protected void releasingReceipt()
+        {
+            Dictionary<string, string> down = new Dictionary<string, string>();
+            SOShipment row = Base.Document.Current;
+            down["ShipmentNbr"] = row.ShipmentNbr;
+            throw new PXReportRequiredException(down, "DP000002", null)
+            {
+                Mode = PXBaseRedirectException.WindowMode.NewWindow
+            };
+        }
+
+        public PXAction<SOShipment> BackloadBtn;
+        [PXButton()]
+        [PXUIField(DisplayName = "Backload")]
+        protected virtual void backloadBtn()
+        {
+            var graph = PXGraph.CreateInstance<BackloadEntry>();
+            var graphBase = Base.Transactions.Select();
+            BackloadLine select = PXSelect<
+                BackloadLine,
+                Where<BackloadLine.shipmentNbr, Equal<Required<BackloadLine.shipmentNbr>>>>
+                .Select(Base, Base.Document.Current.ShipmentNbr);
+            if (select != null)
+            {
+                throw new PXException("Shipment Nbr {0} is already in backload", Base.Document.Current.ShipmentNbr);
+            }
+            else
+            {
+                if (Base.Transactions.Select().Count > 0)
+                {
+                    bool hasProcessedTran = false;
+                    var backloadHead = graph.BackloadHead.Insert(new Backload()
+                    {
+                        CustomerID = Base.Document.Current.CustomerID,
+                        CustomerIDLocation = Base.Document.Current.CustomerLocationID
+                    });
+                    foreach (SOShipLine lines in graphBase)
+                    {
+                        ARTran tran = PXSelect<
+                            ARTran,
+                            Where<ARTran.sOOrderType, Equal<Required<ARTran.sOOrderType>>,
+                                And<ARTran.sOOrderNbr, Equal<Required<ARTran.sOOrderNbr>>,
+                                And<ARTran.sOOrderLineNbr, Equal<Required<ARTran.sOOrderLineNbr>>>>>>
+                            .Select(Base, lines.OrigOrderType, lines.OrigOrderNbr, lines.OrigLineNbr);
+                        SOLine line = PXSelect<
+                            SOLine,
+                            Where<SOLine.orderType, Equal<Required<SOLine.orderType>>,
+                                And<SOLine.orderNbr, Equal<Required<SOLine.orderNbr>>,
+                                And<SOLine.lineNbr, Equal<Required<SOLine.lineNbr>>>>>>
+                            .Select(Base, lines.OrigOrderType, lines.OrigOrderNbr, lines.OrigLineNbr);
+                        var linesExt = PXCache<SOShipLine>.GetExtension<SOShipLineExt>(lines);
+
+                        if (linesExt.UsrIsBackload == true)
+                        {
+                            var backloadLine = graph.BackloadLine.Insert(new BackloadLine()
+                            {
+                                ShipmentNbr = lines.ShipmentNbr,
+                                ShipmentType = lines.ShipmentType,
+                                ShipmentLineNbr = lines.LineNbr,
+                                InvoiceNbr = tran != null ? tran.RefNbr : null,
+                                InventoryID = lines.InventoryID,
+                                SiteID = lines.SiteID,
+                                LocationID = lines.LocationID,
+                                UOM = lines.UOM
+                            });
+
+                            hasProcessedTran = true;
+                        }
+                    }
+
+                    if (!hasProcessedTran) throw new PXException("There are no items tagged for backload.");
+                    throw new PXRedirectRequiredException(graph, "");
+                }
+            }
+        }
+
+        public PXAction<SOShipment> DeliveryReceipt;
+        [PXButton()]
+        [PXUIField(DisplayName = "Delivery Receipt")]
+        public void deliveryReceipt()
+        {
+            Dictionary<string, string> down = new Dictionary<string, string>();
+            SOShipment row = Base.Document.Current;
+            down["ShipmentNbr"] = row.ShipmentNbr;
+            throw new PXReportRequiredException(down, "DP000001", null)
+            {
+                Mode = PXBaseRedirectException.WindowMode.NewWindow
+            };
+        }
+
+        public PXAction<SOShipment> BackloadCM;
+        [PXButton()]
+        [PXUIField(DisplayName = "Backload CM")]
+        protected virtual IEnumerable backloadCM(PXAdapter adapter)
+        {
+            if (ShipmentBackload.AskExt() == WebDialogResult.OK)
+            {
+                var graph = PXGraph.CreateInstance<BackloadEntry>();
+                BackloadLine select = PXSelect<
+                BackloadLine,
+                Where<BackloadLine.shipmentNbr, Equal<Required<BackloadLine.shipmentNbr>>>>
+                .Select(Base, Base.Document.Current.ShipmentNbr);
+                PXLongOperation.StartOperation(Base, delegate ()
+                 {
+                     var backloadHead = graph.BackloadHead.Insert(new Backload()
+                     {
+                         CustomerID = Base.Document.Current.CustomerID,
+                         CustomerIDLocation = Base.Document.Current.CustomerLocationID,
+                         IsCM = true
+                     });
+                     if (select != null)
+                     {
+                         throw new PXException("Shipment is already in backload");
+                     }
+                     foreach (BackLoadCMTable item in ShipmentBackload.Select())
+                     {
+                         if(item.Selected == true)
+                         {
+                             var backloadLine = graph.BackloadLine.Insert(new BackloadLine()
+                             {
+                                 ShipmentNbr = item.ShipmentNbr,
+                                 ShipmentType = item.ShipmentType,
+                                 ShipmentLineNbr = item.LineNbr,
+                                 InvoiceNbr = item.InvoiceNbr,
+                                 InventoryID = item.InventoryID,
+                                 SiteID = item.SiteID,
+                                 LocationID = item.LocationID,
+                                 UOM = item.UOM
+                             });
+                         }
+                     }
+                     throw new PXRedirectRequiredException(graph,null);
+                 });
+            }
+            return adapter.Get();
+        }
+
+        #endregion
+
+        #region EventHandlers
+        public void BackloadCMTable_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+            var row = e.Row as BackLoadCMTable;
+            if(row != null)
+            {
+                PXUIFieldAttribute.SetEnabled(sender, row, false);
+                PXUIFieldAttribute.SetEnabled<BackLoadCMTable.selected>(sender,row,true);
+            }
+        }
+        public void SOShipment_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+            var row = e.Row as SOShipment;
+            if (row == null) return;
+            
+            BackloadBtn.SetEnabled(row.Status == SOShipmentStatus.Completed || row.Status == SOShipmentStatus.Confirmed);
+            ReleasingReceipt.SetEnabled(true);
+            DeliveryReceipt.SetEnabled(true);
+            BackloadCM.SetEnabled(row.Status == SOShipmentStatus.Completed);
+            
+        }
+        public void SOShipLine_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+            var row = e.Row as SOShipLine;
+            if (row == null) return;
+            var rowExt = sender.GetExtension<SOShipLineExt>(row);
+
+            PXUIFieldAttribute.SetEnabled<SOShipLineExt.usrIsBackload>(sender,row, rowExt.UsrAvailBackloadQty > 0);
+        }
+        #endregion
+
+        
+    }
+}]]></CDATA>
+</Graph>

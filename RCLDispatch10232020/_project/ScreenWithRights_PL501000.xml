@@ -1,0 +1,36 @@
+﻿<ScreenWithRights>
+    <data-set>
+        <relations format-version="3" relations-version="20160101" main-table="SiteMap">
+            <link from="RolesInCache (ScreenID)" to="SiteMap (ScreenID)" />
+            <link from="RolesInGraph (ScreenID)" to="SiteMap (ScreenID)" />
+            <link from="RolesInMember (ScreenID)" to="SiteMap (ScreenID)" />
+            <link from="Roles (Rolename, ApplicationName)" to="RolesInCache (Rolename, ApplicationName)" type="FromMaster" updateable="False" />
+            <link from="Roles (Rolename, ApplicationName)" to="RolesInGraph (Rolename, ApplicationName)" type="FromMaster" updateable="False" />
+            <link from="Roles (Rolename, ApplicationName)" to="RolesInMember (Rolename, ApplicationName)" type="FromMaster" updateable="False" />
+        </relations>
+        <layout>
+            <table name="SiteMap">
+                <table name="RolesInCache" uplink="(ScreenID) = (ScreenID)" />
+                <table name="RolesInGraph" uplink="(ScreenID) = (ScreenID)" />
+                <table name="RolesInMember" uplink="(ScreenID) = (ScreenID)" />
+            </table>
+            <table name="Roles" />
+        </layout>
+        <data>
+            <SiteMap>
+                <row Position="0" Title="Pick List Processing" Url="~/Pages/PL/PL501000.aspx" Expanded="0" IsFolder="0" ScreenID="PL501000" NodeID="9097ee6d-d3fc-4df0-bc6a-b4371a05f49f" ParentID="603c021a-c082-451d-96aa-a9f6d988043f">
+                    <RolesInGraph Rolename="Dispatch" ApplicationName="/" Accessrights="4" />
+                    <RolesInGraph Rolename="Administrator" ApplicationName="/" Accessrights="4" />
+                </row>
+                <row Position="1" Title="Picking Process" Url="~/Pages/PL/PL501000.aspx" Expanded="0" IsFolder="0" ScreenID="PL501000" NodeID="b0a1a1f7-9daa-4516-8b37-c6d1872baa93" ParentID="2302d6d5-c76b-4b12-bfb9-7770c6bfb2a1">
+                    <RolesInGraph Rolename="Dispatch" ApplicationName="/" Accessrights="4" />
+                    <RolesInGraph Rolename="Administrator" ApplicationName="/" Accessrights="4" />
+                </row>
+            </SiteMap>
+            <Roles>
+                <row Rolename="Dispatch" ApplicationName="/" Descr="Dispatch User" Guest="0" />
+                <row Rolename="Administrator" ApplicationName="/" Descr="System Administrator" Guest="0" />
+            </Roles>
+        </data>
+    </data-set>
+</ScreenWithRights>

@@ -1,0 +1,25 @@
+﻿<Sql TableName="BackloadLine" TableSchemaXml="#CDATA">
+    <CDATA name="TableSchemaXml"><![CDATA[<table name="BackloadLine">
+  <col name="CompanyID" type="Int" default="Zero" />
+  <col name="BackloadNbr" type="NVarChar(15)" />
+  <col name="BackloadType" type="NVarChar(5)" />
+  <col name="BackloadLineNbr" type="Int" />
+  <col name="ShipmentNbr" type="NVarChar(15)" nullable="true" />
+  <col name="ShipmentType" type="NVarChar(5)" nullable="true" />
+  <col name="ShipmentLineNbr" type="Int" nullable="true" />
+  <col name="InvoiceNbr" type="NVarChar(15)" nullable="true" />
+  <col name="InventoryID" type="Int" nullable="true" />
+  <col name="Qty" type="Decimal(19,6)" nullable="true" />
+  <col name="SiteID" type="Int" nullable="true" />
+  <col name="tstamp" type="Timestamp" />
+  <col name="CreatedByID" type="UniqueIdentifier" />
+  <col name="CreatedDateT9ke" type="DateTime" />
+  <col name="CreatedByScreenID" type="Char(8)" />
+  <col name="LastModifiedByID" type="UniqueIdentifier" />
+  <col name="LastModifiedByScreenID" type="Char(8)" />
+  <col name="LastModifiedDateTime" type="DateTime" />
+  <col name="RecordID" type="Int" identity="true" />
+  <col name="LocationID" type="Int" nullable="true" />
+  <col name="UOM" type="NVarChar(6)" nullable="true" />
+</table>]]></CDATA>
+</Sql>

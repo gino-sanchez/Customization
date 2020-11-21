@@ -1,0 +1,3 @@
+﻿<DAC type="PX.Objects.AR.ARRegister">
+    <Field FieldName="RefNbr" TypeName="string" OverrideClassName="PX.Objects.AR.ARInvoice" StorageName="ExistingColumn" />
+</DAC>

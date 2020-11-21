@@ -1,0 +1,5 @@
+﻿<Fields ScreenID="PL301000">
+    <Field IsActive="True" FieldName="PICKOPENQTY" DisableCondition="True" ObjectName="PL.PLPICKLISTLINE" />
+    <Field IsActive="True" FieldName="SOLINE__OPENQTY" HideCondition="True" ObjectName="PL.PLPICKLISTLINE" />
+    <Field IsActive="True" FieldName="TOLOCATIONID" HideCondition="True" ObjectName="PL.PLPICKLISTLINE" />
+</Fields>

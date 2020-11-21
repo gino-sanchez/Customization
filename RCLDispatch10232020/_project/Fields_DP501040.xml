@@ -1,0 +1,4 @@
+﻿<Fields ScreenID="DP501040">
+    <Field IsActive="True" FieldName="SOADDRESS__ADDRESSLINE1" ObjectName="PX.OBJECTS.SO.SOORDER" />
+    <Field IsActive="True" FieldName="SOADDRESS__ADDRESSLINE2" ObjectName="PX.OBJECTS.SO.SOORDER" />
+</Fields>

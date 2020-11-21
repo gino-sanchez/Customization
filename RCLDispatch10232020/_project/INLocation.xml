@@ -1,0 +1,5 @@
+﻿<Table TableName="INLocation">
+    <Column TableName="INLocation" ColumnName="UsrDefaultPickingLocation" ColumnType="bool" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="INLocation" ColumnName="UsrDamaged" ColumnType="bool" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="INLocation" ColumnName="UsrGoods" ColumnType="bool" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+</Table>

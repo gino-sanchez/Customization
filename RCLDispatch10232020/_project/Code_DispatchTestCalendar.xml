@@ -1,0 +1,181 @@
+﻿<Graph ClassName="DispatchTestCalendar" Source="#CDATA" IsNew="True" FileType="NewGraph">
+    <CDATA name="Source"><![CDATA[using System;
+using PX.Data;
+using Dispatch;
+using PL;
+using PX.Objects.SO;
+using System.Linq;
+using PX.Objects.AR;
+
+namespace Dispatch07052020BackUp
+{
+    public abstract class CalendarDates : IBqlField
+    {
+        public class ListAttribute : PXStringListAttribute
+        {
+            public ListAttribute()
+                : base(
+                new string[] { January, February, March, April, May, June, July, August, September, October, November, December },
+                new string[] { "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December" })
+            { }
+        }
+
+        public const string January = "J";
+        public const string February = "F";
+        public const string March = "M";
+        public const string April = "A";
+        public const string May = "M";
+        public const string June = "J";
+        public const string July = "Jy";
+        public const string August = "A";
+        public const string September = "S";
+        public const string October = "O";
+        public const string November = "N";
+        public const string December = "D";
+
+        public class january : Constant<string>
+        {
+            public january() : base(January) { }
+        }
+
+        public class february : Constant<string>
+        {
+            public february() : base(February) { }
+        }
+
+        public class march : Constant<string>
+        {
+            public march() : base(March) { }
+        }
+
+        public class april : Constant<string>
+        {
+            public april() : base(April) { }
+        }
+
+        public class may : Constant<string>
+        {
+            public may() : base(May) { }
+        }
+
+        public class june : Constant<string>
+        {
+            public june() : base(June) { }
+        }
+
+        public class july : Constant<string>
+        {
+            public july() : base(July) { }
+        }
+
+        public class august : Constant<string>
+        {
+            public august() : base(August) { }
+        }
+
+        public class september : Constant<string>
+        {
+            public september() : base(September) { }
+        }
+
+        public class october : Constant<string>
+        {
+            public october() : base(October) { }
+        }
+
+        public class november : Constant<string>
+        {
+            public november() : base(November) { }
+        }
+
+        public class december : Constant<string>
+        {
+            public december() : base(December) { }
+        }
+    }
+    public class DispatchTestCalendar : PXGraph<DispatchTestCalendar>
+	{
+
+		public PXSave<MasterTable> Save;
+		public PXCancel<MasterTable> Cancel;
+
+
+		public PXFilter<MasterTable> MasterView;
+		public PXFilter<CalendarTest> DetailsView;
+
+		[Serializable]
+		public class MasterTable : IBqlTable
+		{
+            public abstract class month : IBqlField { }
+            [PXString(15, IsUnicode = true)]
+            [PXUIField(DisplayName = "Month")]
+            [CalendarDates.List]
+
+            public virtual string Month { get; set; }
+        }
+
+		
+
+        #region Projection 
+
+
+        [PXProjection(typeof(Select4<SOLine, Aggregate<GroupBy<SOLine.orderNbr>>>))]
+        [Serializable]
+        public class CalendarTest : IBqlTable
+        {
+            public abstract class orderNbr : IBqlField { }
+            [PXDBString(15,IsUnicode =true,BqlField = typeof(SOLine.orderNbr))]
+            [PXUIField(DisplayName = "SO #")]
+            public virtual string OrderNbr { get; set; }
+
+            public abstract class monday : IBqlField { }
+            [PXString(15)]
+            [PXUIField(DisplayName = "Monday")]
+            //[PXDBScalar(typeof(Search<SOLine.orderNbr,Where<SOLine.orderNbr,Equal<CalendarTest.orderNbr>>>))]
+            [PXUnboundDefault(typeof(Search<SOLine.orderNbr,Where<SOLine.orderNbr,Equal<Current<orderNbr>>>>))]
+            public virtual string Monday { get; set; }
+
+            public abstract class tuesday : IBqlField { }
+            [PXString(15)]
+            [PXUIField(DisplayName = "Tuesday")]
+            public virtual string Tuesday { get; set; }
+
+            public abstract class wednesday : IBqlField { }
+            [PXString(15)]
+            [PXUIField(DisplayName = "Wednesday")]
+            public virtual string Wednesday { get; set; }
+
+            public abstract class thursday : IBqlField { }
+            [PXString(15)]
+            [PXUIField(DisplayName = "Thursday")]
+            public virtual string Thursday { get; set; }
+
+            public abstract class friday : IBqlField { }
+            [PXString(15)]
+            [PXUIField(DisplayName = "Friday")]
+            public virtual string Friday { get; set; }
+
+            public abstract class saturday : IBqlField { }
+            [PXString(15)]
+            [PXUIField(DisplayName = "Saturday")]
+            public virtual string Saturday { get; set; }
+
+
+        }
+
+        #endregion
+
+        #region EventHandler
+
+        protected void CalendarTest_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+            var row = e.Row as CalendarTest;
+            if (row == null) return;
+
+            PXUIFieldAttribute.SetEnabled(sender, row, false);
+        }
+
+        #endregion
+    }
+}]]></CDATA>
+</Graph>

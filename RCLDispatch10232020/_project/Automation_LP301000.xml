@@ -1,0 +1,5 @@
+﻿<Automation screen="LP301000">
+    <Fields ScreenID="LP301000">
+        <Field IsActive="True" FieldName="OLDTRIPTICKETNBR" DisableCondition="True" ObjectName="DISPATCH.LPLOADPLANLINE" />
+    </Fields>
+</Automation>

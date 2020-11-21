@@ -1,0 +1,535 @@
+﻿<Graph ClassName="DispatchApprovalRequest" Source="#CDATA" IsNew="True" FileType="NewGraph">
+    <CDATA name="Source"><![CDATA[using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using PX.Data;
+using PX.Objects.AR;
+using PX.Objects.Common;
+using PX.Objects.Common.Bql;
+using PX.Objects.CR;
+using PX.Objects.CS;
+using PX.Objects.CT;
+using PX.Objects.EP;
+using PX.Objects.IN;
+using PX.Objects.SO;
+using PX.SM;
+using PL;
+
+namespace Dispatch
+{
+    [Serializable]
+    public class FilterTable : IBqlTable
+    {
+        
+    }
+
+   
+    public class DispatchApprovalRequest : PXGraph<DispatchApprovalRequest>
+	{
+        protected const string _ScheduleActionKey = "Schedule";
+        public PXCancel<SOApprovalRequest> Cancel;
+		public PXFilter<FilterTable> MasterView;
+        public PXFilter<ReasonForReject> RejectAllComment;
+        [PXFilterable]
+        public PXProcessing<SOApprovalRequest> DetailsView;
+
+        #region Projection
+        [PXProjection(typeof(Select2<
+                                            SOLine,
+                                            InnerJoin<SOOrder,
+                                                On<SOOrder.orderNbr, Equal<SOLine.orderNbr>,
+                                                And<SOOrder.orderType, Equal<SOLine.orderType>>>,
+                                            LeftJoin<InventoryItem,
+                                                On<InventoryItem.inventoryID, Equal<SOLine.inventoryID>>,
+                                            LeftJoin<INSite,
+                                                On<INSite.siteID, Equal<SOLine.siteID>>,
+                                            LeftJoin<Customer,
+                                                On<Customer.bAccountID, Equal<SOLine.customerID>>,
+                                            LeftJoin<INSiteStatus, 
+                                                On<INSiteStatus.inventoryID, Equal<InventoryItem.inventoryID>,
+                                                And<InventoryItem.stkItem, Equal<boolTrue>,
+                                                And<INSiteStatus.siteID, NotEqual<SiteAttribute.transitSiteID>,
+                                                And<INSiteStatus.siteID, Equal<SOLineExt.usrNewSiteID>>>>>>>>>>,
+                                            Where<SOOrder.status, Equal<SOOrderStatus.open>,
+                                                And<Where<SOLineExt.usrRerouteStatus, Equal<MyStatus.pending>,
+                                                    And<Where<SOLineExt.usrRequestType, IsNotNull>>>>>>))]
+        [Serializable]
+        public class SOApprovalRequest : IBqlTable
+        {
+            #region Selected
+            public abstract class selected : IBqlField { }
+            [PXBool()]
+
+            public virtual bool? Selected { get; set; }
+            #endregion
+
+            #region OrderType
+            public abstract class orderType : PX.Data.IBqlField { }
+            [PXDBString(2, IsKey = true, IsFixed = true, BqlField = typeof(SOOrder.orderType))]
+            [PXSelector(typeof(Search2<
+                SOOrderType.orderType,
+                InnerJoin<SOOrderTypeOperation,
+                    On<SOOrderTypeOperation.orderType, Equal<SOOrderType.orderType>,
+                    And<SOOrderTypeOperation.operation, Equal<SOOrderType.defaultOperation>>>>,
+                Where<SOOrderType.requireShipping, Equal<boolFalse>,
+                    Or<FeatureInstalled<FeaturesSet.inventory>>>>))]
+            [PXUIField(DisplayName = "Order Type", Enabled = false)]
+            public virtual string OrderType { get; set; }
+            #endregion
+
+            #region SOOrderNbr
+            public abstract class orderNbr : PX.Data.IBqlField { }
+            [PXDBString(15, IsKey = true, BqlField = typeof(SOOrder.orderNbr))]
+            [PXUIField(DisplayName = "Order Nbr", Enabled = false)]
+            public virtual String OrderNbr { get; set; }
+            #endregion
+
+            #region SOLineNbr
+            public abstract class lineNbr : PX.Data.IBqlField { }
+            [PXDBInt(IsKey = true, BqlField = typeof(SOLine.lineNbr))]
+            [PXUIField(DisplayName = "Line Nbr", Enabled = false)]
+            public virtual int? LineNbr { get; set; }
+            #endregion
+
+            #region RerouteStatus
+            public abstract class requestStatus : PX.Data.IBqlField { }
+            [PXDBString(10, BqlField = typeof(SOLineExt.usrRerouteStatus))]
+            [PXUIField(DisplayName = "Request Status", Visible = false)]
+            [MyStatus.List]
+            public virtual string RequestStatus { get; set; }
+            #endregion
+
+            #region RequestForTransfer
+
+            public abstract class requestForTransfer : PX.Data.IBqlField { }
+            [PXDBBool(BqlField = typeof(SOLineExt.usrRequestForTransfer))]
+            [PXUIField(DisplayName = "Request For Transfer")]
+            public virtual bool? RequestForTransfer { get; set; }
+            #endregion
+
+            #region OrderDate
+            public abstract class orderDate : IBqlField { }
+            [PXDBDate(BqlField = typeof(SOOrder.orderDate))]
+            [PXUIField(DisplayName = "Doc Date")]
+            public virtual DateTime? OrderDate { get; set; }
+            #endregion
+
+            #region CustomerID
+            public abstract class customerID : IBqlField { }
+            [PXDBInt(BqlField = typeof(SOLine.customerID))]
+            [PXUIField(DisplayName = "Customer ID")]
+            public virtual int? CustomerID { get; set; }
+            #endregion
+
+            #region CustomerName
+            public abstract class customerName : IBqlField { }
+            [PXDBString(50, BqlField = typeof(Customer.acctName))]
+            [PXUIField(DisplayName = "Customer Name")]
+            public virtual string CustomerName { get; set; }
+            #endregion
+
+            #region DeliveryAddress
+
+            public abstract class deliveryAddress : IBqlField { }
+            [PXDBString(100, BqlField = typeof(SOShippingAddress.addressLine1))]
+            [PXUIField(DisplayName = "Delivery Address")]
+            public virtual string DeliveryAddress { get; set; }
+
+            #endregion
+
+            #region Warehouse
+
+            public abstract class warehouse : IBqlField { }
+            [PXDBInt(BqlField = typeof(SOLineExt.usrOldSiteID))]
+            [PXUIField(DisplayName = "Requesting Warehouse")]
+            [PXSelector(typeof(Search<INSite.siteID>), SubstituteKey = typeof(INSite.siteCD))]
+            public virtual int? Warehouse { get; set; }
+
+            #endregion
+
+            #region NewWarehouse 
+
+            public abstract class newWarehouse : IBqlField { }
+            [SiteAvail(typeof(SORerouting.inventoryID), BqlField = typeof(SOLineExt.usrNewSiteID))]
+            [PXParent(typeof(Select<
+                SOOrderSite,
+                Where<SOOrderSite.orderType, Equal<Current<SOLine.orderType>>,
+                    And<SOOrderSite.orderNbr, Equal<Current<SOLine.orderNbr>>,
+                    And<SOOrderSite.siteID, Equal<Current2<SOLine.siteID>>>>>>), LeaveChildren = true, ParentCreate = true)]
+            [PXDefault(PersistingCheck = PXPersistingCheck.Nothing)]
+            [PXUIRequired(typeof(IIf<
+                Where<SOLine.lineType, NotEqual<SOLineType.miscCharge>>, True, False>))]
+            [InterBranchRestrictor(typeof(
+                                                                Where2<SameOrganizationBranch<INSite.branchID, Current<SOOrder.branchID>>,
+                                                                    Or<Current<SOOrder.behavior>, Equal<SOBehavior.qT>>>))]
+            [PXUIField(DisplayName = "To Warehouse")]
+            public virtual int? NewWarehouse { get; set; }
+
+            #endregion
+
+            #region InventoryID
+
+            public abstract class inventoryID : IBqlField { }
+            [PXDBInt(BqlField = typeof(SOLine.inventoryID))]
+            [PXUIField(DisplayName = "Inventory ID")]
+            [PXSelector(typeof(Search<InventoryItem.inventoryID>), SubstituteKey = typeof(InventoryItem.inventoryCD))]
+            public virtual int? InventoryID { get; set; }
+
+            #endregion
+
+            #region ItemName
+            public abstract class itemName : IBqlField { }
+            [PXDBString(256, BqlField = typeof(InventoryItem.descr))]
+            [PXUIField(DisplayName = "Item Description")]
+            public virtual string ItemName { get; set; }
+            #endregion
+
+            #region OrderQty
+            public abstract class orderQty : IBqlField { }
+            [PXDBDecimal(BqlField = typeof(SOLine.orderQty))]
+            [PXUIField(DisplayName = "Quantity")]
+            public virtual Decimal? OrderQty { get; set; }
+            #endregion
+
+            #region RequestQty
+            public abstract class requestQty : IBqlField { }
+            [PXDBDecimal(BqlField = typeof(SOLineExt.usrRequestQty))]
+            [PXUIField(DisplayName = "Request Qty")]
+            public virtual Decimal? RequestQty { get; set; }
+            #endregion
+
+            #region StockOnHand
+            public abstract class stockOnHand : IBqlField { }
+            [PXDBQuantity(BqlField = typeof(INSiteStatus.qtyAvail))]
+            [PXUIField(DisplayName = "Stock On Hand")]
+            //[PXUnboundDefault(typeof(Search<
+            //    INSiteStatusSummary.qtyOnHand,
+            //    Where<INSiteStatusSummary.inventoryID, Equal<Current<inventoryID>>,
+            //        And<INSiteStatusSummary.siteID, Equal<Current<warehouse>>>>>), PersistingCheck = PXPersistingCheck.Nothing)]
+            public virtual Decimal? StockOnHand { get; set; }
+            #endregion
+
+            #region ReasonForRejection
+
+            public abstract class reasonReject : IBqlField { }
+            [PXString(60)]
+            [PXUIField(DisplayName = "Reason for Rejection")]
+            public virtual string ReasonReject { get; set; }
+
+            #endregion
+
+            #region RequestType
+
+            public abstract class requestType : IBqlField { }
+            [PXDBString(2, BqlField = typeof(SOLineExt.usrRequestType))]
+            [PXUIField(DisplayName = "Request Type", Visible = false)]
+            [RequestType.List]
+            public virtual string RequestType { get; set; }
+
+            #endregion
+
+            #region RequestorID
+            public abstract class requestorID : IBqlField { }
+            [PXDBGuid(BqlField = typeof(SOLineExt.usrRequestorID))]
+            [PXUIField(DisplayName = "Requestor ID")]
+            public virtual Guid? RequestorID { get; set; }
+
+            #endregion
+
+            #region NoteID
+
+            public abstract class noteID : IBqlField { }
+            [PXNote(BqlField = typeof(SOLine.noteID))]
+            public virtual Guid? NoteID { get; set; }
+
+            #endregion
+
+            #region ShipmentType
+
+            public abstract class shippingType : IBqlField { }
+            [PXDBString(BqlField = typeof(SOLineExt.usrConfirmShipment))]
+            [PXUIField(DisplayName = "Shipping Type" )]
+            [Attrib.List]
+            public virtual string ShippingType { get; set; }
+
+            #endregion
+
+        }
+
+        #endregion
+
+        #region ReasonForRejectionField
+        [Serializable]
+        public class ReasonForReject : IBqlTable
+        {
+            public abstract class reasonReject : IBqlField { }
+            [PXString(100)]
+            [PXUIField(DisplayName = "Reason for Rejection")]
+            public virtual string ReasonReject { get; set; }
+        }
+
+        #endregion
+
+        #region Constructor
+
+        public DispatchApprovalRequest()
+        {
+            ReasonForReject myRjt = RejectAllComment.Current;
+            
+
+            DetailsView.SetProcessCaption("Approve");
+            DetailsView.SetProcessAllCaption("Approve All");
+            DetailsView.SetSelected<SOApprovalRequest.selected>();
+            DetailsView.SetProcessDelegate(list => ProcessRequests(list,String.Empty, myRjt, DetailsView.Cache));
+            
+            
+        }
+        #endregion
+
+        #region Method
+
+        public void EmailNotif(PXGraph graph, SOLine em)
+        {
+            SOSetup setup = PXSelect<SOSetup>.Select(graph);
+            var setupExt = PXCache<SOSetup>.GetExtension<SOSetupExt>(setup);
+            var emExt = PXCache<SOLine>.GetExtension<SOLineExt>(em);
+
+            if (setupExt.UsrDispatchEmailTemp == null)
+                throw new PXException("Please select the email template at the Sales Order Preferences screen.");
+
+            Notification notif = PXSelect<
+                Notification,
+                Where<Notification.notificationID, Equal<Required<Notification.notificationID>>>>
+                .Select(graph, setupExt.UsrDispatchEmailTemp);
+            
+            string emailTo = String.Empty;
+            if (notif.NTo == null)
+            {
+                Users contactDetails = PXSelect<
+                    Users,
+                    Where<Users.pKID, Equal<Required<Users.pKID>>>>
+                    .Select(graph, emExt.UsrRequestorID);
+
+                emailTo = contactDetails.Email;
+            }
+            else
+                emailTo = notif.NTo;
+
+            if (emailTo == String.Empty) throw new PXException("Email of the customer not found.");
+            TemplateNotificationGenerator sender = TemplateNotificationGenerator.Create(em, notif.NotificationID);
+            sender.MailAccountId = (notif.NFrom.HasValue) ? notif.NFrom.Value : PX.Data.EP.MailAccountManager.DefaultAnyMailAccountID;
+            sender.To = emailTo;
+            sender.RefNoteID = em.NoteID;
+            sender.Send().Any();
+        }
+
+        public void ProcessRequests(List<SOApprovalRequest> list, string act, ReasonForReject rjt, PXCache cache)
+        {
+            
+            foreach (SOApprovalRequest myReq in list)
+            {
+                var selectLine = PXSelect<
+                    SOLine, 
+                    Where<SOLine.orderNbr, Equal<Required<SOLine.orderNbr>>,
+                        And<SOLine.orderType,Equal<Required<SOLine.orderType>>,
+                        And<SOLine.lineNbr,Equal<Required<SOLine.lineNbr>>>>>>
+                    .Select(cache.Graph,myReq.OrderNbr,myReq.OrderType,myReq.LineNbr);
+                if (act == "RJ")// Reject Request
+                {
+
+                    if (myReq.Selected == true)
+                    {
+                        if (myReq.ReasonReject != null)
+                        {
+
+                            // do update the rejected request
+                            PXDatabase.Update<SOLine>(
+                                new PXDataFieldAssign<SOLineExt.usrRejectWhse>(myReq.NewWarehouse),
+                                new PXDataFieldAssign<SOLineExt.usrDescReason>(myReq.ReasonReject),
+                                new PXDataFieldAssign<SOLineExt.usrNewSiteID>(null),
+                                new PXDataFieldAssign<SOLineExt.usrRerouteTransferApproveStatusDate>(DateTime.Now),
+                                new PXDataFieldAssign<SOLineExt.usrRerouteStatus>(MyStatus.Declined),
+                                new PXDataFieldRestrict<SOLine.orderType>(myReq.OrderType),
+                                new PXDataFieldRestrict<SOLine.orderNbr>(myReq.OrderNbr),
+                                new PXDataFieldRestrict<SOLine.lineNbr>(myReq.LineNbr)
+                                );
+
+                            EmailNotif(cache.Graph, selectLine);
+                        }
+                        else
+                        {
+                            //Error 
+                            throw new PXException("Reason for Rejection field should not be Empty");
+
+                        }
+                    }
+
+                }
+                else if (act == "RJA") // Reject All Request
+                {
+                    if (myReq.Selected == true)
+                    {
+                        PXDatabase.Update<SOLine>(
+                            new PXDataFieldAssign<SOLineExt.usrRejectWhse>(myReq.NewWarehouse),
+                            new PXDataFieldAssign<SOLineExt.usrDescReason>(rjt.ReasonReject),
+                            new PXDataFieldAssign<SOLineExt.usrNewSiteID>(null),
+                            new PXDataFieldAssign<SOLineExt.usrRerouteTransferApproveStatusDate>(DateTime.Now),
+                            new PXDataFieldAssign<SOLineExt.usrRerouteStatus>(MyStatus.Declined),
+                            new PXDataFieldRestrict<SOLine.orderType>(myReq.OrderType),
+                            new PXDataFieldRestrict<SOLine.orderNbr>(myReq.OrderNbr),
+                            new PXDataFieldRestrict<SOLine.lineNbr>(myReq.LineNbr)
+
+                        );
+                        EmailNotif(cache.Graph, selectLine);
+                    }
+
+                }
+
+                else // Accepted Request
+                {
+                    if (myReq.Selected == true)
+                    {
+
+                        if (myReq.RequestType == RequestType.Transfer)
+                        {
+                            SOOrderEntry graph = PXGraph.CreateInstance<SOOrderEntry>();
+                            
+
+                            var graphSetup = PXGraph.CreateInstance<SOSetupMaint>();
+
+                            SOOrder order = new SOOrder();
+                            order.OrderType = graphSetup.sosetup.SelectSingle().TransferOrderType;
+                            order = graph.Document.Insert(order);
+                            graph.Document.Cache.SetValueExt<SOOrder.orderType>(order, graphSetup.sosetup.SelectSingle().TransferOrderType);
+                            order = graph.Document.Update(order);
+                            graph.Document.Cache.SetValueExt<SOOrder.status>(order,SOOrderStatus.Open);
+                            order = graph.Document.Update(order);
+                            graph.Document.Cache.SetValueExt<SOOrder.destinationSiteID>(order, myReq.Warehouse);
+                            order = graph.Document.Update(order);
+
+                            var insertLineTransfer = graph.Transactions.Insert(new SOLine()
+                            {
+                                InventoryID = myReq.InventoryID,
+                                OrderQty = myReq.RequestQty,
+                                SiteID = myReq.NewWarehouse,
+                                POCreate = false
+                            });
+                            graph.Transactions.Cache.SetValue<SOLineExt.usrConfirmShipment>(insertLineTransfer, myReq.ShippingType);
+                            graph.Transactions.Update(insertLineTransfer);
+                            graph.Transactions.Cache.SetValue<SOLineExt.usrRequestingWarehouse>(insertLineTransfer,myReq.Warehouse);
+                            graph.Transactions.Update(insertLineTransfer);
+                            graph.Persist();
+
+                            
+                            PXDatabase.Update<SOLine>
+                            (
+                                //new PXDataFieldAssign<SOLine.siteID>(myReq.NewWarehouse),
+                                //new PXDataFieldAssign<SOLineExt.usrNewSiteID>(null),
+                                new PXDataFieldAssign<SOLineExt.usrRerouteStatus>(MyStatus.Accepted),
+                                new PXDataFieldAssign<SOLineExt.usrTransferLink>(graph.Document.Current.OrderNbr),
+                                new PXDataFieldAssign<SOLineExt.usrRerouteTransferApproveStatusDate>(DateTime.Now),
+                                new PXDataFieldRestrict<SOLine.orderType>(myReq.OrderType),
+                                new PXDataFieldRestrict<SOLine.orderNbr>(myReq.OrderNbr),
+                                new PXDataFieldRestrict<SOLine.lineNbr>(myReq.LineNbr)
+
+                            );
+                            PXProcessing.SetInfo(list.IndexOf(myReq),"Transfer Ref Nbr is " + graph.Document.Current.OrderNbr);
+                        }
+                        else
+                        {
+                            PXDatabase.Update<SOLine>
+                                (
+                                    new PXDataFieldAssign<SOLine.siteID>(myReq.NewWarehouse),
+                                    new PXDataFieldAssign<SOLineExt.usrNewSiteID>(null),
+                                    new PXDataFieldAssign<SOLineExt.usrRerouteStatus>(MyStatus.Accepted),
+                                    new PXDataFieldAssign<SOLineExt.usrRerouteTransferApproveStatusDate>(DateTime.Now),
+                                    new PXDataFieldRestrict<SOLine.orderType>(myReq.OrderType),
+                                    new PXDataFieldRestrict<SOLine.orderNbr>(myReq.OrderNbr),
+                                    new PXDataFieldRestrict<SOLine.lineNbr>(myReq.LineNbr)
+                                );
+                        }
+                    }
+                }
+            }
+        }
+
+        
+
+        #endregion
+
+        #region Actions
+
+        public PXAction<SOApprovalRequest> Reject;
+        [PXProcessButton()]
+        [PXUIField(DisplayName = "Reject")]
+        public IEnumerable reject(PXAdapter adapter)
+        {
+            ReasonForReject myrjt = RejectAllComment.Current;
+            return RejectRequest(adapter,false,"RJ", myrjt);
+        }
+
+        public PXAction<SOApprovalRequest> RejectAll;
+        [PXProcessButton()]
+        [PXUIField(DisplayName ="Reject All")]
+        public IEnumerable rejectAll(PXAdapter adapter)
+        {
+            if (RejectAllComment.AskExt() != WebDialogResult.OK)
+            {
+                return null;
+            }
+           
+            ReasonForReject myrjt = RejectAllComment.Current;
+            if (myrjt.ReasonReject == null) { throw new PXException("Reason for Rejection field is Required"); }
+            RejectAllComment.View.Clear();
+            RejectAllComment.Cache.Clear();
+            RejectAllComment.Cache.ClearQueryCache();
+            return RejectRequest(adapter, true, "RJA", myrjt);
+            
+        }
+
+        #region PXCancel
+
+        public PXAction<ReasonForReject> MyCancel;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "Cancel")]
+        public virtual IEnumerable myCancel(PXAdapter adapter)
+        {
+            RejectAllComment.Current.ReasonReject = "";
+            RejectAllComment.Update(RejectAllComment.Current);
+            
+
+            return adapter.Get();
+        }
+
+        #endregion
+
+        #region Ienumerable Actions
+
+        private IEnumerable RejectRequest(PXAdapter adapter, bool all,string param,ReasonForReject rjt)
+        {
+            DetailsView.SetProcessDelegate(list => ProcessRequests(list,param,rjt, DetailsView.Cache));
+            foreach (var record in this.Actions[all ? "ProcessAll" : "Process"].Press(adapter))
+                yield return record;
+        }
+
+        #endregion
+
+        #endregion
+
+        #region EventHandlers
+
+        protected void SOApprovalRequest_RowSelected(PXCache sender,PXRowSelectedEventArgs e)
+        {
+            var row = e.Row as SOApprovalRequest;
+            if (row == null) return;
+
+            PXUIFieldAttribute.SetEnabled<SOApprovalRequest.reasonReject>(sender, row, true);
+        }
+        
+        #endregion
+
+      
+    }
+}]]></CDATA>
+</Graph>

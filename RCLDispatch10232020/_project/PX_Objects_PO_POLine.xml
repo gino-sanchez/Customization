@@ -1,0 +1,23 @@
+﻿<DAC type="PX.Objects.PO.POLine">
+    <Field FieldName="UsrSOOrderNbr" TypeName="string" MapDbTable="POLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBString(15)]
+[PXUIField(DisplayName="SOOrderNbr")]
+]]></CDATA>
+    </Field>
+    <Field FieldName="UsrSOOrderType" TypeName="string" MapDbTable="POLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBString(2)]
+[PXUIField(DisplayName="SOOrderType")]
+]]></CDATA>
+    </Field>
+    <Field FieldName="UsrSOOrderLineNbr" TypeName="int" MapDbTable="POLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBInt]
+[PXUIField(DisplayName="SOOrderLineNbr")]
+]]></CDATA>
+    </Field>
+    <Field FieldName="UsrSOShippingType" TypeName="string" MapDbTable="POLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBString(10)]
+[PXUIField(DisplayName="SOShippingType")]
+using PL;
+[Attrib.List]]]></CDATA>
+    </Field>
+</DAC>

@@ -1,0 +1,6 @@
+﻿<Automation screen="DT300000">
+    <Fields ScreenID="DT300000">
+        <Field IsActive="True" FieldName="DESCRIPTION" DisableCondition="True" ObjectName="DISPATCH.DBTOOLS" />
+        <Field IsActive="True" FieldName="DESCRIPTION" DisableCondition="True" ObjectName="DISPATCH.DBVEHICLE" />
+    </Fields>
+</Automation>

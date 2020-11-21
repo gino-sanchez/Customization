@@ -1,0 +1,7 @@
+﻿<DAC type="PX.Objects.SO.SOOrderType">
+    <Field FieldName="UsrDispatch" TypeName="bool" MapDbTable="SOOrderType" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBBool]
+[PXUIField(DisplayName="Allow in Dispatch")]
+]]></CDATA>
+    </Field>
+</DAC>

@@ -1,0 +1,1129 @@
+﻿<Graph ClassName="LoadPlanTicketEntry" Source="#CDATA" IsNew="True" FileType="NewGraph">
+    <CDATA name="Source"><![CDATA[using System;
+using PX.Data;
+using PX.Objects.SO;
+using DispatchSetup;
+using PX.Objects.EP;
+
+using System.Collections;
+using PX.Objects.IN;
+using System.Collections.Generic;
+using PX.Objects.AR;
+using System.Linq;
+using PX.Objects.CS;
+using PX.Objects.CR;
+using PL;
+
+namespace Dispatch
+{
+            #region AddItemsFilterWarehouse
+
+    [Serializable]
+    public class FWarehouse : IBqlTable
+    {
+        public abstract class myWareHouse : IBqlField { }
+        [PXInt()]
+        [PXUIField(DisplayName = "Warehouse")]
+        [PXSelector(typeof(Search<INSite.siteID>), SubstituteKey = typeof(INSite.siteCD))]
+        public virtual int? MyWarehouse { get; set; }
+    }
+
+    #endregion
+    public class LoadPlanTicketEntry : PXGraph<LoadPlanTicketEntry, LPLoadPlanMaster>
+    {
+        public PXSetup<DispatchNumberingSetup> Setup;
+        public PXSelect<LPLoadPlanMaster> LoadPlanMaster;
+        public PXSelectJoin<
+            LPLoadPlanLine,
+            LeftJoin<SOOrder,
+                On<SOOrder.orderNbr, Equal<LPLoadPlanLine.sOOrderNbr>,
+                And<Where<SOOrder.orderType, Equal<LPLoadPlanLine.sOOrderType>>>>,
+            LeftJoin<SOLine,
+                On<SOLine.orderNbr,
+                Equal<LPLoadPlanLine.sOOrderNbr>,
+                And<SOLine.orderType, Equal<LPLoadPlanLine.sOOrderType>,
+                And<SOLine.lineNbr, Equal<LPLoadPlanLine.sOLineNbr>>>>>>,
+            Where<LPLoadPlanLine.tripTicketNbr, Equal<Current<LPLoadPlanMaster.tripTIcketNbr>>>>
+            LoadPlanLine;
+        public PXSelectJoin<
+            LoadPlanSOLineContent,
+            LeftJoin<LPLoadPlanMaster,
+                On<LPLoadPlanMaster.tripTIcketNbr, Equal<LoadPlanSOLineContent.tripTicketNbr>>>,
+            Where<LoadPlanSOLineContent.tripTicketNbr, Equal<Current<LPLoadPlanMaster.tripTIcketNbr>>>>
+            Content;
+        public PXSelect<
+            LPLoadPlanSplit, 
+            Where<LPLoadPlanSplit.tripTicketNbr, Equal<Current<LPLoadPlanLine.tripTicketNbr>>,
+                And<LPLoadPlanSplit.lPLoadPlanLine, Equal<Current<LPLoadPlanLine.lineNbr>>>>> 
+            loadSplit;
+        public PXSelect<
+            SOShipLine,
+            Where<SOShipLine.shipmentNbr,Equal<Required<SOShipLine.shipmentNbr>>>> 
+            shipLines;
+        
+        public PXSelectJoin<
+            SOLine,
+            LeftJoin<SOOrder,
+                On<SOOrder.orderType,Equal<SOLine.orderType>,
+                And<SOOrder.orderNbr,Equal<SOLine.orderNbr>>>,
+            LeftJoin<SOOrderType,
+                On<SOOrderType.orderType,Equal<SOLine.orderType>>>>>
+            AddItems;
+        public PXFilter<FWarehouse> FilterWarehouse;
+        public PXSelect<
+            CrewLine,
+            Where<CrewLine.tripTicketNbr, Equal<Current<LPLoadPlanMaster.tripTIcketNbr>>>>
+            CrewLines;
+        public PXSelect<LPLoadPlanLine> ToReAssignItems;
+        public PXSelect<PickLoadContent, Where<PickLoadContent.tripTicketNbr, Equal<Current<LPLoadPlanMaster.tripTIcketNbr>>>> pLoadContent;
+        #region IEnumerable
+        public virtual IEnumerable toReAssignItems()
+        {
+            List<LPLoadPlanLine> myLine = new List<LPLoadPlanLine>();
+            foreach (LPLoadPlanLine line in PXSelectJoin<
+                LPLoadPlanLine,
+                InnerJoin<LPLoadPlanMaster,
+                    On<LPLoadPlanMaster.tripTIcketNbr, Equal<LPLoadPlanLine.tripTicketNbr>>>,
+                Where<LPLoadPlanMaster.loadStatus, Equal<LoadPlanStatus.reAssign>,
+                    And<Where<LPLoadPlanLine.hasNewTripTicketNbr,NotEqual<True>>>>,
+                OrderBy<
+                    Asc<LPLoadPlanLine.tripTicketNbr>>>
+                .Select(this))
+            {
+                    if (!myLine.Contains(line))
+                    {
+                        myLine.Add(line);
+                    }
+            }
+            return myLine;
+
+        }
+
+        public virtual IEnumerable addItems()
+        {
+            var filter = FilterWarehouse.Current;
+                PXSelectBase<SOLine> query = new PXSelectJoin<
+                    SOLine,
+                    LeftJoin<SOOrder,
+                        On<SOOrder.orderType, Equal<SOLine.orderType>,
+                        And<SOOrder.orderNbr, Equal<SOLine.orderNbr>>>,
+                    LeftJoin<SOOrderType,
+                        On<SOOrderType.orderType, Equal<SOLine.orderType>>>>,
+                        Where2<
+                            Where<SOLine.openQty,Greater<decimal0>,
+                                And<SOLineExt.usrAvailableLoadQty,Greater<decimal0>>>,
+                            And2<
+                                Where<SOOrder.status,Equal<SOOrderStatus.open>,
+                                    Or<SOOrder.status,Equal<SOOrderStatus.backOrder>>>,
+                                And2<Where<SOLineExt.usrConfirmShipment,Equal<Attrib.cwStore>,
+                                    And<SOOrderTypeExt.usrDispatch,Equal<True>>>, And<SOLineExt.usrForeCastDate, IsNotNull>>>>>(this);
+                if(filter.MyWarehouse != null)
+                {
+                    query.WhereAnd<Where<SOLine.siteID, Equal<Current<FWarehouse.myWareHouse>>>>();
+                }
+
+                foreach (PXResult<SOLine,SOOrder,SOOrderType> line in query.Select())
+                {
+                    PXResult<SOLine, SOOrder, SOOrderType> res = line;
+                    yield return res;
+                }
+        }
+        #endregion
+
+        
+
+        #region Constructor
+
+        public LoadPlanTicketEntry()
+        {
+            Reports.AddMenuAction(Print);
+        }
+
+        #endregion
+
+        #region EventHandlers
+
+        public virtual void LPLoadPlanMaster_TruckID_FieldUpdated(PXCache sender, PXFieldUpdatedEventArgs e)
+        {
+            var row = e.Row as LPLoadPlanMaster;
+            if (row == null) { return; }
+            Truck myTruck = PXSelect<
+                Truck,
+                Where<Truck.truckID, Equal<Required<Truck.truckID>>>>
+                .Select(this, row.TruckID);
+            if (myTruck == null) { return; }
+            if (row.TruckID == null)
+            {
+                row.TruckCapacityCBM = null;
+                row.TruckCapacityKGS = null;
+            }
+            else
+            {
+                sender.SetValueExt<LPLoadPlanMaster.truckCapacityCBM>(row, myTruck.TruckCapacityCMB);
+                sender.SetValueExt<LPLoadPlanMaster.truckCapacityKGS>(row, myTruck.TruckCapacityKGS);
+
+                sender.SetValueExt<LPLoadPlanMaster.driverName>(row, myTruck.DriverID);
+
+            }
+        }
+
+        public virtual void LPLoadPlanMaster_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+            LPLoadPlanMaster row = (LPLoadPlanMaster)e.Row;
+            bool isEnabled = row.DocDate == null;
+            bool isClose = row.LoadStatus == LoadPlanStatus.Printed;
+            bool isConfirmed = row.IsConfirmed == true;
+            bool isCancelled = row.IsCancelled == true;
+            bool isReAssign = LoadPlanMaster.Current.LoadStatus == LoadPlanStatus.ReAssign;
+            bool isReAssigned = LoadPlanMaster.Current.LoadStatus == LoadPlanStatus.ReAssigned;
+
+            if (row == null) { return; }
+
+            LoadPlanLine.Cache.AllowInsert = false;
+            LoadPlanLine.Cache.AllowDelete = !isConfirmed && !isCancelled && !isReAssign;
+
+            CrewLines.Cache.AllowInsert = !isConfirmed && !isCancelled && !isReAssign;
+
+            CancelButton.SetEnabled(!isCancelled && !isConfirmed && !isReAssign && !isReAssigned);
+            ConfirmLoadPlan.SetEnabled(!isCancelled && !isConfirmed && !isReAssign && !isReAssigned);
+            ReAssign.SetEnabled(!isReAssign && !isReAssigned && isConfirmed);
+            ReAssignItems.SetEnabled(!isReAssign && !isCancelled && !isConfirmed);
+            LoadItem.SetEnabled(!isReAssign && !isReAssigned && !isCancelled && !isConfirmed);
+            PXUIFieldAttribute.SetEnabled<CrewLine.crewid>(sender, row, !isCancelled && !isConfirmed && !isReAssign);
+            PXUIFieldAttribute.SetEnabled<LPLoadPlanMaster.driverName>(sender, row, !isCancelled && !isConfirmed && !isReAssign);
+            PXUIFieldAttribute.SetEnabled<LPLoadPlanMaster.truckID>(sender, row, !isCancelled && !isConfirmed && !isReAssign);
+            PXUIFieldAttribute.SetEnabled<LPLoadPlanMaster.zone>(sender, row, !isCancelled && !isConfirmed && !isReAssign);
+            PXUIFieldAttribute.SetEnabled<LPLoadPlanMaster.docDate>(sender, row, !isCancelled && !isConfirmed && !isReAssign);
+            if (row.LoadStatus == LoadPlanStatus.Confirmed || row.LoadStatus == LoadPlanStatus.Cancelled)
+            {
+                LoadPlanMaster.View.Cache.IsDirty = false;
+            }
+            if (row.TotalLoadKGS > row.TruckCapacityKGS && !(row.ExcessTruckKGS <= 0m))
+            {
+
+                sender.RaiseExceptionHandling<LPLoadPlanMaster.totalLoadKGS>(row, row.TotalLoadKGS, new PXSetPropertyException("Excess Load KGS", PXErrorLevel.Warning));
+                LoadPlanMaster.View.RequestRefresh();
+            }
+            else if (row.ExcessTruckKGS < 0m)
+            {
+                sender.RaiseExceptionHandling<LPLoadPlanMaster.totalLoadKGS>(row, row.TotalLoadKGS, new PXSetPropertyException("Warning. You Have Excess the 20% allowance overload ", PXErrorLevel.Warning));
+                LoadPlanMaster.View.RequestRefresh();
+            }
+            if (row.TotalLoadCBM < 0m)
+            {
+                sender.RaiseExceptionHandling<LPLoadPlanMaster.totalLoadCBM>(row, row.TotalLoadCBM, new PXSetPropertyException("Remaining balance CBM is Negative", PXErrorLevel.Warning));
+                LoadPlanMaster.View.RequestRefresh();
+            }
+        }
+
+        public virtual void LPLoadPlanMaster_RowPersisting(PXCache sender, PXRowPersistingEventArgs e)
+        {
+            var row = e.Row as LPLoadPlanMaster;
+            if (row == null) return;
+
+            if (row.Zone == null)
+            {
+                sender.RaiseExceptionHandling<LPLoadPlanMaster.zone>(row, row.Zone, new PXSetPropertyException("Zone field is Required", PXErrorLevel.Error));
+            }
+
+        }
+
+        public virtual void LPLoadPlanLine_RowPersisting(PXCache sender, PXRowPersistingEventArgs e)
+        {
+            var row = e.Row as LPLoadPlanLine;
+            if (row == null) return;
+
+            SOLine select = PXSelect<
+                SOLine,
+                Where<SOLine.orderType, Equal<Required<SOLine.orderType>>,
+                    And<SOLine.orderNbr, Equal<Required<SOLine.orderNbr>>,
+                    And<SOLine.lineNbr, Equal<Required<SOLine.lineNbr>>>>>>
+                .Select(this, row.SOOrderType, row.SOOrderNbr, row.SOLineNbr);
+            if (select == null) { return; }
+            SOLineExt selectExt = PXCache<SOLine>.GetExtension<SOLineExt>(select);
+            if(selectExt.UsrAvailableLoadQty < 0m)
+            {
+                sender.RaiseExceptionHandling<LPLoadPlanLine.itemQty>(row, row.ItemQty, new PXSetPropertyException("Available load qty will go negative. Remaining Available Load Qty: {0}",selectExt.UsrAvailableLoadQty, PXErrorLevel.Error)) ;
+            }
+        }
+
+        public virtual void LPLoadPlanLine_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+
+            LPLoadPlanLine row = (LPLoadPlanLine)e.Row;
+            var rowMast = LoadPlanMaster.Current;
+            if (row == null) { return; }
+            bool isReAssigned = LoadPlanMaster.Current.LoadStatus == LoadPlanStatus.ReAssigned;
+            var isCancelled = rowMast.IsCancelled == true;
+            var isConfirmed = rowMast.IsConfirmed == true;
+            bool isReAssign = LoadPlanMaster.Current.LoadStatus == LoadPlanStatus.ReAssign;
+            PXUIFieldAttribute.SetEnabled(sender, row, false);
+            PXUIFieldAttribute.SetEnabled<LPLoadPlanLine.itemQty>(sender, row, !isCancelled && !isConfirmed && !isReAssign);
+            PXUIFieldAttribute.SetEnabled<LPLoadPlanLine.selected>(sender, row, true);
+            PXUIFieldAttribute.SetVisible<LPLoadPlanLine.oldTripTicketNbr>(sender, null, isReAssigned);
+            PXUIFieldAttribute.SetEnabled<LPLoadPlanLine.bufferQty>(sender, row, !isCancelled && !isConfirmed && !isReAssign);
+
+            if (rowMast.LoadStatus == LoadPlanStatus.Confirmed || rowMast.LoadStatus == LoadPlanStatus.Cancelled)
+            {
+                LoadPlanLine.View.Cache.IsDirty = false;
+            }
+
+
+            if (row.TransferRefNbr != null)
+            {
+                INTran xSelect = PXSelectJoin<
+                    INTran,
+                    InnerJoin<INRegister,
+                        On<INRegister.refNbr, Equal<INTran.refNbr>>>,
+                    Where<INTran.refNbr, Equal<Required<INTran.refNbr>>,
+                        And<Where<INRegister.hold, Equal<boolTrue>,
+                            And<Where<INTranExt.usrTripTicketNbr, Equal<Required<INTranExt.usrTripTicketNbr>>>>>>>>
+                    .Select(this, row.TransferRefNbr, row.TripTicketNbr);
+                if (xSelect != null)
+                {
+                    sender.RaiseExceptionHandling<LPLoadPlanLine.transferRefNbr>(row, row.TransferRefNbr, new PXSetPropertyException("Transfer Document is On Hold. Please Pick Lot. Serial Nbr on Allocations.", PXErrorLevel.Warning));
+                }
+            }
+
+            if (row.ItemQty > 0)
+            {
+                InventoryItem myItem = PXSelectJoin<
+                    InventoryItem,
+                    LeftJoin<INLotSerClass,
+                        On<INLotSerClass.lotSerClassID, Equal<InventoryItem.lotSerClassID>>>,
+                    Where<INLotSerClass.lotSerIssueMethod, Equal<Required<INLotSerClass.lotSerIssueMethod>>,
+                        And<InventoryItem.inventoryID, Equal<Required<InventoryItem.inventoryID>>>>>
+                    .Select(this, INLotSerIssueMethod.UserEnterable, row.InventoryID);
+                if (myItem != null)
+                {
+                    LPLoadPlanSplit loadSplits = PXSelect<
+                        LPLoadPlanSplit,
+                        Where<LPLoadPlanSplit.tripTicketNbr, Equal<Required<LPLoadPlanSplit.tripTicketNbr>>,
+                            And<LPLoadPlanSplit.lPLoadPlanLine, Equal<Required<LPLoadPlanSplit.lPLoadPlanLine>>,
+                            And<LPLoadPlanSplit.inventoryID, Equal<Required<LPLoadPlanSplit.inventoryID>>>>>>
+                        .Select(this, row.TripTicketNbr, row.LineNbr, row.InventoryID);
+
+                    PLPickListLine pickLine = PXSelectJoin<
+                        PLPickListLine,
+                        InnerJoin<PLPickList,
+                            On<PLPickList.pickListNbr, Equal<PLPickListLine.pickListNbr>>>,
+                        Where<PLPickListLine.sOOrderNbr, Equal<Required<PLPickListLine.sOOrderNbr>>,
+                            And<PLPickListLine.sOOrderType, Equal<Required<PLPickListLine.sOOrderType>>,
+                            And<PLPickListLine.sOLineNbr, Equal<Required<PLPickListLine.sOLineNbr>>>>>>
+                        .Select(this, row.SOOrderNbr, row.SOOrderType, row.SOLineNbr);
+                    if (pickLine == null)
+                    {
+                        if (loadSplits == null)
+                        {
+                            sender.RaiseExceptionHandling<LPLoadPlanLine.itemQty>(row, row.ItemQty, new PXSetPropertyException("The item is not yet picked. Please pick lot serial nbr on Allocations tab.", PXErrorLevel.RowWarning));
+                        }
+                    }
+
+                }
+            }
+
+        }
+
+        public virtual void LPLoadPlanLine_ItemQty_FieldUpdated(PXCache sender, PXFieldUpdatedEventArgs e)
+        {
+            var row = e.Row as LPLoadPlanLine;
+            if (row == null) return;
+
+            LoadPlanSOLineContent cntnt = PXSelect<
+                LoadPlanSOLineContent,
+                Where<LoadPlanSOLineContent.tripTicketNbr,Equal<Required<LoadPlanSOLineContent.tripTicketNbr>>,
+                    And<LoadPlanSOLineContent.tripTicketLineNbr, Equal<Required<LoadPlanSOLineContent.tripTicketLineNbr>>>>>
+                .Select(this,row.TripTicketNbr,row.LineNbr);
+            if(cntnt != null)
+            {
+                Content.Cache.SetValueExt<LoadPlanSOLineContent.loadQty>(cntnt,row.ItemQty);
+                Content.Update(cntnt);
+            }
+        }
+
+        public virtual void LPLoadPlanLine_RowDeleting(PXCache sender, PXRowDeletingEventArgs e)
+        {
+            var row = e.Row as LPLoadPlanLine;
+            if (row == null) return;
+            LoadPlanSOLineContent cntnt = PXSelect<
+                LoadPlanSOLineContent,
+                Where<LoadPlanSOLineContent.tripTicketNbr, Equal<Required<LoadPlanSOLineContent.tripTicketNbr>>,
+                    And<LoadPlanSOLineContent.tripTicketLineNbr, Equal<Required<LoadPlanSOLineContent.tripTicketLineNbr>>>>>
+                .Select(this, row.TripTicketNbr, row.LineNbr);
+            if(cntnt != null)
+            {
+                row.ItemQty = 0m;
+                Content.Update(cntnt);
+                Content.Delete(cntnt);
+            }
+            LPLoadPlanSplit splits = PXSelect<LPLoadPlanSplit, Where<LPLoadPlanSplit.tripTicketNbr, Equal<Required<LPLoadPlanSplit.tripTicketNbr>>,
+                And<LPLoadPlanSplit.lPLoadPlanLine, Equal<Required<LPLoadPlanSplit.lPLoadPlanLine>>>>>.Select(this, row.TripTicketNbr, row.LineNbr);
+            if(splits != null)
+            {
+                loadSplit.Delete(splits);
+            }
+        }
+
+        public virtual void LPLoadPlanSplit_RowPersisted(PXCache sender, PXRowPersistedEventArgs e)
+        {
+            var row = e.Row as LPLoadPlanSplit;
+            if (row == null) return;
+            var doc = LoadPlanMaster.Current;
+            if (doc.LoadStatus != LoadPlanStatus.Cancelled)
+            {
+                PXDatabase.Update<PLPickListSplit>(
+                               new PXDataFieldAssign<PLPickListSplit.loaded>(true),
+                               new PXDataFieldRestrict<PLPickListSplit.pLPickListNbr>(row.PickListNbr),
+                               new PXDataFieldRestrict<PLPickListSplit.pLPickListLine>(row.PickListLine));
+            }
+        }
+        public virtual void LPLoadPlanSplit_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+            var row = e.Row as LPLoadPlanSplit;
+            if (row == null) return;
+            var doc = LoadPlanMaster.Current;
+            
+            if (doc.LoadStatus == LoadPlanStatus.Confirmed || doc.LoadStatus == LoadPlanStatus.Cancelled)
+            {
+                loadSplit.View.Cache.IsDirty = false;
+            }
+            PXUIFieldAttribute.SetEnabled<LPLoadPlanSplit.qty>(sender,row, row.PickListNbr == null && (doc.LoadStatus == LoadPlanStatus.Open || doc.LoadStatus == LoadPlanStatus.Printed));
+            sender.AllowInsert = doc.LoadStatus == LoadPlanStatus.Open || doc.LoadStatus == LoadPlanStatus.Printed;
+            sender.AllowDelete = doc.LoadStatus == LoadPlanStatus.Open || doc.LoadStatus == LoadPlanStatus.Printed;
+        }
+        public virtual void LPLoadPlanSplit_LotSerialNbr_FieldUpdated(PXCache sender, PXFieldUpdatedEventArgs e)
+        {
+            var row = e.Row as LPLoadPlanSplit;
+            if(row != null)
+            {
+                PLPickListSplit splts = PXSelect<PLPickListSplit,Where<PLPickListSplit.pLPickListNbr, Equal<Required<PLPickListSplit.pLPickListNbr>>,
+                    And<PLPickListSplit.pLPickListLine,Equal<Required<PLPickListSplit.pLPickListLine>>>>>.Select(this,row.PickListNbr,row.PickListLine);
+                if (splts != null)
+                {
+                    if (row.PickListNbr != null && splts.Loaded == true)
+                    {
+                        sender.RaiseExceptionHandling<LPLoadPlanSplit.lotSerialNbr>(row, row.LotSerialNbr, new PXSetPropertyException("Lot Serial Nbr cannot be changed", PXErrorLevel.Warning));
+                        row.LotSerialNbr = (string)e.OldValue;
+                    }
+                }
+            }
+        }
+        
+
+        #endregion
+        #region Actions
+        #region Confirm Load Plan
+        public PXAction<LPLoadPlanMaster> ConfirmLoadPlan;
+        [PXProcessButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "Confirm LoadPlan")]
+        public virtual IEnumerable confirmLoadPlan(PXAdapter adapter)
+        {
+            var graph = PXGraph.CreateInstance<SOOrderEntry>();
+            var LoadMaster = LoadPlanMaster.Current;
+            LoadPlanTicketEntry myGraph = null;
+            
+            List<SOLine> lines = new List<SOLine>();
+            List<SOOrder> orders = new List<SOOrder>();
+            List<LPLoadPlanLine> lpLines = new List<LPLoadPlanLine>();
+            foreach (LPLoadPlanLine myPlan in LoadPlanLine.Select())
+            {
+                SOOrder soOrder = PXSelect<
+                    SOOrder,
+                    Where<SOOrder.orderNbr, Equal<Required<SOOrder.orderNbr>>,
+                        And<Where<SOOrder.orderType, Equal<Required<SOOrder.orderType>>
+                            >>>>
+                    .Select(this, myPlan.SOOrderNbr, myPlan.SOOrderType);
+
+                if (!orders.Contains(soOrder))
+                {
+                    orders.Add(soOrder);
+                }
+                else
+                {
+                    continue;
+                }
+            }
+            foreach (LPLoadPlanLine planLine in LoadPlanLine.Select())
+            {   
+                SOLine soLine = PXSelect<
+                    SOLine,
+                    Where<SOLine.orderType, Equal<Required<SOLine.orderType>>,
+                        And<Where<SOLine.orderNbr, Equal<Required<SOLine.orderNbr>>,
+                            And<Where<SOLine.lineNbr, Equal<Required<SOLine.lineNbr>>>>>>>>
+                    .Select(this, planLine.SOOrderType, planLine.SOOrderNbr, planLine.SOLineNbr);
+
+                lines.Add(soLine);
+
+                lpLines.Add(planLine);
+                
+                
+            }
+            myGraph = this;
+            PXLongOperation.StartOperation(this, delegate
+            {
+                var soGraph = PXGraph.CreateInstance<SOOrderEntry>();
+                using (PXTransactionScope sc = new PXTransactionScope())
+                {
+                    //try
+                    //{
+                        CreateTransfer(LoadMaster, lpLines, myGraph);
+                        foreach (SOOrder order in orders)
+                        {
+                            CreateShipment(order, lines, myGraph);
+                        }
+                        LoadMaster.LoadStatus = LoadPlanStatus.Confirmed;
+                        LoadPlanMaster.Cache.Update(LoadMaster);
+                        LoadMaster.IsConfirmed = true;
+                        LoadPlanMaster.Cache.Update(LoadMaster);
+                        Persist();
+                        sc.Complete();
+                    //}
+                    //catch (Exception ex)
+                    //{
+                    //    throw new PXException(ex.Message);
+                    //}
+                }
+            });
+
+
+            return adapter.Get();
+        }
+        #endregion
+
+        #region Print
+        public PXAction<LPLoadPlanMaster> Print;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "Trip Ticket")]
+        public virtual IEnumerable print(PXAdapter adapter)
+        {
+            var LoadMaster = LoadPlanMaster.Current;
+            Dictionary<string, string> down = new Dictionary<string, string>();
+            this.Actions.PressSave();
+            throw new PXReportRequiredException(down, "TR000001", null) { Mode = PXBaseRedirectException.WindowMode.NewWindow };
+        }
+        #endregion
+
+        #region PrintButton
+
+        public PXAction<LPLoadPlanMaster> Reports;
+        [PXButton(SpecialType = PXSpecialButtonType.ActionsFolder, MenuAutoOpen = true)]
+        [PXUIField(DisplayName = "Reports", MapEnableRights = PXCacheRights.Select, MapViewRights = PXCacheRights.Select)]
+        public void reports()
+        {
+
+        }
+
+        #endregion
+
+        #region Cancel
+
+        public PXAction<LPLoadPlanMaster> CancelButton;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "Cancel")]
+        public virtual IEnumerable cancelButton(PXAdapter adapter)
+        {
+            var LoadMaster = LoadPlanMaster.Current;
+            LoadMaster.LoadStatus = LoadPlanStatus.Cancelled;
+            LoadPlanMaster.Cache.Update(LoadMaster);
+            LoadMaster.IsCancelled = true;
+            LoadPlanMaster.Cache.Update(LoadMaster);
+
+            foreach (LPLoadPlanLine myLine in LoadPlanLine.Select())
+            {
+                LoadPlanSOLineContent lineContent = PXSelect<
+                       LoadPlanSOLineContent,
+                       Where<LoadPlanSOLineContent.tripTicketNbr, Equal<Required<LoadPlanSOLineContent.tripTicketNbr>>,
+                           And<LoadPlanSOLineContent.tripTicketLineNbr, Equal<Required<LoadPlanSOLineContent.tripTicketLineNbr>>>>>
+                       .Select(this, myLine.TripTicketNbr, myLine.LineNbr);
+
+                if (lineContent != null)
+                {
+                    lineContent.LoadQty -= myLine.ItemQty;
+                    Content.Update(lineContent);
+                    Content.Delete(lineContent);
+                }
+            }
+            foreach(LPLoadPlanSplit spltLine in loadSplit.Select())
+            {
+                PLPickListSplit splts = PXSelect<PLPickListSplit,Where<PLPickListSplit.pLPickListNbr,Equal<Required<PLPickListSplit.pLPickListNbr>>,
+                    And<PLPickListSplit.pLPickListLine,Equal<Required<PLPickListSplit.pLPickListLine>>>>>.Select(this,spltLine.PickListNbr,spltLine.PickListLine);
+                LoadPlanLine.Current.LineNbr = spltLine.LPLoadPlanLine;
+                if(splts != null)
+                {
+                    PXDatabase.Update<PLPickListSplit>(
+                             new PXDataFieldAssign<PLPickListSplit.loaded>(false),
+                             new PXDataFieldRestrict<PLPickListSplit.pLPickListNbr>(spltLine.PickListNbr),
+                             new PXDataFieldRestrict<PLPickListSplit.pLPickListLine>(spltLine.PickListLine));
+                    loadSplit.Delete(spltLine);
+                }
+            }
+            foreach(PickLoadContent item in pLoadContent.Select())
+            {
+                if (item.TripTicketNbr == LoadPlanMaster.Current.TripTIcketNbr)
+                {
+                    pLoadContent.Delete(item);
+                }
+            }
+            Persist();
+
+
+            return adapter.Get();
+        }
+
+        #endregion
+
+        #region Re-Assign
+
+        public PXAction<LPLoadPlanMaster> ReAssign;
+        [PXButton(CommitChanges =true)]
+        [PXUIField(DisplayName = "Re-Assign")]
+        public void reAssign()
+        {
+            var graph = PXGraph.CreateInstance<LoadPlanTicketEntry>();
+            var myCurrent = LoadPlanMaster.Current;
+
+            myCurrent.LoadStatus = LoadPlanStatus.ReAssign;
+            LoadPlanMaster.Cache.Update(myCurrent);
+            Actions.PressSave();
+        }
+
+        #endregion
+
+        #region Load Item
+
+        public PXAction<LPLoadPlanMaster> LoadItem;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "Load Item")]
+        public virtual IEnumerable loadItem(PXAdapter adapter)
+        {
+
+            if (AddItems.AskExt() == WebDialogResult.OK)
+            {
+
+                foreach (PXResult<SOLine,SOOrder,SOOrderType> line in AddItems.Select())
+                {
+                    SOLine soLine = line;
+                    if (soLine == null) return adapter.Get();
+                    SOLineExt soLineExt = PXCache<SOLine>.GetExtension<SOLineExt>(soLine);
+                    if (soLineExt.UsrSelected == true)
+                    {
+                       if (Setup.Current.RequireInvPay == true)
+                        {
+
+                          ARTran select = PXSelectJoin<
+                                 ARTran,
+                                 InnerJoin<ARInvoice,
+                                     On<ARInvoice.docType, Equal<ARTran.tranType>,
+                                     And<ARTran.refNbr, Equal<ARInvoice.refNbr>>>>,
+                                 Where<ARTran.sOOrderType, Equal<Required<ARTran.sOOrderType>>,
+                                 And<ARTran.sOOrderNbr, Equal<Required<ARTran.sOOrderNbr>>, And<ARTran.sOOrderLineNbr, Equal<Required<ARTran.sOOrderLineNbr>>, And<Where<ARInvoice.status, Equal<ARDocStatus.closed>>>>>>>
+                                 .Select(this, soLine.OrderType, soLine.OrderNbr, soLine.LineNbr);
+                          if (select == null)
+                          {
+                              AddItems.Cache.Clear();
+                              throw new PXException("Order Nbr " + soLine.OrderNbr + " needs to be settled on Payments");
+                          }
+                        }
+                        var insertLoadPlanItem = LoadPlanLine.Insert(new LPLoadPlanLine()
+                        {
+                            SOOrderNbr = soLine.OrderNbr,
+                            SOOrderType = soLine.OrderType,
+                            SOLineNbr = soLine.LineNbr,
+                            ItemQty = soLine.OrderQty,
+                            CustomerID = soLine.CustomerID,
+                            InventoryID = soLine.InventoryID,
+                            SiteID = soLine.SiteID,
+                            UnitCBM = soLine.UnitVolume,
+                            UnitKGS = soLine.UnitWeigth,
+                        });
+                        AddLoadContent(insertLoadPlanItem, soLine, 0m);
+
+                    }
+                }
+
+            }
+            return adapter.Get();
+        }
+
+        #endregion
+
+        #region Re-Assign Items
+
+        public PXAction<LPLoadPlanMaster> ReAssignItems;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName ="Re Assign Items")]
+        public virtual IEnumerable reAssignItems(PXAdapter adapter)
+        {
+            
+                if (ToReAssignItems.AskExt() == WebDialogResult.OK)
+                {
+                    foreach (LPLoadPlanLine lines in ToReAssignItems.Select())
+                    {
+                        if (lines.Selected == true)
+                        {
+                            var insertToLine = LoadPlanLine.Insert(new LPLoadPlanLine()
+                            {
+                                Zone = lines.Zone,
+                                SOOrderNbr = lines.SOOrderNbr,
+                                SOOrderType = lines.SOOrderType,
+                                SOLineNbr = lines.SOLineNbr,
+                                ItemQty = lines.ItemQty,
+                                CustomerID = lines.CustomerID,
+                                InventoryID = lines.InventoryID,
+                                SiteID = lines.SiteID,
+                                UnitCBM = lines.UnitCBM,
+                                UnitKGS = lines.UnitKGS,
+                                OldTripTicketNbr = lines.TripTicketNbr,
+                                ShipmentNbr = lines.ShipmentNbr
+                            });
+                        this.LoadPlanLine.Cache.SetValueExt<LPLoadPlanLine.hasNewTripTicketNbr>(lines,true);
+                        LoadPlanMaster.Current.LoadStatus = LoadPlanStatus.ReAssigned;
+                        LoadPlanMaster.Update(LoadPlanMaster.Current);
+                        LoadPlanMaster.Current.DocType = LoadPlanStatus.Transfer;
+                        LoadPlanMaster.Update(LoadPlanMaster.Current);
+                        }
+                    }
+            }
+            return adapter.Get();
+        }
+
+        #endregion
+
+        #region Refresh
+
+        public PXAction<SOLine> RefreshAction;
+        [PXButton(CommitChanges =true)]
+        [PXUIField(DisplayName ="Cancel")]
+        public virtual IEnumerable refreshAction(PXAdapter adapter)
+        {
+            AddItems.Cache.Clear();
+            AddItems.Cache.ClearQueryCache();
+            return adapter.Get();
+        }
+
+        #endregion
+
+        #region Allocations
+
+        public PXAction<LPLoadPlanMaster> Allocations;
+        [PXButton()]
+        [PXUIField(DisplayName = "Allocations")]
+
+        public virtual IEnumerable allocations(PXAdapter adapter)
+        {
+            loadSplit.AskExt(true);
+            return adapter.Get();
+        }
+
+        #endregion
+
+        #region LinkCommands
+
+        public PXAction<SOOrder> MySOLink;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName ="SO")]
+        public virtual void mySOLink()
+        {
+            SOOrderEntry graph = PXGraph.CreateInstance<SOOrderEntry>();
+            LPLoadPlanLine lplineCurrent = LoadPlanLine.Current;
+            
+            graph.Document.Current = graph.Document.Search<SOOrder.orderNbr >(lplineCurrent.SOOrderNbr, lplineCurrent.SOOrderType);
+
+            throw new PXRedirectRequiredException(graph, "SOOrder Redirect")
+            {
+                Mode = PXBaseRedirectException.WindowMode.NewWindow
+            };
+        }
+
+        public PXAction<ARInvoice> MySILink;    
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "SI")]
+        public virtual void mySILink()
+        {
+            var graph = PXGraph.CreateInstance<ARInvoiceEntry>();
+
+            graph.Document.Current = graph.Document.Search<ARInvoice.refNbr>(this.LoadPlanLine.Current.InvoiceNbr,this.LoadPlanLine.Current.InvoiceType);
+
+            throw new PXRedirectRequiredException(graph, "Invoice Redirect")
+            {
+                Mode = PXBaseRedirectException.WindowMode.NewWindow
+            };
+        }
+
+        public PXAction<Customer> MyCustomer;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "Customer")]
+        public virtual void myCustomer()
+        {
+            var graph = PXGraph.CreateInstance<CustomerMaint>();
+
+            graph.BAccount.Current = graph.BAccount.Search<Customer.bAccountID>(this.LoadPlanLine.Current.CustomerID);
+
+            throw new PXRedirectRequiredException(graph, "Customer Redirect")
+            {
+                Mode = PXBaseRedirectException.WindowMode.NewWindow
+            };
+        }
+
+        public PXAction<InventoryItem> MyInventory;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "Inventory")]
+        public virtual void myInventory()
+        {
+            var graph = PXGraph.CreateInstance<InventoryItemMaint>();
+            graph.Item.Current = graph.Item.Search<InventoryItem.inventoryID>(this.LoadPlanLine.Current.InventoryID);
+
+            throw new PXRedirectRequiredException(graph, "Inventory Item Redirect")
+            {
+                Mode = PXBaseRedirectException.WindowMode.NewWindow
+            };
+        }
+
+        public PXAction<SOShipment> MyShipment;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "Shipment")]
+        public virtual void myShipment()
+        {
+            var graph = PXGraph.CreateInstance<SOShipmentEntry>();
+            graph.Document.Current = graph.Document.Search<SOShipment.shipmentNbr>(LoadPlanLine.Current.ShipmentNbr);
+            throw new PXRedirectRequiredException(graph, "Inventory Item Redirect")
+            {
+                Mode = PXBaseRedirectException.WindowMode.NewWindow
+            };
+        }
+
+        public PXAction<INRegister> TransferNbr;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "Transfer Nbr", Visible = false)]
+        public virtual void transferNbr()
+        {
+            var graph = PXGraph.CreateInstance<INTransferEntry>();
+
+            graph.transfer.Current = graph.transfer.Search<ARRegister.refNbr>(this.LoadPlanLine.Current.TransferRefNbr);
+
+            throw new PXRedirectRequiredException(graph, "Transfers")
+            {
+                Mode = PXBaseRedirectException.WindowMode.NewWindow
+            };
+        }
+        #endregion
+
+
+        #endregion
+        #region Method
+        public static void CreateShipment(SOOrder soOrder, List<SOLine> soLines, LoadPlanTicketEntry graph)
+        {
+            Truck myTruckCD = PXSelect<
+                Truck, 
+                Where<Truck.truckID, Equal<Required<Truck.truckID>>>>
+                .Select(graph, graph.LoadPlanMaster.Current.TruckID);
+            INLocation myLocation = PXSelect<
+                INLocation, 
+                Where<INLocation.locationCD, Equal<Required<INLocation.locationCD>>,
+                    And<Where<INLocation.siteID,Equal<Required<INLocation.siteID>>>>>>
+                .Select(graph, myTruckCD.TruckCD,graph.LoadPlanLine.Current.SiteID);
+            SOShipmentEntry shipmentEntry = PXGraph.CreateInstance<SOShipmentEntry>();
+            SOOrderEntry soLineEntry = PXGraph.CreateInstance<SOOrderEntry>();
+            
+            var groupbywh = soLines.GroupBy(l => l.SiteID);
+                foreach (var soline in groupbywh)
+                {
+                int? value = soline.Key;
+                if (soOrder.OrderType == SOOrderTypeConstants.TransferOrder)
+                {
+                    SOLine line = PXSelect<
+                        SOLine, 
+                        Where<SOLine.orderType,Equal<Required<SOLine.orderType>>,
+                            And<SOLine.orderNbr,Equal<Required<SOLine.orderNbr>>>>>
+                        .Select(graph,soOrder.OrderType,soOrder.OrderNbr);
+                    SOLineExt lineExt = PXCache<SOLine>.GetExtension<SOLineExt>(line);
+                   
+                    var shipment = shipmentEntry.Document.Insert(new SOShipment()
+                    {
+                        ShipmentType = SOShipmentType.Transfer,
+                        SiteID = value,
+                        DestinationSiteID = lineExt.UsrRequestingWarehouse,
+                        Operation = SOShipmentType.Issue,
+                        Status = SOShipmentStatus.Hold
+                    });
+                    shipmentEntry.Document.Update(shipment);
+                    shipmentEntry.Document.Cache.SetValueExt<SOShipment.destinationSiteID>(shipment,lineExt.UsrRequestingWarehouse);
+                    AddSOFilter addSOFilter = shipmentEntry.addsofilter.Select();
+                    addSOFilter.OrderType = soOrder.OrderType;
+                    addSOFilter.OrderNbr = soOrder.OrderNbr;
+                    shipmentEntry.addsofilter.Update(addSOFilter);
+                   
+                }
+                else
+                {
+                    var shipment = (SOShipment)shipmentEntry.Document.Cache.CreateInstance();
+                    shipment.CustomerID = soOrder.CustomerID;
+                    shipment.SiteID = value;
+                    shipmentEntry.Document.Update(shipment);
+                    
+
+                    AddSOFilter addSOFilter = shipmentEntry.addsofilter.Select();
+                    addSOFilter.OrderType = soOrder.OrderType;
+                    addSOFilter.OrderNbr = soOrder.OrderNbr;
+                    shipmentEntry.addsofilter.Update(addSOFilter);
+                }
+                foreach (SOShipmentPlan item in shipmentEntry.soshipmentplan.Select())//shipmentEntry.soshipmentplan.Select())
+                {
+
+                    bool include = false;
+
+                    foreach (SOLine line in soLines)
+                    {
+                        SOShipmentPlan plan = PXSelectJoin<
+                            SOShipmentPlan,
+                            InnerJoin<SOLineSplit,
+                                On<SOShipmentPlan.planID, Equal<SOLineSplit.planID>>>,
+                            Where<SOLineSplit.orderType, Equal<Required<SOLineSplit.orderType>>,
+                                And<SOLineSplit.orderNbr, Equal<Required<SOLineSplit.orderNbr>>,
+                                And<SOLineSplit.lineNbr, Equal<Required<SOLineSplit.lineNbr>>,
+                                And<SOShipmentPlan.planID, Equal<Required<SOShipmentPlan.planID>>>>>>>
+                            .Select(shipmentEntry, line.OrderType, line.OrderNbr, line.LineNbr, item.PlanID);
+
+                        if (plan != null)
+                        {
+                            include = true;
+                            break;
+                        }
+                    }
+
+                    item.Selected = include;
+                    item.PlanDate = shipmentEntry.Document.Current.ShipDate;
+                    shipmentEntry.soshipmentplan.Cache.Update(item);
+                }
+                shipmentEntry.addSO.Press();
+                shipmentEntry.Document.Cache.SetValue<SOShipmentExt.usrShippingType>(shipmentEntry.Document.Current, Attrib.CWStore);
+                shipmentEntry.Document.Update(shipmentEntry.Document.Current);
+                
+
+
+                if (shipmentEntry.Transactions.Select().Count > 0)
+                {
+                        foreach (SOShipLine shipmentLine in shipmentEntry.Transactions.Select())
+                        {
+                            shipmentEntry.Transactions.Current = shipmentLine;
+                            var shipExt = PXCache<SOShipLine>.GetExtension<SOShipLineExt>(shipmentLine);
+                            shipmentEntry.Transactions.SetValueExt<SOShipLineExt.usrTripTicketNbr>(shipmentLine, graph.LoadPlanMaster.Current.TripTIcketNbr);
+                            shipmentEntry.Transactions.SetValueExt<SOShipLine.shippedQty>(shipmentLine, 0m);
+                            shipmentEntry.Transactions.Update(shipmentLine);
+                            shipmentEntry.Persist();
+                            PXDatabase.Update<LPLoadPlanLine>(
+                               new PXDataFieldAssign<LPLoadPlanLine.shipmentNbr>(shipmentLine.ShipmentNbr),
+                               new PXDataFieldRestrict<LPLoadPlanLine.sOOrderType>(shipmentLine.OrigOrderType),
+                               new PXDataFieldRestrict<LPLoadPlanLine.sOOrderNbr>(shipmentLine.OrigOrderNbr),
+                               new PXDataFieldRestrict<LPLoadPlanLine.sOLineNbr>(shipmentLine.OrigLineNbr),
+                               new PXDataFieldRestrict<LPLoadPlanLine.tripTicketNbr>(shipExt.UsrTripTicketNbr));
+
+                            LPLoadPlanLine mySelect = PXSelect<
+                                LPLoadPlanLine,
+                                Where<LPLoadPlanLine.sOOrderType, Equal<Required<LPLoadPlanLine.sOOrderType>>,
+                                    And<Where<LPLoadPlanLine.sOOrderNbr, Equal<Required<LPLoadPlanLine.sOOrderNbr>>,
+                                        And<Where<LPLoadPlanLine.sOLineNbr, Equal<Required<LPLoadPlanLine.sOLineNbr>>,
+                                        And<Where<LPLoadPlanLine.shipmentNbr, Equal<Required<LPLoadPlanLine.shipmentNbr>>>>>>>>>>
+                                .Select(shipmentEntry, shipmentLine.OrigOrderType, shipmentLine.OrigOrderNbr, shipmentLine.OrigLineNbr, shipmentLine.ShipmentNbr);
+                            SOShipLineExt shipLineExt = PXCache<SOShipLine>.GetExtension<SOShipLineExt>(shipmentLine);
+                            shipmentEntry.Transactions.Cache.SetValue<SOShipLineExt.usrLPLoadPlanLine>(shipmentEntry.Transactions.Current, mySelect.LineNbr);
+                            shipmentEntry.Transactions.Cache.SetValue<SOShipLineExt.usrShippingType>(shipmentEntry.Transactions.Current, Attrib.CWStore);
+                            shipmentEntry.Transactions.Cache.SetValue<SOShipLine.shippedQty>(shipmentEntry.Transactions.Current, mySelect.ItemQty);
+                            shipmentEntry.Transactions.Cache.SetValue<SOShipLine.locationID>(shipmentEntry.Transactions.Current, myLocation.LocationID);
+                            shipmentEntry.Transactions.Cache.SetValue<SOShipLineExt.usrBufferQty>(shipmentEntry.Transactions.Current, mySelect.BufferQty);
+                            shipmentEntry.Transactions.Cache.SetValue<SOShipLineExt.usrLoadQty>(shipmentEntry.Transactions.Current, mySelect.ItemQty);
+                            shipmentEntry.Transactions.Update(shipmentLine);
+                            shipmentEntry.Persist();
+                        }
+                    
+                }
+
+            }
+            //Deleting of line
+            foreach (SOShipLine line in shipmentEntry.Transactions.Select())
+            {
+                var lineExt = PXCache<SOShipLine>.GetExtension<SOShipLineExt>(line);
+                shipmentEntry.Transactions.Current = line;
+                foreach (LPLoadPlanSplit item in graph.loadSplit.Select().RowCast<LPLoadPlanSplit>().Where(d => d.TripTicketNbr == lineExt.UsrTripTicketNbr && d.LPLoadPlanLine == lineExt.UsrLPLoadPlanLine))
+                {
+                    foreach (SOShipLineSplit splts in shipmentEntry.splits.Select())
+                    {
+                        if (item != null)
+                        {
+                            shipmentEntry.splits.Delete(splts);
+                        }
+                    }
+                }
+                line.ShippedQty = 0m;
+                shipmentEntry.Transactions.Update(line);
+            }
+            //shipmentEntry.Persist();
+            //--End
+            foreach (SOShipLine line in shipmentEntry.Transactions.Select())
+            {
+                var lineExt = PXCache<SOShipLine>.GetExtension<SOShipLineExt>(line);
+
+                graph.LoadPlanLine.Current.LineNbr = lineExt.UsrLPLoadPlanLine;
+                line.ExpireDate = line.ExpireDate;
+                shipmentEntry.Transactions.Update(line);
+                decimal? total = graph.LoadPlanLine.Select().RowCast<LPLoadPlanLine>().Where(r => r.TripTicketNbr == lineExt.UsrTripTicketNbr && r.LineNbr == lineExt.UsrLPLoadPlanLine).Sum(f => f.ItemQty);
+                foreach (LPLoadPlanSplit item in graph.loadSplit.Select().RowCast<LPLoadPlanSplit>().Where(d => d.TripTicketNbr == lineExt.UsrTripTicketNbr && d.LPLoadPlanLine == lineExt.UsrLPLoadPlanLine))
+                {
+
+                    if (item != null)
+                    {
+                        shipmentEntry.Transactions.Current = line;
+                        SOShipLineSplit insert = (SOShipLineSplit)shipmentEntry.splits.Cache.CreateInstance();
+                        insert.LocationID = line.LocationID;
+                        insert.LotSerialNbr = item.LotSerialNbr;
+                        insert.Qty = item.Qty;
+                        insert.ExpireDate = line.ExpireDate != null ? line.ExpireDate : shipmentEntry.Document.Current.ShipDate;
+                        shipmentEntry.splits.Insert(insert);
+                    }
+                    
+                }
+                line.ShippedQty = total;
+                shipmentEntry.Transactions.Update(line);
+                shipmentEntry.Persist();
+                PXDatabase.Update<SOLine>(
+                new PXDataFieldAssign<SOLineExt.usrShippingStatus>(ShippingStatus.Shipping),
+                new PXDataFieldRestrict<SOLine.orderType>(line.OrigOrderType),
+                new PXDataFieldRestrict<SOLine.orderNbr>(line.OrigOrderNbr),
+                new PXDataFieldRestrict<SOLine.lineNbr>(line.OrigLineNbr));
+            }
+                   
+        }
+
+        public static void CreateTransfer(LPLoadPlanMaster mastCurrent, List<LPLoadPlanLine> lpLines, LoadPlanTicketEntry myLoad)
+        {
+            var release = true;
+                    INTransferEntry transferGraph = PXGraph.CreateInstance<INTransferEntry>();
+                    Truck myTruckCD = PXSelect<
+                        Truck, 
+                        Where<Truck.truckID, Equal<Required<Truck.truckID>>>>
+                        .Select(myLoad, mastCurrent.TruckID);
+                    INLocation myLocation = PXSelect<
+                        INLocation, 
+                        Where<INLocation.locationCD, Equal<Required<INLocation.locationCD>>,
+                            And<Where<INLocation.siteID,Equal<Required<INLocation.siteID>>>>>>
+                        .Select(myLoad, myTruckCD.TruckCD,myLoad.LoadPlanLine.Current.SiteID);
+                    if (myLocation == null) { throw new PXException("Please double check your the location ID & of your location warehouse."); }
+                    if (myTruckCD == null) { throw new PXException("No Truck Found"); }
+                    #region Transfer Process
+                    foreach (LPLoadPlanLine myLPLines in lpLines)
+                    {
+                        INTran sumQty = PXSelectJoinGroupBy<
+                            INTran, 
+                            InnerJoin<INRegister, 
+                                On<INRegister.refNbr, Equal<INTran.refNbr>>>, 
+                            Where<INTran.sOOrderNbr, Equal<Required<INTran.sOOrderNbr>>,
+                                And<Where<INTran.sOOrderType, Equal<Required<INTran.sOOrderType>>,
+                                    And<Where<INTran.sOOrderLineNbr, Equal<Required<INTran.sOOrderLineNbr>>,
+                                        And<Where<INRegister.status, Equal<INDocStatus.released>>>>>>>>, 
+                            Aggregate<
+                                Sum<INTran.qty>>>
+                            .Select(myLoad, myLPLines.SOOrderNbr, myLPLines.SOOrderType, myLPLines.SOLineNbr);
+                        INTran myTran = PXSelectJoin<
+                            INTran, 
+                            InnerJoin<INRegister, 
+                                On<INRegister.refNbr, Equal<INTran.refNbr>>>, 
+                            Where<INTran.sOOrderNbr, Equal<Required<INTran.sOOrderNbr>>,
+                                And<Where<INTran.sOOrderType, Equal<Required<INTran.sOOrderType>>,
+                                    And<Where<INTran.sOOrderLineNbr, Equal<Required<INTran.sOOrderLineNbr>>,
+                                        And<Where<INRegister.status, Equal<INDocStatus.released>>>>>>>>>
+                            .Select(myLoad, myLPLines.SOOrderNbr, myLPLines.SOOrderType, myLPLines.SOLineNbr)
+                            .LastOrDefault();
+                        INLocation myLoc = PXSelect<
+                                INLocation,
+                                Where<INLocationExt.usrDefaultPickingLocation, Equal<boolTrue>,
+                                    And<Where<INLocation.siteID, Equal<Required<INLocation.siteID>>>>>>
+                                .Select(myLoad, myLPLines.SiteID);
+                            var inventoryHead = transferGraph.transfer.Insert(new INRegister()
+                            {
+                                SiteID = myLPLines.SiteID,
+                                ToSiteID = myLPLines.SiteID,
+                                TransferType = INTransferType.OneStep
+
+                            });
+                            transferGraph.transfer.Update(inventoryHead);
+                            foreach (INTransferEntry.INSiteStatusSelected item in transferGraph.sitestatus.Select().RowCast<INTransferEntry.INSiteStatusSelected>().Where(d => d.InventoryID == myLPLines.InventoryID && d.LocationID == myLoc.LocationID))
+                            {
+                                item.Selected = true;
+                                item.QtySelected = myLPLines.ItemQty;
+                                transferGraph.sitestatus.Update(item);
+                            }
+                            transferGraph.addInvSelBySite.PressButton();
+                            transferGraph.transactions.Cache.SetValueExt<INTran.locationID>(transferGraph.transactions.Current,myLoc.LocationID);
+                            transferGraph.transactions.Cache.SetValueExt<INTran.toLocationID>(transferGraph.transactions.Current,myLocation.LocationID);
+                            transferGraph.transactions.Cache.SetValue<INTranExt.usrTripTicketNbr>(transferGraph.transactions.Current, myLPLines.TripTicketNbr);
+                            transferGraph.transactions.Cache.SetValue<INTranExt.usrTripTicketLine>(transferGraph.transactions.Current, myLPLines.LineNbr);
+                            transferGraph.transactions.Update(transferGraph.transactions.Current);
+                    }
+                    //Allocations Insertion
+                    foreach (INTran loc in transferGraph.transactions.Select())
+                    {
+                        var locExt = PXCache<INTran>.GetExtension<INTranExt>(loc);
+                        myLoad.LoadPlanLine.Current.LineNbr = locExt.UsrTripTicketLine;
+                        foreach (LPLoadPlanSplit lotSplits in myLoad.loadSplit.Select().RowCast<LPLoadPlanSplit>().Where(d => d.TripTicketNbr == locExt.UsrTripTicketNbr && d.LPLoadPlanLine == locExt.UsrTripTicketLine))
+                        {
+                            if (lotSplits != null)
+                            {
+                                transferGraph.transactions.Current = loc;
+                                foreach (INTranSplit item in transferGraph.splits.Select())
+                                {
+                                    if (item != null)
+                                    {
+                                        transferGraph.splits.Delete(item);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    foreach(INTran loc in transferGraph.transactions.Select())
+                    {
+                        var locExt = PXCache<INTran>.GetExtension<INTranExt>(loc);
+                        myLoad.LoadPlanLine.Current.LineNbr = locExt.UsrTripTicketLine;
+                        foreach (LPLoadPlanSplit lotSplits in myLoad.loadSplit.Select().RowCast<LPLoadPlanSplit>().Where(d => d.TripTicketNbr == locExt.UsrTripTicketNbr && d.LPLoadPlanLine == locExt.UsrTripTicketLine))
+                        {
+                        myLoad.loadSplit.SetValueExt<LPLoadPlanSplit.released>(lotSplits, true);
+                        myLoad.loadSplit.Update(lotSplits);
+                            transferGraph.transactions.Current = loc;
+                            if (lotSplits != null)
+                            {
+                                var insert = transferGraph.splits.Insert(new INTranSplit()
+                                {
+                                    LocationID = loc.LocationID,
+                                    LotSerialNbr = lotSplits.LotSerialNbr,
+                                    Qty = lotSplits.Qty,
+                                    ExpireDate = loc.ExpireDate
+                                });
+                                transferGraph.splits.Update(insert);
+                            }
+                        }
+                    }
+                    // -- end of allocation insertion
+                    transferGraph.Persist();
+                    transferGraph.transfer.Cache.SetValueExt<INRegister.hold>(transferGraph.transfer.Current, false);
+                    transferGraph.release.Press();
+                    myLoad.Persist();
+            #endregion
+           
+        }
+
+
+        public void AddLoadContent(LPLoadPlanLine line, SOLine soLine, decimal? qty)
+        {
+            LoadPlanSOLineContent content = Content.Insert();
+            PXCache cache = Content.Cache;
+            cache.SetValueExt<LoadPlanSOLineContent.tripTicketLineNbr>(content, line.LineNbr);
+            cache.SetValueExt<LoadPlanSOLineContent.sOOrderNbr>(content, soLine.OrderNbr);
+            cache.SetValueExt<LoadPlanSOLineContent.sOOrderType>(content, soLine.OrderType);
+            cache.SetValueExt<LoadPlanSOLineContent.sOOrderLineNbr>(content, soLine.LineNbr);
+            cache.SetValueExt<LoadPlanSOLineContent.loadQty>(content, qty ?? 0m);
+
+            Content.Update(content);
+        }
+        #endregion
+    }
+}]]></CDATA>
+</Graph>

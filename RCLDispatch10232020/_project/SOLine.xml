@@ -1,0 +1,54 @@
+﻿<Table TableName="SOLine">
+    <Column TableName="SOLine" ColumnName="UsrLoadPlanQty" ColumnType="decimal" AllowNull="True" MaxLength="19" DecimalPrecision="6" DecimalLength="19" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrBarcode" ColumnType="string" AllowNull="True" MaxLength="30" DecimalPrecision="2" DecimalLength="30" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrBuffer" ColumnType="bool" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrBufferQty" ColumnType="decimal" AllowNull="True" MaxLength="19" DecimalPrecision="6" DecimalLength="19" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrDescReason" ColumnType="string" AllowNull="True" MaxLength="256" DecimalPrecision="2" DecimalLength="256" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrDriverID" ColumnType="int" AllowNull="True" DecimalPrecision="0" DecimalLength="0" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrLoadPlanStatus" ColumnType="string" AllowNull="True" MaxLength="2" DecimalPrecision="2" DecimalLength="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrNewDeliveryDate" ColumnType="date" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrNewSiteID" ColumnType="int" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrRejectWhse" ColumnType="int" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrRerouteStatus" ColumnType="string" AllowNull="True" MaxLength="10" DecimalPrecision="2" DecimalLength="10" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrZoneID" ColumnType="string" AllowNull="True" MaxLength="20" DecimalPrecision="0" DecimalLength="0" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrPickListQty" ColumnType="decimal" AllowNull="True" MaxLength="19" DecimalPrecision="6" DecimalLength="19" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrPickListOpenQty" ColumnType="decimal" AllowNull="True" MaxLength="19" DecimalPrecision="6" DecimalLength="19" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrPickListNbr" ColumnType="string" AllowNull="True" MaxLength="30" DecimalPrecision="2" DecimalLength="30" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrPickListDate" ColumnType="date" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrPickListStatus" ColumnType="string" AllowNull="True" MaxLength="5" DecimalPrecision="2" DecimalLength="5" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrRemarks" ColumnType="string" AllowNull="True" MaxLength="150" DecimalPrecision="2" DecimalLength="150" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrForeCastDate" ColumnType="date" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrPercentageLineItem" ColumnType="decimal" AllowNull="True" MaxLength="19" DecimalPrecision="6" DecimalLength="19" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrPickListReference" ColumnType="string" AllowNull="True" MaxLength="256" DecimalPrecision="2" DecimalLength="256" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrShippingReference" ColumnType="string" AllowNull="True" MaxLength="1000" DecimalPrecision="2" DecimalLength="1000" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrLoaded" ColumnType="bool" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrShipped" ColumnType="bool" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrBalanceQty" ColumnType="decimal" AllowNull="True" MaxLength="19" DecimalPrecision="6" DecimalLength="19" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrRequestForTransfer" ColumnType="bool" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrAvailableQty" ColumnType="decimal" AllowNull="True" MaxLength="19" DecimalPrecision="6" DecimalLength="19" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrRequestType" ColumnType="string" AllowNull="True" MaxLength="2" DecimalPrecision="2" DecimalLength="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrOldSiteID" ColumnType="int" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrRerouteTransferRequestDate" ColumnType="date" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrRerouteTransferApproveStatusDate" ColumnType="date" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrTransferRefNbr" ColumnType="string" AllowNull="True" MaxLength="15" DecimalPrecision="2" DecimalLength="15" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrRequestorID" ColumnType="guid" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrRequestQty" ColumnType="decimal" AllowNull="True" MaxLength="19" DecimalPrecision="6" DecimalLength="19" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrForecastConfirmed" ColumnType="bool" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrShippingStatus" ColumnType="string" AllowNull="True" MaxLength="5" DecimalPrecision="2" DecimalLength="5" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrBackloadNbr" ColumnType="string" AllowNull="True" MaxLength="15" DecimalPrecision="2" DecimalLength="15" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrBackloadType" ColumnType="string" AllowNull="True" MaxLength="10" DecimalPrecision="2" DecimalLength="10" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrRequestingWarehouse" ColumnType="int" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrLinkSONbr" ColumnType="string" AllowNull="True" MaxLength="15" DecimalPrecision="2" DecimalLength="15" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrLinkSOType" ColumnType="string" AllowNull="True" MaxLength="2" DecimalPrecision="2" DecimalLength="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrLinkSOLineNbr" ColumnType="int" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrTransferLink" ColumnType="string" AllowNull="True" MaxLength="15" DecimalPrecision="2" DecimalLength="15" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrAvailPickQty" ColumnType="decimal" AllowNull="True" MaxLength="19" DecimalPrecision="6" DecimalLength="19" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrAvailLoadQty" ColumnType="decimal" AllowNull="True" MaxLength="19" DecimalPrecision="6" DecimalLength="19" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrAvailableLoadQty" ColumnType="decimal" AllowNull="True" MaxLength="19" DecimalPrecision="6" DecimalLength="19" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrForPicking" ColumnType="bool" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrDriverName" ColumnType="int" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrShipmentNbr" ColumnType="string" AllowNull="True" MaxLength="15" DecimalPrecision="2" DecimalLength="15" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrSelected" ColumnType="bool" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrForecastPickQty" ColumnType="decimal" AllowNull="True" MaxLength="19" DecimalPrecision="6" DecimalLength="19" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="SOLine" ColumnName="UsrSchedulingType" ColumnType="string" AllowNull="True" MaxLength="2" DecimalPrecision="2" DecimalLength="2" IsNewColumn="True" IsUnicode="True" />
+</Table>

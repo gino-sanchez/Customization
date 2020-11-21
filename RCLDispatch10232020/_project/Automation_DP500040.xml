@@ -1,0 +1,11 @@
+﻿<Automation screen="DP500040">
+    <Fields ScreenID="DP500040">
+        <Field IsActive="True" FieldName="SHIPPINGTYPE" HideCondition="True" ObjectName="DISPATCH.DISPATCHAPPROVALREQUEST+SOAPPROVALREQUEST" />
+    </Fields>
+    <Actions ScreenID="DP500040">
+        <Action IsActive="True" ActionName="Schedule" ActionType="G" WindowMode="S" HideCondition="True">
+            <StateActionFields />
+            <StateActionParams />
+        </Action>
+    </Actions>
+</Automation>

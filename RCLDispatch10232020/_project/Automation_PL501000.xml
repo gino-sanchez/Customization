@@ -1,0 +1,6 @@
+﻿<Automation screen="PL501000">
+    <Fields ScreenID="PL501000">
+        <Field IsActive="True" DisplayName="SO Date From" FieldName="DATEFROM" ObjectName="PL.PLPICKLISTPROCESS+SOLINEFILTER" />
+        <Field IsActive="True" FieldName="DATETO" RequiredCondition="True" ObjectName="PL.PLPICKLISTPROCESS+SOLINEFILTER" />
+    </Fields>
+</Automation>

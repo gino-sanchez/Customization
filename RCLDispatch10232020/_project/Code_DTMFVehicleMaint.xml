@@ -1,0 +1,17 @@
+﻿<Graph ClassName="DTMFVehicleMaint" Source="#CDATA" IsNew="True" FileType="NewGraph">
+    <CDATA name="Source"><![CDATA[using System;
+using PX.Data;
+
+namespace Dispatch
+{
+	public class DTMFVehicleMaint : PXGraph<DTMFVehicleMaint>
+	{
+
+		public PXSave<VehicleMaint> Save;
+		public PXCancel<VehicleMaint> Cancel;
+
+
+		public PXSelect<VehicleMaint> Vehicles;
+	}
+}]]></CDATA>
+</Graph>

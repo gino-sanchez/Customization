@@ -1,0 +1,841 @@
+﻿<Graph ClassName="RerouteProcessing" Source="#CDATA" IsNew="True" FileType="NewGraph">
+    <CDATA name="Source"><![CDATA[using System;
+using System.Collections;
+using System.Collections.Generic;
+using PX.Data;
+using PX.Objects.AR;
+using PX.Objects.Common;
+using PX.Objects.Common.Bql;
+using PX.Objects.CS;
+using PX.Objects.IN;
+using PX.Objects.SO;
+using static PX.Objects.FS.SharedClasses;
+using PX.Objects.CR;
+using PL;
+using System.Linq;
+using PX.Objects.PO;
+
+namespace Dispatch
+{
+    #region MyActions
+    public abstract class MyAction : IBqlField
+    {
+        public class ListAttribute : PXStringListAttribute
+        {
+            public ListAttribute()
+                : base(
+                new string[] { Reroute,Transfer,PurchaseOrder },
+                new string[] { "Reroute Request","Transfer Request", "Request P.O" })
+            { }
+        }
+        public const string Accept = "AD";
+        public const string Decline = "DD";
+        public const string Reroute = "PD";
+        public const string Transfer = "TR";
+        public const string PurchaseOrder = "PO";
+        
+    }
+    #endregion
+    #region RequestStatus
+
+    public abstract class MyStatus : IBqlField
+    {
+        public class ListAttribute : PXStringListAttribute
+        {
+            public ListAttribute()
+                : base(
+                new string[] { Accepted, Declined, },
+                new string[] { "Accepted", "Declined" })
+            { }
+        }
+        public const string Accepted = "AD";
+        public const string Declined = "DD";
+        public const string Pending = "PD";
+        
+
+        public class accepted : Constant<string>
+        {
+            public accepted() : base(Accepted) { }
+        }
+        public class declined : Constant<string>
+        {
+            public declined() : base(Declined) { }
+        }
+        public class pending : Constant<string>
+        {
+            public pending() : base(Pending) { }
+        }
+    }
+    #endregion
+    #region GridStatus
+
+    public abstract class GridStatus : IBqlField
+    {
+        public class ListAttribute : PXStringListAttribute
+        {
+            public ListAttribute()
+                : base(
+                new string[] { Accepted, Declined,Pending, NullValue },
+                new string[] { "Accepted", "Declined", "Pending" ," " })
+            { }
+        }
+            public const string Accepted = "AD";
+            public const string Declined = "DD";
+            public const string NullValue = "NS";
+            public const string Pending = "PD";
+
+            public class pending : Constant<string>
+            {
+                public pending() : base(Pending) { }
+            }
+            public class accepted : Constant<string>
+            {
+                public accepted() : base(Accepted) { }
+            }
+            public class declined : Constant<string>
+            {
+                public declined() : base(Declined) { }
+            }
+            public class nullValue : Constant<string>
+            {
+                public nullValue() : base(NullValue) { }
+            }
+        
+    }
+
+    #endregion
+    #region RequestType
+    
+    public abstract class RequestType : IBqlField
+    {
+        public class ListAttribute : PXStringListAttribute
+        {
+            public ListAttribute()
+                : base(
+                new string[] { Transfer, Reroute },
+                new string[] { "Transfer Request", "Reroute Request"})
+            { }
+        }
+
+        public const string Transfer = "TR";
+        public const string Reroute = "RR";
+        public const string PO = "PO";
+
+        public class transfer : Constant<string>
+        {
+            public transfer() : base(Transfer) { }
+        }
+        public class reroute : Constant<string>
+        {
+            public reroute() : base(Reroute) { }
+        }
+        public class pO : Constant<string>
+        {
+            public pO() : base(PO) { }
+        }
+    }
+
+    #endregion
+
+    #region Filters
+    [Serializable]
+    public class Filters : IBqlTable
+    { 
+        public abstract class deliveryDate : IBqlField { }
+        [PXDate()]
+        [PXUIField(DisplayName = "Delivery Date")]
+        public virtual DateTime? DeliveryDate { get; set; }
+        public abstract class customerName : IBqlField { }
+        [CustomerActive(DisplayName = "Customer Name", DescriptionField = typeof(Customer.acctName))]
+        public virtual int? CustomerName { get; set; }
+        public abstract class orderNbr : IBqlField { }
+        [PXString(15)]
+        [PXUIField(DisplayName = "Order Nbr")]
+        [PXSelector(typeof(Search<SOOrder.orderNbr>), Filterable = true)]
+        public virtual string OrderNbr { get; set; }
+        public abstract class status : IBqlField { }
+        [PXString(2)]
+        [PXUIField(DisplayName = "Status")]
+        [MyStatus.List]
+        public virtual string Status { get; set; }
+        public abstract class rerouteAction : IBqlField { }
+        [PXString(2)]
+        [PXUIField(DisplayName = "Action")]
+        [MyAction.List]
+        public virtual string RerouteAction { get; set; }
+        public abstract class shippingType : IBqlField { }
+        [PXString(5)]
+        [PXUIField(DisplayName = "Shipping Type")]
+        [Attrib.List]
+        public virtual string ShippingType { get; set;  }
+    }
+    #endregion
+    #region Projection
+
+    [PXProjection(typeof(Select5<
+        SOLine,
+        LeftJoin<SOShippingAddress,
+            On<SOShippingAddress.customerID, Equal<SOLine.customerID>>,
+        LeftJoin<SOOrder,
+            On<SOOrder.orderNbr, Equal<SOLine.orderNbr>,
+            And<SOOrder.orderType, Equal<SOLine.orderType>>>,
+        LeftJoin<InventoryItem,
+            On<InventoryItem.inventoryID, Equal<SOLine.inventoryID>>,
+        LeftJoin<INSite,
+            On<INSite.siteID, Equal<SOLine.siteID>>,
+        LeftJoin<Customer,
+            On<Customer.bAccountID, Equal<SOLine.customerID>>,
+        LeftJoin<INSiteStatus,
+            On<INSiteStatus.inventoryID,Equal<InventoryItem.inventoryID>,
+            And<InventoryItem.stkItem,Equal<boolTrue>,
+            And<INSiteStatus.siteID,NotEqual<SiteAttribute.transitSiteID>>>>>>>>>>,
+        Where
+            <SOLineExt.usrPickListQty, Equal<decimal_0>,
+            And<Where<SOLine.shippedQty, Equal<decimal_0>,
+                And<Where<SOLine.orderType, Equal<SOOrderTypeConstants.salesOrder>,
+                    And2<
+                        Where<SOLineExt.usrRerouteStatus, NotEqual<MyStatus.accepted>>,
+                        And<Where<SOLineExt.usrConfirmShipment, NotEqual<Attrib.directDelivery>,
+                            And2<
+                                Where<SOOrder.status, Equal<SOOrderStatus.open>>,
+                                Or<Where<SOOrder.status, Equal<SOOrderStatus.backOrder>
+                                    >>>>>>>>>>>,
+        Aggregate<
+            GroupBy<SOLine.orderNbr>>>))]
+    [Serializable]
+    public class SORerouting : IBqlTable
+    {
+        #region Selected
+        public abstract class selected : IBqlField { }
+        [PXBool()]
+        [PXUIField(DisplayName = "Selected")]
+        [PXDefault(false,PersistingCheck = PXPersistingCheck.Nothing)]
+        public virtual bool? Selected { get; set; }
+        #endregion
+
+        #region OrderType
+        public abstract class orderType : PX.Data.IBqlField { }
+        [PXDBString(2, IsKey = true, IsFixed = true, BqlField = typeof(SOOrder.orderType))]
+        [PXSelector(typeof(Search2<
+            SOOrderType.orderType,
+            InnerJoin<SOOrderTypeOperation,
+                On<SOOrderTypeOperation.orderType, Equal<SOOrderType.orderType>,
+                And<SOOrderTypeOperation.operation, Equal<SOOrderType.defaultOperation>>>>,
+            Where<SOOrderType.requireShipping, Equal<boolFalse>,
+                Or<FeatureInstalled<FeaturesSet.inventory>>>>))]
+        [PXUIField(DisplayName = "Order Type", Enabled = false)]
+        public virtual string OrderType { get; set; }
+        #endregion
+
+        #region ShipmentType
+
+        public abstract class shipmentType : PX.Data.IBqlField { }
+        [PXDBString(10,BqlField = typeof(SOLineExt.usrConfirmShipment))]
+        [PXUIField(DisplayName = "Shipment Type")]
+        [Attrib.List]
+        public virtual string ShipmentType { get; set; }
+
+        #endregion
+
+        #region ActionLineItem
+
+        public abstract class actionLineItem : PX.Data.IBqlField { }
+        [PXString(10)]
+        [PXUIField(DisplayName = "Action")]
+        [RequestTypeV2.List]
+        public virtual string ActionLineItem { get; set; }
+
+        #endregion
+
+        #region SOOrderNbr
+        public abstract class orderNbr : PX.Data.IBqlField { }
+        [PXDBString(15, IsKey = true, BqlField = typeof(SOOrder.orderNbr))]
+        [PXUIField(DisplayName = "Order Nbr", Enabled = false)]
+        public virtual String OrderNbr { get; set; }
+        #endregion
+
+        #region SOLineNbr
+        public abstract class lineNbr : PX.Data.IBqlField { }
+        [PXDBInt(IsKey = true, BqlField = typeof(SOLine.lineNbr))]
+        [PXUIField(DisplayName = "Line Nbr", Enabled = false)]
+        public virtual int? LineNbr { get; set; }
+        #endregion
+
+        #region CustomerID
+        public abstract class customerID : IBqlField { }
+        [PXDBInt(BqlField = typeof(SOLine.customerID))]
+        [PXUIField(DisplayName = "Customer ID")]
+        public virtual int? CustomerID { get; set; }
+        #endregion
+
+        #region CustomerName
+        public abstract class customerName : IBqlField { }
+        [PXDBString(50, BqlField = typeof(Customer.acctName))]
+        [PXUIField(DisplayName = "Customer Name")]
+        public virtual string CustomerName { get; set; }
+        #endregion
+
+        #region DeliveryAddress
+
+        public abstract class deliveryAddress : IBqlField { }
+        [PXDBString(100, BqlField = typeof(SOShippingAddress.addressLine1))]
+        [PXUIField(DisplayName = "Delivery Address")]
+        public virtual string DeliveryAddress { get; set; }
+
+        #endregion
+
+        #region City
+
+        public abstract class city : IBqlField { }
+        [PXDBString(50, IsUnicode = true, BqlField = typeof(SOShippingAddress.city))]
+        [PXUIField(DisplayName = "City",Enabled = false)]
+        public virtual string City { get; set; }
+
+        #endregion
+
+        #region Warehouse
+
+        public abstract class warehouse : IBqlField { }
+        [PXDBInt(BqlField = typeof(INSite.siteID))]
+        [PXUIField(DisplayName = "Warehouse")]
+        [PXSelector(typeof(Search<INSite.siteID>), SubstituteKey = typeof(INSite.siteCD))]
+        public virtual int? Warehouse { get; set; }
+
+        #endregion
+
+        #region NewWarehouse 
+
+        public abstract class newWarehouse : IBqlField { }
+        [SiteAvail(typeof(SORerouting.inventoryID), BqlField = typeof(SOLineExt.usrNewSiteID))]
+        [PXParent(typeof(Select<
+            SOOrderSite,
+            Where<SOOrderSite.orderType, Equal<Current<SOLine.orderType>>,
+                And<SOOrderSite.orderNbr, Equal<Current<SOLine.orderNbr>>,
+                And<SOOrderSite.siteID, Equal<Current2<SOLine.siteID>>>>>>), LeaveChildren = true, ParentCreate = true)]
+        [PXDefault(PersistingCheck = PXPersistingCheck.Nothing)]
+        [PXUIRequired(typeof(IIf<
+            Where<SOLine.lineType, NotEqual<SOLineType.miscCharge>>, True, False>))]
+        [InterBranchRestrictor(typeof(
+                                                                        Where2<SameOrganizationBranch<INSite.branchID, Current<SOOrder.branchID>>,
+                                                                            Or<Current<SOOrder.behavior>, Equal<SOBehavior.qT>>>))]
+        [PXUIField(DisplayName = "Request Warehouse")]
+        [PXSelector(typeof(Search5<
+            INSite.siteID,
+            LeftJoin<INSiteStatus,
+                On<INSiteStatus.siteID,Equal<INSite.siteID>>>,
+            Aggregate<
+                GroupBy<INSite.siteCD>>>),typeof(INSite.siteCD),typeof(INSiteStatus.qtyHardAvail),SubstituteKey = typeof(INSite.siteCD))]
+        public virtual int? NewWarehouse { get; set; }
+
+        #endregion
+
+        #region RejectWhse
+        public abstract class rejectWhse : IBqlField { }
+        [PXDBInt(BqlField = typeof(SOLineExt.usrRejectWhse))]
+        [PXUIField(DisplayName = "Reject Warehouse")]
+        [PXSelector(typeof(Search<INSite.siteID>),
+        typeof(INSite.siteCD),
+        SubstituteKey = typeof(INSite.siteCD))]
+        public virtual int? RejectWhse { get; set; }
+        #endregion
+
+        #region lastModifiedbyIDRequestor
+        public abstract class requestorID : IBqlField { }
+        [PXDBGuid(BqlField = typeof(SOLine.lastModifiedByID))]
+        [PXUIField(DisplayName = "Requestor ID")]
+        public virtual Guid? RequestorID { get; set; }
+        
+        #endregion
+
+        #region RejectDesc
+
+        public abstract class rejectDesc : IBqlField { }
+        [PXDBString(256, BqlField = typeof(SOLineExt.usrDescReason))]
+        [PXUIField(DisplayName = "Reason for Rejection")]
+        public virtual string RejectDesc { get; set; }
+
+        #endregion
+
+        #region InventoryID
+
+        public abstract class inventoryID : IBqlField { }
+        [PXDBInt(BqlField = typeof(SOLine.inventoryID))]
+        [PXUIField(DisplayName = "Inventory ID")]
+        [PXSelector(typeof(Search<InventoryItem.inventoryID>), SubstituteKey = typeof(InventoryItem.inventoryCD))]
+        public virtual int? InventoryID { get; set; }
+
+        #endregion
+
+        #region ItemName
+        public abstract class itemName : IBqlField { }
+        [PXDBString(256, BqlField = typeof(InventoryItem.descr))]
+        [PXUIField(DisplayName = "Item Description")]
+        public virtual string ItemName { get; set; }
+        #endregion
+
+        #region OrderQty
+        public abstract class orderQty : IBqlField { }
+        [PXDBDecimal(BqlField = typeof(SOLine.orderQty))]
+        [PXUIField(DisplayName = "Order Qty")]
+        public virtual Decimal? OrderQty { get; set; }
+        #endregion
+
+        #region RequestStatus
+        public abstract class rerouteStatus : IBqlField { }
+        [PXDBString(10, BqlField = typeof(SOLineExt.usrRerouteStatus))]
+        [PXUIField(DisplayName = "Request Status")]
+        [GridStatus.List]
+        public virtual string RerouteStatus { get; set; }
+
+        #endregion
+
+        #region StockOnHand
+        public abstract class stockOnHand : IBqlField { }
+        [PXDBQuantity(BqlField = typeof(INSiteStatus.qtyHardAvail))]
+        [PXDefault(TypeCode.Decimal, "0.0", PersistingCheck = PXPersistingCheck.Nothing)]
+        [PXUIField(DisplayName = "Available Qty")]
+       
+        public virtual Decimal? StockOnHand { get; set; }
+        #endregion
+
+        #region OrderDate
+        public abstract class orderDate : IBqlField { }
+        [PXDBDate(BqlField = typeof(SOOrder.orderDate))]
+        [PXUIField(DisplayName = "Order Date")]
+        public virtual DateTime? OrderDate { get; set; }
+        #endregion
+
+        #region Requested Date
+        public abstract class requestedDate : IBqlField { }
+        [PXDBDate(BqlField = typeof(SOLine.requestDate))]
+        [PXUIField(DisplayName = "Requested Date")]
+        public virtual DateTime? RequestedDate { get; set; }
+        #endregion
+
+        #region ForeCastDate
+        public abstract class foreCastDate : IBqlField { }
+        [PXDate()]
+        [PXUIField(DisplayName = "Forecast Date")]
+        public virtual DateTime? ForeCastDate { get; set; }
+        #endregion
+
+        #region Order Status
+
+        public abstract class orderStatus : IBqlField { }
+        [PXDBString(1, IsFixed = true, BqlField = typeof(SOOrder.status))]
+        [PXUIField(DisplayName = "Order Status", Visibility = PXUIVisibility.SelectorVisible, Enabled = false)]
+        [SOOrderStatus.List()]
+        public virtual string OrderStatus { get; set; }
+        #endregion
+
+        #region Barcode
+
+        public abstract class barcode : IBqlField { }
+        [PXDBString(50,BqlField = typeof(InventoryItemExt.usrBarcode))]
+        [PXUIField(DisplayName = "Barcode",Enabled = false)]
+        public virtual string Barcode { get; set; }
+        #endregion
+
+        #region VendorID
+
+        public abstract class vendorID : IBqlField { }
+        [PXDBInt(BqlField = typeof(SOLine.vendorID))]
+        [PXUIField(DisplayName = "Request Vendor")]
+        [PXSelector(typeof(Search<
+            BAccount.bAccountID,
+            Where<BAccount.bAccountID,Equal<Current<vendorID>>>>),SubstituteKey = typeof(BAccount.acctName))]
+        public virtual Int32? VendorID { get; set; }
+
+        #endregion
+
+        #region RequestQty
+
+        public abstract class requestQty : IBqlField { }
+        [PXDecimal()]
+        [PXUIField(DisplayName = "Request Qty",Enabled = true)]
+        [PXDefault(TypeCode.Decimal, "0.00",PersistingCheck = PXPersistingCheck.Nothing)]
+        public virtual Decimal? RequestQty { get; set; }
+
+        #endregion
+    }
+    #endregion
+
+    public class RerouteProcessing : PXGraph<RerouteProcessing>
+    {
+        #region Selects
+        public PXFilter<Filters> MyFilters;
+        public PXSelectJoin<
+            SOOrder,
+            LeftJoin<SOLine,
+                On<SOLine.orderType, Equal<SOOrder.orderType>,
+                And<SOLine.orderNbr, Equal<SOOrder.orderNbr>>>,
+            InnerJoin<ARTran,
+                On<ARTran.sOOrderType, Equal<SOLine.orderType>,
+                And<ARTran.sOOrderNbr, Equal<SOLine.orderNbr>,
+                And<ARTran.sOOrderLineNbr, Equal<SOLine.lineNbr>>>>,
+            LeftJoin<ARInvoice,
+                On<ARInvoice.docType, Equal<ARTran.tranType>,
+                And<ARInvoice.refNbr, Equal<ARTran.refNbr>>>,
+            LeftJoin<SOShippingAddress,
+                On<SOShippingAddress.customerID, Equal<SOOrder.customerID>>>>>>>
+            CustomerOrder;
+        public PXProcessing<SORerouting>
+            RerouteGrid;
+        public PXSelect<SOOrder> SOORDERS;
+        #endregion
+
+
+
+        #region IEnumerable
+
+        //public virtual IEnumerable rerouteGrid()
+        //{
+        //    var mastHead = MyFilters.Current;
+
+        //        PXSelectBase<SORerouting> query = new PXSelect<SORerouting>(this);
+
+        //    if (mastHead.DeliveryDate != null)
+        //    {
+        //        query
+        //            .WhereAnd<
+        //            Where<SORerouting.requestedDate, Equal<Current<Filters.deliveryDate>>>>();
+        //    }
+        //    if (mastHead.OrderNbr != null)
+        //    {
+        //        query
+        //            .WhereAnd<
+        //            Where<SORerouting.orderNbr, Equal<Current<Filters.orderNbr>>>>();
+        //    }
+        //    if (mastHead.CustomerName != null)
+        //    {
+        //        query
+        //            .WhereAnd<
+        //            Where<SORerouting.customerID, Equal<Current<Filters.customerName>>>>();
+        //    }
+        //    if (mastHead.Status != null)
+        //    {
+        //        query
+        //            .WhereAnd<
+        //            Where<SORerouting.rerouteStatus, Equal<Current<Filters.status>>>>();
+        //    }
+        //    if (mastHead.ShippingType != null)
+        //    {
+        //        query
+        //            .WhereAnd<
+        //            Where<SORerouting.shipmentType, Equal<Current<Filters.shippingType>>>>();
+        //    }
+        //    foreach (SORerouting myLines in query.Select())
+        //    {
+
+        //        if (mastHead.RerouteAction != null)
+        //        {
+        //            if (mastHead.RerouteAction == MyAction.Transfer || mastHead.RerouteAction == MyAction.PurchaseOrder)    
+        //            {
+        //                if (GridStatus.NullValue == myLines.RerouteStatus || MyStatus.Declined == myLines.RerouteStatus)
+        //                {
+        //                    yield return myLines;
+        //                }
+        //            }
+        //            else if (mastHead.RerouteAction == MyAction.Reroute)
+        //            {
+        //                if ((GridStatus.NullValue == myLines.RerouteStatus || MyStatus.Declined == myLines.RerouteStatus) && Attrib.CWStore == myLines.ShipmentType)
+        //                {
+        //                    yield return myLines;
+        //                }
+        //            }
+        //            else
+        //            {
+        //                if (MyStatus.Pending == myLines.RerouteStatus)
+        //                {
+        //                    yield return myLines;
+        //                }
+        //            }
+        //        }
+        //    }
+        //}
+
+        public virtual IEnumerable customerOrder()
+        {
+            PXSelectBase<SOOrder> query = new PXSelectJoinGroupBy<
+            SOOrder,
+            LeftJoin<SOLine,
+                On<SOLine.orderType, Equal<SOOrder.orderType>,
+                And<SOLine.orderNbr, Equal<SOOrder.orderNbr>>>,
+            InnerJoin<ARTran,
+                On<ARTran.sOOrderType, Equal<SOLine.orderType>,
+                And<ARTran.sOOrderNbr, Equal<SOLine.orderNbr>,
+                And<ARTran.sOOrderLineNbr, Equal<SOLine.lineNbr>>>>,
+            LeftJoin<ARInvoice,
+                On<ARInvoice.docType, Equal<ARTran.tranType>,
+                And<ARInvoice.refNbr, Equal<ARTran.refNbr>>>,
+            LeftJoin<SOShippingAddress, On<SOShippingAddress.customerID, Equal<SOOrder.customerID>>>>>>,
+            Where2<Where<SOOrder.status, Equal<SOOrderStatus.open>, Or<SOOrder.status, Equal<SOOrderStatus.backOrder>>>,
+            And<SOOrder.orderType, Equal<SOOrderTypeConstants.salesOrder>>>, Aggregate<GroupBy<SOOrder.orderNbr>>>(this);
+
+            return query.Select();
+        }
+
+        #endregion
+
+        //#region EventHandlers
+
+        //protected void SORerouting_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        //{
+        //    var mastCurrent = MyFilters.Current;
+        //    var row = e.Row as SORerouting;
+        //    if (row == null) { return; }
+        //    var openNewWarehouse = mastCurrent.RerouteAction == MyAction.Reroute || mastCurrent.RerouteAction == MyAction.Transfer || mastCurrent.RerouteAction == MyAction.PurchaseOrder;
+        //    var openReasonForReject = mastCurrent.RerouteAction == MyAction.Decline;
+        //    var visibleCustomer = mastCurrent.RerouteAction == MyAction.Reroute;
+        //    var visibleRequestWhse = mastCurrent.RerouteAction == MyAction.PurchaseOrder;
+        //    PXUIFieldAttribute.SetEnabled<SORerouting.newWarehouse>(sender, row, openNewWarehouse);
+        //    PXUIFieldAttribute.SetEnabled<SORerouting.rejectDesc>(sender, row, openReasonForReject);
+        //    PXUIFieldAttribute.SetVisible<SORerouting.customerName>(sender, null, visibleCustomer);
+        //    PXUIFieldAttribute.SetVisible<SORerouting.rerouteStatus>(sender, null, visibleCustomer);
+        //    PXUIFieldAttribute.SetVisible<SORerouting.deliveryAddress>(sender, null, visibleCustomer);
+        //    PXUIFieldAttribute.SetVisible<SORerouting.newWarehouse>(sender, null, !visibleRequestWhse);
+        //    PXUIFieldAttribute.SetEnabled<SORerouting.requestQty>(sender, row, openNewWarehouse);
+        //    PXUIFieldAttribute.SetVisible<SORerouting.city>(sender, null, visibleCustomer);
+
+        //}
+
+        //protected void SORerouting_Selected_FieldUpdated(PXCache sender, PXFieldUpdatedEventArgs e)
+        //{
+        //    var current = MyFilters.Current;
+        //    var row = e.Row as SORerouting;
+        //    if (row == null) return;
+        //    if (row.Selected == true)
+        //    {
+        //        if (current.RerouteAction == MyAction.PurchaseOrder)
+        //        {
+        //            if (row.VendorID == null)
+        //            {
+        //                sender.RaiseExceptionHandling<SORerouting.vendorID>(row, 0m, new PXSetPropertyException("Request Vendor field is required ", PXErrorLevel.Error));
+        //            }
+        //        }
+        //        if (current.RerouteAction == MyAction.Reroute || current.RerouteAction == MyAction.Transfer)
+        //        {
+        //            if (row.NewWarehouse == null)
+        //            {
+        //                sender.RaiseExceptionHandling<SORerouting.newWarehouse>(row, null, new PXSetPropertyException("Request Warehouse field is Required"));
+        //            }
+        //        }
+        //        if (row.RequestQty == null)
+        //        {
+        //            sender.RaiseExceptionHandling<SORerouting.requestQty>(row, 0m, new PXSetPropertyException("Request qty must not be 0", PXErrorLevel.Error));
+        //        }
+        //    }
+        //}
+
+        //#endregion
+
+        //#region Method
+
+        //public static void POCreate(List<SORerouting> line, RerouteProcessing graph)
+        //{
+        //    var soGraph = PXGraph.CreateInstance<SOOrderEntry>();
+        //    var POGraph = PXGraph.CreateInstance<POOrderEntry>();
+
+        //    foreach (SORerouting myItems in graph.RerouteGrid.Cache.Updated)
+        //    {
+        //        SOLine selectLine = PXSelect<
+        //            SOLine,
+        //            Where<SOLine.orderType, Equal<Required<SOLine.orderType>>,
+        //                And<SOLine.orderNbr, Equal<Required<SOLine.orderNbr>>,
+        //                And<SOLine.lineNbr, Equal<Required<SOLine.lineNbr>>>>>>
+        //            .Select(graph, myItems.OrderType, myItems.OrderNbr, myItems.LineNbr);
+        //        if (myItems.Selected == true && myItems.RequestQty == 0m && myItems.VendorID == null)
+        //        {
+        //            throw new PXException("Order {0} Request Qty must not be less than or equal 0 and Request Vendor field is required", myItems.OrderNbr);
+        //        }
+        //        else if (myItems.Selected == true && myItems.VendorID == null)
+        //        {
+
+        //            throw new PXException("Order {0} Request Vendor field is required ", myItems.OrderNbr);
+        //        } else if (myItems.Selected == true && myItems.RequestQty == 0m)
+        //        {
+        //            throw new PXException("Order {0} Request Qty must not be less than or equal 0", myItems.OrderNbr);
+        //        } else
+        //        {
+        //            soGraph.Transactions.Cache.SetValue<SOLineExt.usrRequestType>(selectLine, RequestType.PO);
+        //            soGraph.Transactions.Update(selectLine);
+        //            soGraph.Transactions.Cache.SetValue<SOLineExt.usrRerouteStatus>(selectLine, MyStatus.Pending);
+        //            soGraph.Transactions.Update(selectLine);
+        //            soGraph.Transactions.Cache.SetValue<SOLineExt.usrRequestQty>(selectLine, myItems.RequestQty);
+        //            soGraph.Transactions.Update(selectLine);
+
+
+        //            foreach (SORerouting lines in line)
+        //            {
+        //                var inserted = POGraph.Document.Insert(new POOrder()
+        //                {
+        //                    OrderType = POOrderType.RegularOrder,
+        //                    VendorID = lines.VendorID
+        //                });
+        //                POGraph.Document.Update(inserted);
+
+        //                var lineInserted = POGraph.Transactions.Insert(new POLine()
+        //                {
+        //                    InventoryID = lines.InventoryID,
+        //                    OrderQty = lines.RequestQty
+
+        //                });
+        //                POGraph.Transactions.Update(lineInserted);
+        //            }
+        //            POGraph.Actions.PressSave();
+        //        }
+        //    }
+        //    soGraph.Actions.PressSave();
+        //    PXRedirectHelper.TryRedirect(POGraph, PXRedirectHelper.WindowMode.NewWindow);
+        //}
+
+        //#region RerouteMethod
+
+        //public void RequestMethod(List<SORerouting> list, Filters myFilter, RerouteProcessing thisGraph)
+        //{
+        //    foreach (SORerouting itm in thisGraph.RerouteGrid.Cache.Updated)
+        //    {
+        //        if (itm.Selected == true && itm.RequestQty == null && itm.NewWarehouse == null)
+        //        {
+        //            throw new PXException("Order {0} Request Qty must not be less than or equal 0 and Request Warehouse is required", itm.OrderNbr);
+        //        }
+        //        else if (itm.Selected == true && itm.NewWarehouse == null)
+        //        {
+        //            throw new PXException("Order {0} Request Warehouse field is Required.", itm.OrderNbr);
+        //        }
+        //        if (itm.Selected == true && itm.RequestQty == null)
+        //        {
+        //            throw new PXException("Order {0} Request Qty must not be less than or equal 0", itm.OrderNbr);
+        //        }
+        //    }
+
+        //    var graph = PXGraph.CreateInstance<SOOrderEntry>();
+
+        //    foreach (SORerouting itemList in list)
+        //    {
+        //        SOLine selectLine = PXSelect<
+        //            SOLine,
+        //            Where<SOLine.orderType, Equal<Required<SOLine.orderType>>,
+        //                And<SOLine.orderNbr, Equal<Required<SOLine.orderNbr>>,
+        //                And<SOLine.lineNbr, Equal<Required<SOLine.lineNbr>>>>>>
+        //            .Select(this, itemList.OrderType, itemList.OrderNbr, itemList.LineNbr);
+        //        try
+        //        {
+        //            if (itemList.NewWarehouse == null)
+        //            {
+        //                throw new PXException("Order {0}, Field New Warehouse cannot be empty.", itemList.OrderNbr);
+        //            }
+        //            else
+        //            {
+        //                if (myFilter.RerouteAction == MyAction.Reroute)
+        //                {
+        //                    graph.Transactions.Cache.SetValueExt<SOLineExt.usrNewSiteID>(selectLine, itemList.NewWarehouse);
+        //                    graph.Transactions.Cache.SetValueExt<SOLineExt.usrRerouteStatus>(selectLine, MyStatus.Pending);
+        //                    graph.Transactions.Cache.SetValueExt<SOLineExt.usrRequestType>(selectLine, RequestType.Reroute);
+        //                    graph.Transactions.Cache.SetValueExt<SOLineExt.usrOldSiteID>(selectLine, itemList.Warehouse);
+        //                    graph.Transactions.Cache.SetValueExt<SOLineExt.usrRequestQty>(selectLine, itemList.RequestQty);
+        //                    graph.Transactions.Cache.SetValueExt<SOLineExt.usrRerouteTransferRequestDate>(selectLine, DateTime.Now);
+        //                    graph.Transactions.Update(selectLine);
+
+        //                    PXProcessing<SORerouting>.SetInfo(list.IndexOf(itemList), String.Format("Order {0} has been Requested for Reroute", itemList.OrderNbr));
+        //                }
+        //                else if (myFilter.RerouteAction == MyAction.Transfer)
+        //                {
+        //                    graph.Transactions.Cache.SetValueExt<SOLineExt.usrNewSiteID>(selectLine, itemList.NewWarehouse);
+        //                    graph.Transactions.Cache.SetValueExt<SOLineExt.usrRerouteStatus>(selectLine, MyStatus.Pending);
+        //                    graph.Transactions.Cache.SetValueExt<SOLineExt.usrRequestType>(selectLine, RequestType.Transfer);
+        //                    graph.Transactions.Cache.SetValueExt<SOLineExt.usrOldSiteID>(selectLine, itemList.Warehouse);
+        //                    graph.Transactions.Cache.SetValueExt<SOLineExt.usrRequestQty>(selectLine, itemList.RequestQty);
+        //                    graph.Transactions.Cache.SetValueExt<SOLineExt.usrRerouteTransferRequestDate>(selectLine, DateTime.Now);
+        //                    graph.Transactions.Update(selectLine);
+
+        //                    PXProcessing<SORerouting>.SetInfo(list.IndexOf(itemList), String.Format("Order {0} has been Requested for Transfer", itemList.OrderNbr + "Lastmodified {0}", selectLine.LastModifiedByID));
+        //                }
+        //            }
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            PXProcessing<SORerouting>.SetError(list.IndexOf(itemList), String.Format("Error: " + ex.Message));
+        //        }
+        //    }
+        //    graph.Actions.PressSave();
+        //    foreach (SORerouting itemList in list)
+        //    {
+        //        SOLine selectLine = PXSelect<
+        //            SOLine,
+        //            Where<SOLine.orderType, Equal<Required<SOLine.orderType>>,
+        //                And<SOLine.orderNbr, Equal<Required<SOLine.orderNbr>>,
+        //                And<SOLine.lineNbr, Equal<Required<SOLine.lineNbr>>>>>>
+        //            .Select(this, itemList.OrderType, itemList.OrderNbr, itemList.LineNbr);
+        //        try
+        //        {
+        //            if (myFilter.RerouteAction == MyAction.Reroute)
+        //            {
+        //                graph.Transactions.Cache.SetValueExt<SOLineExt.usrRequestorID>(selectLine, selectLine.LastModifiedByID);
+        //                graph.Transactions.Update(selectLine);
+        //            }
+        //            else if (myFilter.RerouteAction == MyAction.Transfer)
+        //            {
+        //                graph.Transactions.Cache.SetValueExt<SOLineExt.usrRequestorID>(selectLine, selectLine.LastModifiedByID);
+        //                graph.Transactions.Update(selectLine);
+        //            }
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            PXProcessing<SORerouting>.SetError(list.IndexOf(itemList), String.Format("Error: " + ex.Message));
+        //        }
+        //    }
+        //    graph.Actions.PressSave();
+
+        //}
+
+        //#endregion
+
+        //#endregion
+
+        //#region Constructor
+
+        //public RerouteProcessing()
+        //{
+        //    Filters filter = MyFilters.Current;
+
+
+
+        //    //RerouteGrid.SetSelected<SORerouting.selected>();
+
+        //    //var graph = this;
+        //    //if (filter.RerouteAction == MyAction.PurchaseOrder)
+        //    //{
+        //    //    RerouteGrid.SetProcessDelegate(list => POCreate(list, graph));
+        //    //}
+        //    //else
+        //    //{
+        //    //    RerouteGrid.SetProcessDelegate(list => RequestMethod(list, filter, graph));
+        //    //}
+        //}
+
+        //#endregion
+
+        #region Buttons
+
+        //public PXAction<SORerouting> Customer;
+        //[PXButton()]
+        //[PXUIField(DisplayName = "Custmer View Order")]
+        //protected IEnumerable customer(PXAdapter adapter)
+        //{
+        //    RerouteGrid.AskExt();
+        //    return adapter.Get();
+        //}
+
+        public PXAction<SOOrder> Sample;
+        [PXButton()]
+        [PXUIField(DisplayName = "Sample")]
+        protected void sample()
+        {
+            SOORDERS.AskExt();
+        }
+
+        #endregion
+    }
+}]]></CDATA>
+</Graph>

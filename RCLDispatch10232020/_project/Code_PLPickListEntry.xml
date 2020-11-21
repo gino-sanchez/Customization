@@ -1,0 +1,1346 @@
+﻿<Graph ClassName="PLPickListEntry" Source="#CDATA" IsNew="True" FileType="NewGraph">
+    <CDATA name="Source"><![CDATA[using System;
+using System.Collections;
+using PX.Data;
+using PX.Objects.SO;
+using DispatchSetup;
+using System.Collections.Generic;
+using PX.Objects.CS;
+using PX.Objects.IN;
+using System.Linq;
+using Dispatch;
+using PX.Objects.AR;
+using PX.Objects.EP;
+using PX.Objects.AP;
+using Dispatch;
+using PX.Common;
+
+namespace PL
+{
+    #region StringListCorrectShipment
+
+    public abstract class CorrectShipmentAttrib : IBqlField
+    {
+        public class ListAttribute : PXStringListAttribute
+        {
+            public ListAttribute()
+                : base(
+                new string[] {  Pickup, CWStore },
+                new string[] {  "Pick-up", "CW Store Delivery" })
+            { }
+        }
+
+        public const string Pickup = "P";
+        public const string CWStore = "S";
+
+        public class cwStore : Constant<string>
+        {
+            public cwStore() : base(CWStore) { }
+        }
+
+        public class pickup : Constant<string>
+        {
+            public pickup() : base(Pickup) { }
+        }
+    }
+
+    #endregion
+    [Serializable]
+    public class PLPickListEntry : PXGraph<PLPickListEntry, PLPickList>
+    {
+        #region Constructor
+        public PLPickListEntry()
+        {
+            BtnReport.AddMenuAction(Print);
+            BtnReport.AddMenuAction(MySO);
+
+        }
+        #endregion
+        #region Selects
+        public PXSetup<DispatchNumberingSetup> Setup;
+
+        public PXSelect<PLPickList> PickLists;
+
+        public PXSelectJoin<
+            PLPickListLine,
+            InnerJoin<SOLine,
+                On<SOLine.orderNbr, Equal<PLPickListLine.sOOrderNbr>,
+                And<SOLine.orderType, Equal<PLPickListLine.sOOrderType>,
+                And<SOLine.lineNbr, Equal<PLPickListLine.sOLineNbr>>>>,
+            LeftJoin<INSiteStatusSummary,
+                On<INSiteStatusSummary.inventoryID, Equal<SOLine.inventoryID>,
+                And<Where<INSiteStatusSummary.siteID, Equal<SOLine.siteID>>>>,
+            LeftJoin<Customer,
+                On<Customer.bAccountID, Equal<SOLine.customerID>>,
+            LeftJoin<ARTran,
+                On<ARTran.sOOrderNbr, Equal<SOLine.orderNbr>,
+                And<ARTran.sOOrderType, Equal<SOLine.orderType>,
+                And<ARTran.lineNbr, Equal<SOLine.lineNbr>>>>,
+            LeftJoin<ARInvoice,
+                On<ARInvoice.refNbr, Equal<ARTran.refNbr>,
+                And<ARInvoice.docType, Equal<ARTran.tranType>>>,
+            LeftJoin<SOOrder,
+                On<SOOrder.orderNbr, Equal<SOLine.orderNbr>,
+                And<SOOrder.orderType, Equal<SOLine.orderType>>>>>>>>>,
+            Where<PLPickListLine.pickListNbr, Equal<Current<PLPickList.pickListNbr>>>>
+            PickListLines;
+        public PXSelectJoin<
+            PLPickListSOLineContent,
+            LeftJoin<PLPickList,
+                On<PLPickList.pickListNbr, Equal<PLPickListSOLineContent.pickListNbr>>>,
+            Where<PLPickListSOLineContent.pickListNbr, Equal<Current<PLPickList.pickListNbr>>>>
+            Content;
+        public PXSelect<
+            PLPickListSplit,
+            Where<PLPickListSplit.pLPickListNbr, Equal<Current<PLPickListLine.pickListNbr>>,
+                And<PLPickListSplit.pLPickListLine, Equal<Current<PLPickListLine.lineNbr>>>>>
+            pickSplits;
+        public PXSelect<
+            SOPickLines,
+            Where<SOPickLines.pickListNbr, Equal<Current<PLPickList.pickListNbr>>>>
+            Akatsuki;
+        public PXSelectJoin<
+            SOLine,
+            InnerJoin<PLPickListLine,
+                On<PLPickListLine.sOOrderNbr, Equal<SOLine.orderNbr>,
+                And<SOLine.orderType, Equal<PLPickListLine.sOOrderType>,
+                And<SOLine.lineNbr, NotEqual<PLPickListLine.sOLineNbr>>>>,
+            LeftJoin<SOOrder,
+                On<SOOrder.orderNbr, Equal<SOLine.orderNbr>,
+                And<SOOrder.orderType, Equal<SOLine.orderType>>>>>>
+            Items;
+        #endregion
+        #region Projection
+        [Serializable]
+        [PXProjection(typeof(Select2<
+            PLPickListLine,
+            LeftJoin<SOLine,
+                On<SOLine.orderNbr, Equal<PLPickListLine.sOOrderNbr>,
+                And<SOLine.orderType, Equal<PLPickListLine.sOOrderType>,
+                And<SOLine.lineNbr, Equal<PLPickListLine.sOLineNbr>>>>,
+            LeftJoin<SOOrder,
+                On<SOOrder.orderNbr, Equal<PLPickListLine.sOOrderNbr>,
+                And<SOOrder.orderType, Equal<PLPickListLine.sOOrderType>>>,
+            LeftJoin<ARTran,
+                On<ARTran.sOOrderNbr, Equal<PLPickListLine.sOOrderNbr>,
+                And<ARTran.sOOrderType, Equal<PLPickListLine.sOOrderType>,
+                And<ARTran.sOOrderLineNbr, Equal<PLPickListLine.sOLineNbr>>>>,
+            LeftJoin<ARInvoice,
+                On<ARInvoice.refNbr, Equal<ARTran.refNbr>,
+                And<ARInvoice.docType, Equal<ARTran.tranType>>>,
+            LeftJoin<PLPickList,
+                On<PLPickList.pickListNbr, Equal<PLPickListLine.pickListNbr>>>>>>>,
+            Where<SOLineExt.usrConfirmShipment, Equal<Attrib.pickup>,
+                And<Where<SOPickLines.pickListNbr, Equal<Current<PLPickList.pickListNbr>>>>>>))]
+        public class SOPickLines : IBqlTable
+        {
+            #region PickListNbr
+            public abstract class pickListNbr : IBqlField { }
+            [PXDBString(15, IsUnicode = true, InputMask = "", IsKey = true, BqlField = typeof(PLPickListLine.pickListNbr))]
+            [PXUIField(DisplayName = "Pick List Nbr")]
+            public virtual string PickListNbr { get; set; }
+            #endregion
+            #region Selected
+            public abstract class selected : IBqlField { }
+            [PXDBBool()]
+            [PXUIField(DisplayName = "Selected")]
+            [PXDefault(false, PersistingCheck = PXPersistingCheck.Nothing)]
+            public bool? Selected { get; set; }
+            #endregion
+
+            #region SOOrderType
+            public abstract class orderType : PX.Data.IBqlField { }
+            [PXDBString(2, IsKey = true, IsFixed = true, BqlField = typeof(SOOrder.orderType))]
+            [PXSelector(typeof(Search2<
+                SOOrderType.orderType,
+                InnerJoin<SOOrderTypeOperation,
+                    On<SOOrderTypeOperation.orderType, Equal<SOOrderType.orderType>,
+                    And<SOOrderTypeOperation.operation, Equal<SOOrderType.defaultOperation>>>>,
+                Where<SOOrderType.requireShipping, Equal<boolFalse>,
+                    Or<FeatureInstalled<FeaturesSet.inventory>>>>))]
+            [PXUIField(DisplayName = "Order Type", Enabled = false)]
+            public virtual String OrderType { get; set; }
+
+            #endregion
+            #region SOOrderNbr
+            public abstract class orderNbr : PX.Data.IBqlField { }
+            [PXDBString(15, IsKey = true, BqlField = typeof(SOLine.orderNbr))]
+            [PXUIField(DisplayName = "Order Nbr", Enabled = false)]
+            public virtual String OrderNbr { get; set; }
+            #endregion
+            #region SOLineNbr
+            public abstract class lineNbr : PX.Data.IBqlField { }
+            [PXDBInt(IsKey = true, BqlField = typeof(SOLine.lineNbr))]
+            [PXUIField(DisplayName = "Line Nbr", Enabled = false)]
+            public virtual int? LineNbr { get; set; }
+            #endregion
+
+            #region InvoiceNbr
+
+            public abstract class invoiceNbr : PX.Data.IBqlField { }
+            [PXDBString(15, IsKey = true, BqlField = typeof(ARInvoice.refNbr))]
+            [PXUIField(DisplayName = "Invoice #")]
+            public virtual string InvoiceNbr { get; set; }
+            #endregion
+
+            #region InvoiceDOcType
+            public abstract class invoiceType : PX.Data.IBqlField { }
+            [PXDBString(3, IsFixed = true, BqlField = typeof(ARInvoice.docType))]
+            [ARDocType.List()]
+            [PXUIField(DisplayName = "Invoice Type")]
+            public virtual string InvoiceType { get; set; }
+            #endregion
+
+            #region Customer Name
+            public abstract class customerID : PX.Data.IBqlField { }
+            [Customer(BqlField = typeof(SOOrder.customerID))]
+            [PXUIField(DisplayName = "Customer Name", Enabled = false)]
+            public virtual int? CustomerID { get; set; }
+            #endregion
+
+            #region InventoryID
+            public abstract class inventoryID : PX.Data.IBqlField { }
+            [Inventory(BqlField = typeof(SOLine.inventoryID))]
+            [PXUIField(DisplayName = "Item Description", Enabled = false)]
+            public virtual int? InventoryID { get; set; }
+            #endregion
+
+            #region OrderQty
+            public abstract class orderQty : PX.Data.IBqlField { }
+            [PXDBDecimal(BqlField = typeof(SOLine.orderQty))]
+            [PXUIField(DisplayName = "Order Qty", Enabled = false)]
+            public virtual decimal? OrderQty { get; set; }
+            #endregion
+
+            #region Claim Qty
+
+            public abstract class claimQty : PX.Data.IBqlField { }
+            [PXDecimal()]
+            [PXUIField(DisplayName = "Claim Qty")]
+            [PXDefault(TypeCode.Decimal, "0.00", PersistingCheck = PXPersistingCheck.Nothing)]
+            public virtual Decimal? ClaimQty { get; set; }
+
+            #endregion
+
+            #region CorrectShipment
+            public abstract class correctShipment : PX.Data.IBqlField { }
+            [PXDBString(5, BqlField = typeof(SOLineExt.usrConfirmShipment))]
+            [PXUIField(DisplayName = "Shipping Type")]
+            [CorrectShipmentAttrib.List]
+            public virtual string CorrectShipment { get; set; }
+
+            #endregion
+
+        }
+        #endregion
+
+        #region IENumerable
+        public virtual IEnumerable pickListLines()
+        {
+            List<int> lineNbr = new List<int>();
+            PXSelectBase<PLPickListLine> query = new PXSelectJoin<PLPickListLine,
+            InnerJoin<SOLine,
+                On<SOLine.orderNbr, Equal<PLPickListLine.sOOrderNbr>,
+                And<SOLine.orderType, Equal<PLPickListLine.sOOrderType>,
+                And<SOLine.lineNbr, Equal<PLPickListLine.sOLineNbr>>>>,
+            LeftJoin<INSiteStatusSummary,
+                On<INSiteStatusSummary.inventoryID, Equal<SOLine.inventoryID>,
+                And<Where<INSiteStatusSummary.siteID, Equal<SOLine.siteID>>>>,
+            LeftJoin<Customer,
+                On<Customer.bAccountID, Equal<SOLine.customerID>>,
+            LeftJoin<ARTran,
+                On<ARTran.sOOrderNbr, Equal<SOLine.orderNbr>,
+                And<ARTran.sOOrderType, Equal<SOLine.orderType>,
+                And<ARTran.lineNbr, Equal<SOLine.lineNbr>>>>,
+            LeftJoin<ARInvoice,
+                On<ARInvoice.refNbr, Equal<ARTran.refNbr>,
+                And<ARInvoice.docType, Equal<ARTran.tranType>>>,
+            LeftJoin<SOOrder,
+                On<SOOrder.orderNbr, Equal<SOLine.orderNbr>,
+                And<SOOrder.orderType, Equal<SOLine.orderType>>>>>>>>>,
+            Where<PLPickListLine.pickListNbr, Equal<Current<PLPickList.pickListNbr>>>>(this);
+
+            foreach(PXResult<PLPickListLine,SOLine,INSiteStatusSummary,Customer,ARTran,ARInvoice,SOOrder> line in query.Select())
+            {
+                PLPickListLine lineItem = line;
+                if (!lineNbr.Contains((int)lineItem.LineNbr))
+                {
+                    lineNbr.Add((int)lineItem.LineNbr);
+                    yield return line;
+                }
+            }
+        }
+        public virtual IEnumerable items()
+        {
+            var setupCurrent = Setup.Current;
+
+
+            PXResultset<SOLine> nc = PXSelectJoinGroupBy<
+                SOLine,
+                LeftJoin<PLPickListLine,
+                    On<PLPickListLine.sOOrderNbr, Equal<SOLine.orderNbr>,
+                    And<SOLine.orderType, Equal<PLPickListLine.sOOrderType>,
+                    And<PLPickListLine.sOLineNbr, Equal<SOLine.lineNbr>>>>,
+                LeftJoin<SOOrder,
+                    On<SOOrder.orderNbr, Equal<SOLine.orderNbr>,
+                    And<SOOrder.orderType, Equal<SOLine.orderType>>>,
+                LeftJoin<InventoryItem,
+                    On<InventoryItem.inventoryID, Equal<SOLine.inventoryID>>,
+                LeftJoin<ARTran,
+                    On<ARTran.sOOrderNbr, Equal<SOLine.orderNbr>,
+                    And<ARTran.sOOrderType, Equal<SOLine.orderType>,
+                    And<ARTran.sOOrderLineNbr, Equal<SOLine.lineNbr>>>>,
+                LeftJoin<SOOrderType,
+                    On<SOOrderType.orderType, Equal<SOOrder.orderType>>>>>>>,
+                Where2<
+                    Where<SOOrder.status, Equal<SOOrderStatus.open>,
+                        Or<SOOrder.status, Equal<SOOrderStatus.backOrder>>>,
+                    And2<
+                        Where<SOLine.openQty, Greater<decimal0>,
+                            And<SOLineExt.usrAvailPickQty, Greater<decimal0>>>,
+                        And<
+                            Where<SOLineExt.usrConfirmShipment, NotEqual<Attrib.directDelivery>,
+                            And<Where<SOOrderTypeExt.usrDispatch, Equal<True>,
+                                And<Where<SOLineExt.usrForeCastDate, IsNotNull>>>>>>>>,
+                Aggregate<
+                    GroupBy<SOLine.orderType,
+                    GroupBy<SOLine.orderNbr,
+                    GroupBy<SOLine.lineNbr>>>>>
+                .Select(this);
+
+            foreach (PXResult<SOLine, PLPickListLine, SOOrder, InventoryItem, ARTran, SOOrderType> res in nc)
+            {
+                PXResult<SOLine, PLPickListLine, SOOrder> line = res;
+                yield return line;
+            }
+
+
+        }
+
+        public virtual IEnumerable akatsuki()
+        {
+            PXSelectBase<SOPickLines> query = new PXSelectJoin<SOPickLines, LeftJoin<SOShipLine, On<SOShipLine.origOrderNbr, Equal<SOPickLines.orderNbr>,
+                And<SOShipLine.origOrderType, Equal<SOPickLines.orderType>, And<SOShipLine.origLineNbr, Equal<SOPickLines.lineNbr>>>>>,
+                                        Where<SOPickLines.pickListNbr, Equal<Current<PLPickList.pickListNbr>>>>(this);
+            query
+                .WhereAnd<
+                Where<SOShipLine.origOrderNbr, IsNull,
+                    And<Where<SOShipLine.origOrderType, IsNull,
+                        And<Where<SOShipLine.origLineNbr, IsNull>>>>>>();
+            query
+                .WhereOr<
+                Where<SOShipLine.shippedQty, NotEqual<SOShipLine.origOrderQty>>>();
+
+
+            foreach (PXResult<SOPickLines, SOShipLine> line in query.Select())
+            {
+                SOShipLine myLine = line;
+
+            }
+
+
+            return query.Select();
+        }
+
+
+
+        #endregion
+
+        #region Event Handlers
+        public void PLPickList_RowSelected(PXCache cache, PXRowSelectedEventArgs e)
+        {
+            PLPickList master = PickLists.Current;
+            bool isCancelled = master.Status == pickListStatus.Cancel;
+            PLPickList row = (PLPickList)e.Row;
+            bool isOpen = row.Status == pickListStatus.Released;
+            bool isCheck = row.MyCheck == true;
+            bool isCancel = row.IsCancelled == true;
+
+            if (row == null) return;
+
+            PickListLines.AllowInsert = false;
+            PickListLines.Cache.AllowDelete = !isCancel && !isCheck;
+
+            Release.SetEnabled(!isCheck && !isCancel);
+            CancelButton.SetEnabled(!isCancel);
+            AddItem.SetEnabled(!isCancel && !isCheck);
+            DeleteButton.SetEnabled(!isCancel && !isCheck);
+            ClaimPickUpItems.SetEnabled(!isCancel);
+            PXUIFieldAttribute.SetEnabled<PLPickList.description>(cache, row, !isCheck && !isCancelled);
+            PXUIFieldAttribute.SetEnabled<PLPickList.pickDate>(cache, row, !isCheck && !isCancelled);
+            if (row.Status == pickListStatus.Released || row.Status == pickListStatus.Cancel)
+            {
+                PXUIFieldAttribute.SetEnabled<PLPickListSplit.lotSerialNbr>(pickSplits.Cache, null, false);
+            }
+        }
+
+
+        public virtual void PLPickListLine_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+
+            PLPickListLine row = (PLPickListLine)e.Row;
+            PLPickList master = PickLists.Current;
+
+            bool isCancelled = master.Status == pickListStatus.Cancel;
+            bool isCheck = master.MyCheck == true;
+
+            if (row == null) { return; }
+            PXUIFieldAttribute.SetEnabled(sender, row, false);
+            PXUIFieldAttribute.SetEnabled<PLPickListLine.picker>(sender, row, master.Status == pickListStatus.Open|| master.Status == pickListStatus.OpenPrinted);
+            PXUIFieldAttribute.SetEnabled<PLPickListLine.pickQty>(sender, row, master.Status == pickListStatus.Open || master.Status == pickListStatus.OpenPrinted);
+            PXUIFieldAttribute.SetEnabled<PLPickListLine.vendor>(sender, row, master.Status == pickListStatus.Open || master.Status == pickListStatus.OpenPrinted);
+            PXUIFieldAttribute.SetEnabled<PLPickListLine.sOLocationID>(sender, row,master.Status == pickListStatus.Open || master.Status == pickListStatus.OpenPrinted);
+            PXUIFieldAttribute.SetEnabled<PLPickListLine.locationID>(sender, row, master.Status == pickListStatus.Open || master.Status == pickListStatus.OpenPrinted);
+            if (master.Status == pickListStatus.Open)
+            {
+                SOLine myLine = PXSelect<
+                    SOLine,
+                    Where<SOLine.orderType, Equal<Required<SOLine.orderType>>,
+                        And<Where<SOLine.orderNbr, Equal<Required<SOLine.orderNbr>>,
+                            And<Where<SOLine.lineNbr, Equal<Required<SOLine.lineNbr>>>>>>>>
+                    .Select(this, row.SOOrderType, row.SOOrderNbr, row.SOLineNbr);
+                if (myLine.OpenQty < row.PickOpenQty)
+                {
+                    row.PickOpenQty = myLine.OpenQty;
+                }
+            }
+            if (row.TransferRefNbr != null)
+            {
+                INTran xSelect = PXSelectJoin<
+                    INTran,
+                    InnerJoin<INRegister,
+                        On<INRegister.refNbr, Equal<INTran.refNbr>>>,
+                    Where<INTran.refNbr, Equal<Required<INTran.refNbr>>,
+                        And<Where<INRegister.hold, Equal<boolTrue>,
+                            And<Where<INTranExt.usrPickListNbr, Equal<Required<INTranExt.usrPickListNbr>>>>>>>>
+                    .Select(this, row.TransferRefNbr, row.PickListNbr);
+                if (xSelect == null) return;
+                if (xSelect != null)
+                {
+                    sender.RaiseExceptionHandling<PLPickListLine.transferRefNbr>(row, row.TransferRefNbr, new PXSetPropertyException("Transfer Document is On Hold. Please Pick Lot. Serial Nbr on Allocations.", PXErrorLevel.Warning));
+                }
+            }
+            #region Validation in Allocations
+            if (row.PickQty > 0)
+            {
+                InventoryItem myItem = PXSelectJoin<
+                    InventoryItem,
+                    LeftJoin<INLotSerClass,
+                        On<INLotSerClass.lotSerClassID, Equal<InventoryItem.lotSerClassID>>>,
+                    Where<INLotSerClass.lotSerIssueMethod, Equal<Required<INLotSerClass.lotSerIssueMethod>>,
+                        And<InventoryItem.inventoryID, Equal<Required<InventoryItem.inventoryID>>>>>
+                    .Select(this, INLotSerIssueMethod.UserEnterable, row.InventoryID);
+                if (myItem != null)
+                {
+                    PLPickListSplit mySplits = PXSelect<
+                        PLPickListSplit,
+                        Where<PLPickListSplit.pLPickListNbr, Equal<Required<PLPickListSplit.pLPickListNbr>>,
+                            And<Where<PLPickListSplit.pLPickListLine, Equal<Required<PLPickListSplit.pLPickListLine>>,
+                                And<Where<PLPickListSplit.inventoryID, Equal<Required<PLPickListSplit.inventoryID>>>>>>>>
+                        .Select(this, row.PickListNbr, row.LineNbr, row.InventoryID);
+
+                    if (mySplits == null) {
+                        sender.RaiseExceptionHandling<PLPickListLine.pickQty>(row, row.PickQty, new PXSetPropertyException("Please pick lot serial nbr on Allocations.", PXErrorLevel.RowWarning));
+                    }
+                }
+            }
+            #endregion
+
+            sender.SetDefaultExt<PLPickListLine.toLocationID>(row);
+            PXUIFieldAttribute.SetEnabled<PLPickListLine.pickQty>(sender, row, !isCheck || !isCancelled);
+            PXUIFieldAttribute.SetEnabled<PLPickListLine.pickingRemarks>(sender, row, !isCheck || !isCancelled);
+            PXUIFieldAttribute.SetEnabled<PLPickListLine.sOOrderNbr>(sender, row, false);
+            PXUIFieldAttribute.SetEnabled<PLPickListLine.sOOrderType>(sender, row, false);
+            PXUIFieldAttribute.SetEnabled<PLPickListLine.quantity>(sender, row, false);
+            PXUIFieldAttribute.SetEnabled<PLPickListLine.picker>(sender, row, !isCheck && !isCancelled);
+            PXUIFieldAttribute.SetEnabled<PLPickListLine.vendor>(sender, row, !isCheck && !isCancelled);
+            PXUIFieldAttribute.SetEnabled<PLPickListLine.selected>(sender, row, !isCheck && !isCancelled);
+            PXUIFieldAttribute.SetEnabled<PLPickListLine.inventoryID>(sender, row, false);
+            
+        }
+
+        public virtual void PLPickListLine_RowPersisting(PXCache sender, PXRowPersistingEventArgs e)
+        {
+            PLPickListLine row = (PLPickListLine)e.Row;
+
+            if (row == null) { return; }
+
+            if (row.Picker == null)
+            {
+                sender.RaiseExceptionHandling<PLPickListLine.picker>(row, "", new PXSetPropertyException("Picker cannot be null", PXErrorLevel.Error));
+                throw new PXException("PickListLine raised at lease one error. Please review the errors.");
+            }
+            INLocationStatus qtyAvail = PXSelect<INLocationStatus, Where<INLocationStatus.siteID, Equal<Required<INLocation.siteID>>,And<INLocationStatus.locationID,Equal<Required<INLocationStatus.locationID>>
+                ,And<INLocationStatus.inventoryID,Equal<Required<INLocationStatus.inventoryID>>>>>>.Select(this,row.SiteID,row.LocationID,row.InventoryID);
+            
+            if(qtyAvail != null)
+            {
+                InventoryItem inv = PXSelect<InventoryItem,Where<InventoryItem.inventoryID,Equal<Required<InventoryItem.inventoryID>>>>.Select(this,row.InventoryID);
+                if (qtyAvail.QtyAvail <= 0m || qtyAvail.QtyAvail == null)
+                {
+                    sender.RaiseExceptionHandling<PLPickListLine.locationID>(row,row.LocationID,new PXSetPropertyException("Item "+inv.InventoryCD+" has no available qty in your location warehouse",PXErrorLevel.Error));
+                }
+                if (row.PickQty > qtyAvail.QtyAvail)
+                {
+                    sender.RaiseExceptionHandling<PLPickListLine.locationID>(row, row.LocationID, new PXSetPropertyException("Item "+ inv.InventoryCD +" pick qty is greater than available qty in location warehouse.",PXErrorLevel.Error));
+                }
+            }
+            SOLine select = PXSelect<
+                SOLine,
+                Where<SOLine.orderType, Equal<Required<SOLine.orderType>>,
+                    And<SOLine.orderNbr, Equal<Required<SOLine.orderNbr>>,
+                    And<SOLine.lineNbr, Equal<Required<SOLine.lineNbr>>>>>>
+                .Select(this, row.SOOrderType, row.SOOrderNbr, row.SOLineNbr);
+            if (select == null) { return; }
+            SOLineExt selectExt = PXCache<SOLine>.GetExtension<SOLineExt>(select);
+
+            if (selectExt.UsrAvailPickQty < 0m)
+            {
+                //e.NewValue = selectExt.UsrAvailPickQty;
+                sender.RaiseExceptionHandling<PLPickListLine.pickQty>(row, row.PickQty, new PXSetPropertyException("Available pick qty will go negative", PXErrorLevel.Error));
+            }
+            if(row.PickQty > selectExt.UsrForecastPickQty)
+            {
+                sender.RaiseExceptionHandling<PLPickListLine.pickQty>(row, row.PickQty, new PXSetPropertyException("Pick qty must not be greater than Pick Qty (Scheduling)",PXErrorLevel.Error));
+            }
+        }
+
+        public virtual void PLPickListLine_ToLocationID_FieldDefaulting(PXCache sender, PXFieldDefaultingEventArgs e)
+        {
+            var row = e.Row as PLPickListLine;
+            if (row == null) return;
+            INLocation myLoc = PXSelect<
+                INLocation,
+                Where<INLocationExt.usrDefaultPickingLocation, Equal<boolTrue>,
+                    And<Where<INLocation.siteID, Equal<Required<INLocation.siteID>>>>>>
+                .Select(this, row.SiteID);
+
+            if (myLoc == null) return;
+
+            e.NewValue = myLoc.LocationID;
+        }
+
+        public virtual void PLPickListSplit_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+            var row = e.Row as PLPickListSplit;
+            var mastCurrent = PickLists.Current;
+            if (row == null) return;
+            pickSplits.AllowInsert = mastCurrent.Status == pickListStatus.Open || mastCurrent.Status == pickListStatus.OpenPrinted;
+            pickSplits.AllowDelete = mastCurrent.Status == pickListStatus.Open|| mastCurrent.Status == pickListStatus.OpenPrinted;
+            PXUIFieldAttribute.SetEnabled(sender, row, mastCurrent.Status == pickListStatus.Open || mastCurrent.Status == pickListStatus.OpenPrinted);
+            if (mastCurrent.Status == pickListStatus.Released || mastCurrent.Status == pickListStatus.Cancel)
+            {
+                pickSplits.View.Cache.IsDirty = false;
+            }
+        }
+        
+        public virtual void PLPickListSplit_LocationID_FieldUpdated(PXCache sender, PXFieldUpdatedEventArgs e)
+        {
+            var row = e.Row as PLPickListSplit;
+            if (row == null) return;
+            PLPickListLine line = PXSelect<PLPickListLine, Where<PLPickListLine.lineNbr, Equal<Required<PLPickListLine.lineNbr>>>>.Select(this,row.PLPickListLine);
+            PickListLines.Current.LocationID = row.LocationID;
+            
+        }
+
+        public virtual void PLPickListSplit_LotSerialNbr_FieldUpdated(PXCache sender, PXFieldUpdatedEventArgs e)
+        {
+            var row = e.Row as PLPickListSplit;
+            if(row != null)
+            {
+                var head = PickLists.Current;
+                if(head.Status == pickListStatus.Released || head.Status == pickListStatus.Cancel)
+                {
+                    sender.RaiseExceptionHandling<PLPickListSplit.lotSerialNbr>(row, e.OldValue, new PXSetPropertyException("Lot serial nbr cannot be changed",PXErrorLevel.Warning));
+                    row.LotSerialNbr = (string)e.OldValue;
+                }
+            }
+        }
+
+        public virtual void PLPickListSplit_Qty_FieldUpdated(PXCache sender, PXFieldUpdatedEventArgs e)
+        {
+            var row = e.Row as PLPickListSplit;
+            if (row == null) { return; }
+            INSiteLotSerial status = PXSelectReadonly<INSiteLotSerial,Where<INSiteLotSerial.inventoryID, Equal<Required<INSiteLotSerial.inventoryID>>,
+            And<INSiteLotSerial.siteID, Equal<Required<INSiteLotSerial.siteID>>, And<INSiteLotSerial.lotSerialNbr, Equal<Required<INSiteLotSerial.lotSerialNbr>>>>>>.Select(this, row.InventoryID, row.SiteID, row.LotSerialNbr);
+            if(status != null)
+            {
+                if (row.Qty > status.QtyAvail) { sender.RaiseExceptionHandling<PLPickListSplit.qty>(row,row.Qty, new PXSetPropertyException("Lot serial nbr qty is greater than available qty in inventory. The result will go negative.",PXErrorLevel.Error)); }
+            }
+        }
+
+        protected void SOLine_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+            SOLine row = (SOLine)e.Row;
+
+            if (row == null) { return; }
+
+            PXUIFieldAttribute.SetEnabled(sender, row, false);
+            PXUIFieldAttribute.SetEnabled<SOLineExt.usrSelected>(sender, row, true);
+        }
+
+        public void PLPickListLine_RowDeleting(PXCache cache, PXRowDeletingEventArgs e)
+        {
+            var row = e.Row as PLPickListLine;
+            if (row == null) return;
+
+            PLPickListSOLineContent content = PXSelect<
+                PLPickListSOLineContent,
+                Where<PLPickListSOLineContent.pickListNbr, Equal<Required<PLPickListSOLineContent.pickListNbr>>,
+                    And<PLPickListSOLineContent.pickListLineNbr, Equal<Required<PLPickListSOLineContent.pickListLineNbr>>>>>
+                .Select(this, row.PickListNbr, row.LineNbr);
+            if (content != null)
+            {
+                content.PickQty = 0m;
+                Content.Update(content);
+                Content.Delete(content);
+            }
+            PLPickListSplit splts = PXSelect<PLPickListSplit,Where<PLPickListSplit.pLPickListNbr, Equal<Required<PLPickListSplit.pLPickListNbr>>,
+                And<PLPickListSplit.pLPickListLine,Equal<Required<PLPickListSplit.pLPickListLine>>>>>.Select(this,row.PickListNbr,row.LineNbr);
+            if(splts != null)
+            {
+                pickSplits.Delete(splts);
+            }
+
+        }
+
+        public void PLPickListLine_PickQty_FieldUpdated(PXCache cache, PXFieldUpdatedEventArgs e)
+        {
+            var row = e.Row as PLPickListLine;
+            if (row == null) return;
+
+            PLPickListSOLineContent content = PXSelect<
+                PLPickListSOLineContent,
+                Where<PLPickListSOLineContent.pickListNbr, Equal<Required<PLPickListSOLineContent.pickListNbr>>,
+                    And<PLPickListSOLineContent.pickListLineNbr, Equal<Required<PLPickListSOLineContent.pickListLineNbr>>>>>
+                .Select(this, row.PickListNbr, row.LineNbr);
+
+            if (content != null)
+            {
+                Content.Cache.SetValueExt<PLPickListSOLineContent.pickQty>(content, row.PickQty);
+                Content.Update(content);
+            }
+        }
+
+        public virtual void PLPickListSplit_RowPersisting(PXCache sender, PXRowPersistingEventArgs e)
+        {
+            var row = e.Row as PLPickListSplit;
+            if (row == null) return;
+            var head = PickLists.Current;
+            foreach (PLPickListLine item in PickListLines.Select())
+            {
+                var lineCurrent = PickListLines.Current = item;
+                decimal? total = pickSplits.Select().RowCast<PLPickListSplit>().Where(r => r.PLPickListLine == lineCurrent.LineNbr).Sum(f => f.Qty);
+                if (pickSplits.Select().Count > 0)
+                {
+                    if (total != lineCurrent.PickQty)
+                    {
+                        sender.RaiseExceptionHandling<PLPickListSplit.lotSerialNbr>(row, row.LotSerialNbr, new PXSetPropertyException("Total Qty in allocations is not equal to pick qty", PXErrorLevel.RowError));
+                        PickListLines.Cache.RaiseExceptionHandling<PLPickListLine.selected>(lineCurrent, lineCurrent.Selected, new PXSetPropertyException("Total Qty in allocations is not equal to pick qty", PXErrorLevel.RowWarning));
+                    }
+                }
+            }
+        }
+
+        #endregion
+
+        #region Actions
+
+        #region Report
+        public PXAction<PLPickList> BtnReport;
+        [PXButton(SpecialType = PXSpecialButtonType.ActionsFolder, MenuAutoOpen = true)]
+        [PXUIField(DisplayName = "Reports", MapEnableRights = PXCacheRights.Select, MapViewRights = PXCacheRights.Select)]
+        public void btnReport()
+        {
+            //return adapter.Get();
+        }
+        #endregion
+
+        #region Release
+        public PXAction<PLPickList> Release;
+        [PXProcessButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "Release")]
+        public IEnumerable release(PXAdapter adapter)
+        {
+
+            var transferGraph = PXGraph.CreateInstance<INTransferEntry>();
+            var graph = PXGraph.CreateInstance<SOOrderEntry>();
+            var thisGraph = PXGraph.CreateInstance<PLPickListEntry>();
+            var picklist = PickLists.Current;
+            var picklistline = PickListLines.Current;
+            var isUserEnterable = false;
+            List<PLPickListLine> lst = new List<PLPickListLine>();
+            if (picklistline == null)
+            {
+                PickListLines.Ask("Information", "Release Failed. No Items to be Released", MessageButtons.OK, MessageIcon.Information);
+            }
+            else
+            {
+
+                using (PXTransactionScope ts = new PXTransactionScope())
+                {
+                    PXLongOperation.StartOperation(this, delegate
+                    {
+                        foreach (PLPickListLine pickline in PickListLines.Select())
+                        {
+                            InventoryItem item = PXSelectJoin<InventoryItem,
+                            LeftJoin<INLotSerClass,On<INLotSerClass.lotSerClassID,Equal<InventoryItem.lotSerClassID>>>,
+                            Where<InventoryItem.inventoryID,Equal<Required<InventoryItem.inventoryID>>,
+                            And<INLotSerClass.lotSerIssueMethod,Equal<Required<INLotSerClass.lotSerIssueMethod>>>>>.Select(this,pickline.InventoryID,INLotSerIssueMethod.UserEnterable);
+                            PickListLines.Current = pickline;
+                            if(item != null)
+                            {
+                                if(pickSplits.Select().Count <= 0)
+                                {
+                                    throw new PXException("Item " + item.InventoryCD + " lot serial nbr is required");
+                                }
+                            }
+                            if (pickline.LocationID == null) {
+                                PickListLines.Cache.RaiseExceptionHandling<PLPickListLine.locationID>(pickline, pickline.LocationID, new PXSetPropertyException("Location Warehouse is empty", PXErrorLevel.Warning));
+                                throw new PXException("Please pick Location Warehouse"); }
+
+                            if (!lst.Contains(pickline)) lst.Add(pickline);
+
+                        }
+                        ReleaseDoc(lst, this);
+                        ts.Complete();
+
+                    });
+                }
+            }
+            return adapter.Get();
+        }
+        #endregion Release 
+
+        #region Vendor
+        public PXAction<PLPickList> Print;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "Vendor")]
+        public virtual IEnumerable print(PXAdapter adapter)
+        {
+
+            var graph = PXGraph.CreateInstance<PLPickListEntry>();
+
+
+
+            PXLongOperation.StartOperation(this, delegate ()
+             {
+                 Dictionary<string, string> down = new Dictionary<string, string>();
+                 PLPickList row = PickLists.Current;
+                 down["PickListNbr"] = row.PickListNbr;
+                 if (row.Status == pickListStatus.Open)
+                 {
+                     PXDatabase.Update<PLPickList>(
+                     new PXDataFieldAssign<PLPickList.status>(pickListStatus.OpenPrinted),
+                     new PXDataFieldRestrict<PLPickList.pickListNbr>(row.PickListNbr));
+                 } else if (row.Status == pickListStatus.Released)
+                 {
+                     PXDatabase.Update<PLPickList>(
+                     new PXDataFieldAssign<PLPickList.status>(pickListStatus.ReleasedPrinted),
+                     new PXDataFieldRestrict<PLPickList.pickListNbr>(row.PickListNbr));
+                 }
+                 throw new PXReportRequiredException(down, "PL000001", null)
+                 {
+                     Mode = PXBaseRedirectException.WindowMode.NewWindow
+                 };
+             });
+
+            return adapter.Get();
+        }
+        #endregion
+
+        #region SO
+        public PXAction<PLPickList> MySO;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "SO")]
+        public virtual IEnumerable mySO(PXAdapter adapter)
+        {
+            var graph = PXGraph.CreateInstance<PLPickListEntry>();
+
+            PXLongOperation.StartOperation(this, delegate ()
+            {
+                Dictionary<string, string> down = new Dictionary<string, string>();
+
+                PLPickList row = PickLists.Current;
+                down["PickListNbr"] = row.PickListNbr;
+                if (row.Status == pickListStatus.Open)
+                {
+                    PXDatabase.Update<PLPickList>(
+                    new PXDataFieldAssign<PLPickList.status>(pickListStatus.OpenPrinted),
+                    new PXDataFieldRestrict<PLPickList.pickListNbr>(row.PickListNbr));
+                }
+                else if (row.Status == pickListStatus.Released)
+                {
+                    PXDatabase.Update<PLPickList>(
+                    new PXDataFieldAssign<PLPickList.status>(pickListStatus.ReleasedPrinted),
+                    new PXDataFieldRestrict<PLPickList.pickListNbr>(row.PickListNbr));
+                }
+                throw new PXReportRequiredException(down, "PL000002", null) { Mode = PXRedirectRequiredException.WindowMode.NewWindow };
+            });
+            return adapter.Get();
+        }
+        #endregion
+
+        #region Cancel
+
+        public virtual void CancelPicklist(PLPickListLine line)
+        {
+            var soGraph = PXGraph.CreateInstance<SOOrderEntry>();
+            SOLine soLine = PXSelect<SOLine, Where<SOLine.orderNbr, Equal<Required<SOLine.orderNbr>>,
+                And<SOLine.orderType, Equal<Required<SOLine.orderType>>, And<SOLine.lineNbr, Equal<Required<SOLine.lineNbr>>>>>>.Select(this, line.SOOrderNbr, line.SOOrderType, line.SOLineNbr);
+
+            soGraph.Document.Current = soGraph.Document.Search<SOOrder.orderNbr>(soLine.OrderNbr, soLine.OrderType);
+
+            soGraph.Transactions.Cache.SetValueExt<SOLineExt.usrSchedulingType>(soLine, ShippingStatus.PickCancelled);
+            soGraph.Transactions.Update(soLine);
+            soGraph.Persist();
+
+        }
+
+        public PXAction<PLPickList> CancelButton;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "Cancel")]
+        public virtual IEnumerable cancelButton(PXAdapter adapter)
+        {
+            var soGraph = PXGraph.CreateInstance<SOOrderEntry>();
+            var transferGraph = PXGraph.CreateInstance<INTransferEntry>();
+            PLPickListLine rowLine = PickListLines.Current;
+            PLPickList rowHead = PickLists.Current;
+            if (rowLine == null) { PickListLines.Ask("Information", "No Items in List", MessageButtons.OK, MessageIcon.Information); }
+            else
+            {
+                if (rowHead.Status == pickListStatus.Open || rowHead.Status == pickListStatus.OpenPrinted)
+                {
+                    foreach (PLPickListLine myLine in PickListLines.Select()) {
+                        PLPickList row = PickLists.Current;
+                        PLPickListSOLineContent lineContent = PXSelect<
+                               PLPickListSOLineContent,
+                               Where<PLPickListSOLineContent.pickListNbr, Equal<Required<PLPickListSOLineContent.pickListNbr>>,
+                                   And<PLPickListSOLineContent.pickListLineNbr, Equal<Required<PLPickListSOLineContent.pickListLineNbr>>>>>
+                               .Select(this, myLine.PickListNbr, myLine.LineNbr);
+
+                        if (lineContent != null)
+                        {
+                            lineContent.PickQty -= myLine.PickQty;
+                            Content.Update(lineContent);
+                            Content.Delete(lineContent);
+                        }
+                        row.Status = pickListStatus.Cancel;
+                        row.IsCancelled = true;
+                        PickLists.Update(row);
+                        //CancelPicklist(myLine);
+                    }
+                    Persist();
+                }
+                else
+                {
+                    PXLongOperation.StartOperation(this, delegate
+                    {
+
+                        var returnInventoryHead = transferGraph.transfer.Insert(new INRegister()
+                        {
+                            SiteID = PickListLines.Current.SiteID,
+                            ToSiteID = PickListLines.Current.SiteID,
+                            TransferType = INTransferType.OneStep,
+                            Hold = false
+                        });
+                        foreach (PLPickListLine myLine in PickListLines.Select())
+                        {
+                            PickListLines.Current = myLine;
+                            var pickToString = Convert.ToString(myLine.PickQty);
+                            var dateTime = Convert.ToString(myLine.LastModifiedDateTime);
+                            string concat = ";-" + pickToString + " " + myLine.PickListNbr + " " + dateTime;
+                            InventoryItem myItem = PXSelectJoin<
+                                InventoryItem,
+                                LeftJoin<INLotSerClass,
+                                    On<INLotSerClass.lotSerClassID, Equal<InventoryItem.lotSerClassID>>>,
+                                Where<INLotSerClass.lotSerIssueMethod, Equal<Required<INLotSerClass.lotSerIssueMethod>>,
+                                    And<InventoryItem.inventoryID, Equal<Required<InventoryItem.inventoryID>>>>>
+                                .Select(this, INLotSerIssueMethod.UserEnterable, myLine.InventoryID);
+                            SOLine soLine = PXSelect<
+                                SOLine,
+                                Where<SOLine.orderType, Equal<Required<SOLine.orderType>>,
+                                    And<Where<SOLine.orderNbr, Equal<Required<SOLine.orderNbr>>,
+                                        And<Where<SOLine.lineNbr, Equal<Required<SOLine.lineNbr>>>>>>>>
+                                .Select(this, myLine.SOOrderType, myLine.SOOrderNbr, myLine.SOLineNbr);
+                            PLPickListSOLineContent lineContent = PXSelect<
+                                PLPickListSOLineContent,
+                                Where<PLPickListSOLineContent.pickListNbr, Equal<Required<PLPickListSOLineContent.pickListNbr>>,
+                                    And<PLPickListSOLineContent.pickListLineNbr, Equal<Required<PLPickListSOLineContent.pickListLineNbr>>>>>
+                                .Select(this, myLine.PickListNbr, myLine.LineNbr);
+
+                            LPLoadPlanLine loadLine = PXSelect<
+                                LPLoadPlanLine,
+                                Where<LPLoadPlanLine.sOOrderNbr, Equal<Required<LPLoadPlanLine.sOOrderNbr>>,
+                                    And<Where<LPLoadPlanLine.sOOrderType, Equal<Required<LPLoadPlanLine.sOOrderType>>,
+                                        And<Where<LPLoadPlanLine.sOLineNbr, Equal<Required<LPLoadPlanLine.sOLineNbr>>>>>>>>
+                                .Select(this, myLine.SOOrderNbr, myLine.SOOrderType, myLine.SOLineNbr);
+                            SOLineExt lineExt = PXCache<SOLine>.GetExtension<SOLineExt>(soLine);
+                            if (loadLine != null)
+                            {
+                                throw new PXException("Document is already loaded in Load Plan");
+                            }
+
+                            foreach (INTransferEntry.INSiteStatusSelected item in transferGraph.sitestatus.Select().RowCast<INTransferEntry.INSiteStatusSelected>().Where(d => d.InventoryID == myLine.InventoryID && d.LocationID == myLine.LocationID))
+                            {  
+                                item.Selected = true;
+                                item.QtySelected = myLine.PickQty;
+                                transferGraph.sitestatus.Update(item);
+                            }
+                            transferGraph.addInvSelBySite.PressButton();
+                            transferGraph.transactions.SetValueExt<INTran.locationID>(transferGraph.transactions.Current, myLine.ToLocationID);
+                            transferGraph.transactions.SetValueExt<INTran.toLocationID>(transferGraph.transactions.Current, myLine.LocationID);
+                            transferGraph.transactions.Cache.SetValue<INTranExt.usrPickListNbr>(transferGraph.transactions.Current, myLine.PickListNbr);
+                            transferGraph.transactions.Update(transferGraph.transactions.Current);
+                            transferGraph.transactions.Cache.SetValue<INTranExt.usrPickListLine>(transferGraph.transactions.Current, myLine.LineNbr);
+                            transferGraph.transactions.Update(transferGraph.transactions.Current);
+
+                            SOLineExt soLineExt = PXCache<SOLine>.GetExtension<SOLineExt>(soLine);
+                            soGraph.Transactions.SetValueExt<SOLineExt.usrPickListQty>(soLine, soLineExt.UsrPickListQty - myLine.PickQty);
+                            soGraph.Transactions.Update(soLine);
+                            soGraph.Transactions.SetValueExt<SOLineExt.usrPickListStatus>(soLine, pickStatusList.Open);
+                            soGraph.Transactions.Update(soLine);
+                            soGraph.Transactions.SetValueExt<SOLineExt.usrPickListReference>(soLine, soLineExt.UsrPickListReference + concat);
+                            soGraph.Transactions.Update(soLine);
+
+                            if (lineContent != null)
+                            {
+                                lineContent.PickQty -= myLine.PickQty;
+                                Content.Update(lineContent);
+                                Content.Delete(lineContent);
+                            }
+                        }
+                        foreach (INTran loc in transferGraph.transactions.Select())
+                        {
+                            var locExt = PXCache<INTran>.GetExtension<INTranExt>(loc);
+                            PickListLines.Current.LineNbr = locExt.UsrPickListLine;
+                            foreach (PLPickListSplit lotSplits in pickSplits.Select().RowCast<PLPickListSplit>().Where(d => d.PLPickListNbr == locExt.UsrPickListNbr && d.PLPickListLine == locExt.UsrPickListLine))
+                            {
+                                if (lotSplits != null)
+                                {
+                                    transferGraph.transactions.Current = loc;
+                                    foreach (INTranSplit item in transferGraph.splits.Select())
+                                    {
+                                        if (item != null)
+                                        {
+                                            transferGraph.splits.Delete(item);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        foreach (INTran loc in transferGraph.transactions.Select())
+                        {
+                            var locExt = PXCache<INTran>.GetExtension<INTranExt>(loc);
+                            PickListLines.Current.LineNbr = locExt.UsrPickListLine;
+                            foreach (PLPickListSplit lotSplits in pickSplits.Select().RowCast<PLPickListSplit>().Where(d => d.PLPickListNbr == locExt.UsrPickListNbr && d.PLPickListLine == locExt.UsrPickListLine))
+                            {
+                                if (lotSplits != null)
+                                {
+                                    transferGraph.transactions.Current = loc;
+                                    INTranSplit splts = (INTranSplit)transferGraph.splits.Cache.CreateInstance();
+                                    splts.LocationID = loc.LocationID;
+                                    splts.LotSerialNbr = lotSplits.LotSerialNbr;
+                                    splts.Qty = lotSplits.Qty;
+                                    splts.ExpireDate = loc.ExpireDate;
+                                    transferGraph.splits.Insert(splts);
+                                }
+                                pickSplits.Cache.SetValueExt<PLPickListSplit.cancelled>(lotSplits, true);
+                                pickSplits.Cache.SetValueExt<PLPickListSplit.released>(lotSplits, false);
+                                pickSplits.Update(lotSplits);
+                            }
+                        }
+                        PLPickList row = PickLists.Current;
+                        row.Status = pickListStatus.Cancel;
+                        row.IsCancelled = true;
+                        PickLists.Update(row);
+                        soGraph.Persist();
+                        transferGraph.release.Press();
+                        Persist();
+
+                    });
+                }
+            }
+
+            return adapter.Get();
+        }
+
+        #endregion
+
+        #region Additem
+
+        public PXAction<PLPickList> AddItem;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "Add Item")]
+        public virtual IEnumerable addItem(PXAdapter adapter)
+        {
+            if (Items.AskExt() == WebDialogResult.OK)
+            {
+                foreach (SOLine line in Items.Cache.Updated)
+                {
+                    SOLineExt lineExt = PXCache<SOLine>.GetExtension<SOLineExt>(line);
+
+                    if (lineExt.UsrSelected == true)
+                    {
+                        if (Setup.Current.RequireInvPay == true)
+                        {
+
+                            ARTran select = PXSelectJoin<
+                                ARTran,
+                                InnerJoin<ARInvoice,
+                                    On<ARInvoice.docType, Equal<ARTran.tranType>,
+                                    And<ARTran.refNbr, Equal<ARInvoice.refNbr>>>>,
+                                Where<ARTran.sOOrderType, Equal<Required<ARTran.sOOrderType>>,
+                                    And<ARTran.sOOrderNbr, Equal<Required<ARTran.sOOrderNbr>>,
+                                    And<ARTran.sOOrderLineNbr, Equal<Required<ARTran.sOOrderLineNbr>>,
+                                    And<Where<ARInvoice.status, Equal<ARDocStatus.closed>>>>>>>
+                                .Select(this, line.OrderType, line.OrderNbr, line.LineNbr);
+                            if (select == null)
+                            {
+                                Items.Cache.Clear();
+                                throw new PXException("Order Nbr " + line.OrderNbr + " needs to be settled on Payments");
+                            }
+                        }
+                        var insertedItems = PickListLines.Insert(new PLPickListLine()
+                        {
+                            SOOrderType = line.OrderType,
+                            SOOrderNbr = line.OrderNbr,
+                            SOLineNbr = line.LineNbr,
+                            PickOpenQty = lineExt.UsrPickListOpenQty,
+                            PickStatus = lineExt.UsrPickListStatus,
+                            Quantity = line.OrderQty,
+                            Vendor = line.VendorID,
+                            InventoryID = line.InventoryID,
+                            SiteID = line.SiteID,
+                            SOLocationID = line.LocationID,
+                            UOM = line.UOM
+                        });
+                        AddPickContent(insertedItems, line, 0m);
+
+                    }
+                }
+            }
+
+            return adapter.Get();
+        }
+        #endregion
+
+        #region Allocations
+
+        public PXAction<PLPickList> Allocations;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "Allocations")]
+        public virtual IEnumerable allocations(PXAdapter adapter)
+        {
+            pickSplits.AskExt();
+
+            return adapter.Get();
+        }
+
+        #endregion
+
+        #region ClaimItems
+
+        public PXAction<PLPickList> ClaimPickUpItems;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "Claim Pickup Items", Visible = false)]
+        public virtual IEnumerable claimPickUpItems(PXAdapter adapter)
+        {
+            Akatsuki.AskExt();
+            return adapter.Get();
+        }
+
+        #endregion
+
+        #region DeleteButton
+
+        public PXAction<PLPickList> DeleteButton;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "Delete")]
+
+        public virtual IEnumerable deleteButton(PXAdapter adapter)
+        {
+            foreach (PLPickListLine lines in PickListLines.Select())
+            {
+                if (lines.Selected != true)
+                {
+                    PickListLines.Delete(lines);
+                }
+            }
+            return adapter.Get();
+        }
+
+        #endregion
+
+        #region LinkCommand
+        public PXAction<SOOrder> MySOOrder;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "MySO", Visible = false)]
+        public virtual void mySOOrder()
+        {
+            var graph = PXGraph.CreateInstance<SOOrderEntry>();
+
+            graph.Document.Current = graph.Document.Search<SOOrder.orderNbr, SOOrder.orderType>(this.PickListLines.Current.SOOrderNbr, this.PickListLines.Current.SOOrderType);
+            throw new PXRedirectRequiredException(graph, "SOOrder Redirect")
+            {
+                Mode = PXBaseRedirectException.WindowMode.NewWindow
+            };
+        }
+
+        public PXAction<ARInvoice> MyInvoice;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "MY SI", Visible = false)]
+        public virtual void myInvoice()
+        {
+            var graph = PXGraph.CreateInstance<ARInvoiceEntry>();
+            graph.Document.Current = graph.Document.Search<ARInvoice.refNbr>(this.PickListLines.Current.InvoiceNbr, this.PickListLines.Current.InvoiceType);
+            throw new PXRedirectRequiredException(graph, "Invoice Redirect")
+            {
+                Mode = PXBaseRedirectException.WindowMode.NewWindow
+            };
+        }
+
+        public PXAction<InventoryItem> MyInventory;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "MY Inventory", Visible = false)]
+        public virtual void myInventory()
+        {
+            var graph = PXGraph.CreateInstance<InventoryItemMaint>();
+            graph.Item.Current = graph.Item.Search<InventoryItem.inventoryID>(this.PickListLines.Current.InventoryID);
+            throw new PXRedirectRequiredException(graph, "Inventory Item Redirect")
+            {
+                Mode = PXBaseRedirectException.WindowMode.NewWindow
+            };
+        }
+
+        public PXAction<EPEmployee> MyEmployee;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "My Picker", Visible = false)]
+        public virtual void myEmployee()
+        {
+            var graph = PXGraph.CreateInstance<EmployeeMaint>();
+
+            graph.Employee.Current = graph.Employee.Search<EPEmployee.bAccountID>(this.PickListLines.Current.Picker);
+            throw new PXRedirectRequiredException(graph, "Employee Redirect")
+            {
+                Mode = PXBaseRedirectException.WindowMode.NewWindow
+            };
+        }
+
+        public PXAction<VendorR> MyVendor;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "My Vendor", Visible = false)]
+        public virtual void myVendor()
+        {
+            var graph = PXGraph.CreateInstance<VendorMaint>();
+
+            graph.BAccount.Current = graph.BAccount.Search<VendorR.bAccountID>(this.PickListLines.Current.Vendor);
+            throw new PXRedirectRequiredException(graph, "Vendor Redirect")
+            {
+                Mode = PXBaseRedirectException.WindowMode.NewWindow
+            };
+        }
+
+        public PXAction<INRegister> TransferNbr;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "Transfer Nbr", Visible = false)]
+        public virtual void transferNbr()
+        {
+            var graph = PXGraph.CreateInstance<INTransferEntry>();
+
+            graph.transfer.Current = graph.transfer.Search<ARRegister.refNbr>(this.PickListLines.Current.TransferRefNbr);
+
+            throw new PXRedirectRequiredException(graph, "Transfers")
+            {
+                Mode = PXBaseRedirectException.WindowMode.NewWindow
+            };
+        }
+
+        #endregion
+
+        #region ActionClaimNow
+
+        public PXAction<PLPickListLine> ClaimNow;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "Ok")]
+        public virtual IEnumerable claimNow(PXAdapter adapter)
+        {
+
+            return adapter.Get();
+        }
+
+        #endregion
+
+        #endregion
+
+        #region Method
+
+        public void AddPickContent(PLPickListLine line, SOLine soLine, decimal? qty)
+        {
+            PLPickListSOLineContent content = Content.Insert();
+            PXCache cache = Content.Cache;
+            cache.SetValueExt<PLPickListSOLineContent.pickListLineNbr>(content, line.LineNbr);
+            cache.SetValueExt<PLPickListSOLineContent.sOOrderNbr>(content, soLine.OrderNbr);
+            cache.SetValueExt<PLPickListSOLineContent.sOOrderType>(content, soLine.OrderType);
+            cache.SetValueExt<PLPickListSOLineContent.sOOrderLineNbr>(content, soLine.LineNbr);
+            cache.SetValueExt<PLPickListSOLineContent.pickQty>(content, qty ?? 0m);
+
+            Content.Update(content);
+        }
+
+        public static void ReleaseDoc(List<PLPickListLine> lst, PLPickListEntry thisGraph)
+        {
+            using (PXTransactionScope sn = new PXTransactionScope())
+            {
+                //try
+                //{
+                    thisGraph.Actions.PressSave();
+                    var transferGraph = PXGraph.CreateInstance<INTransferEntry>();
+                    var graph = PXGraph.CreateInstance<SOOrderEntry>();
+                    DateTime? ExpireDate;
+                    foreach (PLPickListLine line in lst)
+                    {
+                        thisGraph.PickListLines.Current = line;
+                        var pickToString = Convert.ToString(line.PickQty);
+                        var dateTime = Convert.ToString(line.LastModifiedDateTime);
+                        string concat = pickToString + " " + line.PickListNbr + " " + dateTime;
+                        SOLine soLine = PXSelect<SOLine, Where<SOLine.orderNbr, Equal<Required<SOLine.orderNbr>>,
+                        And<SOLine.orderType, Equal<Required<SOLine.orderType>>, And<SOLine.lineNbr, Equal<Required<SOLine.lineNbr>>>>>>.Select(graph, line.SOOrderNbr, line.SOOrderType, line.SOLineNbr);
+                        var soLineExt = PXCache<SOLine>.GetExtension<SOLineExt>(soLine);
+                        if (line.PickQty == 0m)
+                        {
+                            graph.Transactions.SetValueExt<SOLineExt.usrPickListStatus>(soLine, pickStatusList.NotPicked);
+                            thisGraph.PickListLines.SetValueExt<PLPickListLine.pickStatus>(line, pickStatusList.NotPicked);
+                        }
+                        if (line.PickQty == soLineExt.UsrForecastPickQty)
+                        {
+                            graph.Transactions.SetValueExt<SOLineExt.usrPickListStatus>(soLine, pickStatusList.FullyPicked);
+                            //for scheduling
+                            graph.Transactions.SetValueExt<SOLineExt.usrSchedulingType>(soLine, ShippingStatus.PickReleased);
+                            //--End
+                            thisGraph.PickListLines.SetValueExt<PLPickListLine.pickStatus>(line, pickStatusList.FullyPicked);
+
+                        }
+                        if (line.PickQty != 0m)
+                        {
+                            if (line.PickQty != soLineExt.UsrForecastPickQty)
+                            {
+                                graph.Transactions.SetValueExt<SOLineExt.usrPickListStatus>(soLine, pickStatusList.PartiallyPicked);
+                                thisGraph.PickListLines.SetValueExt<PLPickListLine.pickStatus>(line, pickStatusList.PartiallyPicked);
+                            }
+                        }
+                        if (soLineExt.UsrPickListReference == null)
+                        {
+                            graph.Transactions.SetValueExt<SOLineExt.usrPickListReference>(soLine, concat);
+                        }
+                        else if (soLineExt.UsrPickListReference != null)
+                        {
+                            graph.Transactions.SetValueExt<SOLineExt.usrPickListReference>(soLine, soLineExt.UsrPickListReference + ";" + concat);
+                        }
+                        #region Auto Transfer
+                        if (line.PickQty > 0m)
+                        {
+                            var insert = transferGraph.transfer.Insert(new INRegister()
+                            {
+                                SiteID = line.SiteID,
+                                ToSiteID = line.SiteID,
+                                TransferType = INTransferType.OneStep
+                            });
+                            transferGraph.transfer.Update(insert);
+                            foreach (INTransferEntry.INSiteStatusSelected item in transferGraph.sitestatus.Select().RowCast<INTransferEntry.INSiteStatusSelected>().Where(d => d.InventoryID == line.InventoryID && d.LocationID == line.LocationID))
+                            {
+                                item.Selected = true;
+                                item.QtySelected = line.PickQty;
+                                transferGraph.sitestatus.Update(item);
+                            }
+                        transferGraph.addInvSelBySite.PressButton();
+                        transferGraph.transactions.SetValueExt<INTran.locationID>(transferGraph.transactions.Current, line.LocationID);
+                        transferGraph.transactions.SetValueExt<INTran.toLocationID>(transferGraph.transactions.Current, line.ToLocationID);
+                        transferGraph.transactions.SetValueExt<INTranExt.usrPickListNbr>(transferGraph.transactions.Current, line.PickListNbr);
+                        transferGraph.transactions.SetValueExt<INTranExt.usrPickListLine>(transferGraph.transactions.Current, line.LineNbr);
+                        transferGraph.transactions.Update(transferGraph.transactions.Current);
+                    }
+                    #endregion
+                    if (line.SOLocationID != null) graph.Transactions.SetValueExt<SOLine.locationID>(soLine, line.SOLocationID);
+
+                        graph.Transactions.SetValueExt<SOLineExt.usrPickListQty>(soLine, soLineExt.UsrPickListQty + line.PickQty);
+                        thisGraph.PickListLines.Cache.SetValueExt<PLPickListLine.pickOpenQty>(line, soLineExt.UsrPickListOpenQty);
+                        thisGraph.PickLists.Cache.SetValueExt<PLPickList.status>(thisGraph.PickLists.Current, pickListStatus.Released);
+                        thisGraph.PickLists.Cache.SetValueExt<PLPickList.myCheck>(thisGraph.PickLists.Current, true);
+                        graph.Transactions.Update(soLine);
+                        thisGraph.PickListLines.Update(line);
+                    }
+               
+
+                // lot serial nbr
+                foreach (INTran loc in transferGraph.transactions.Select())
+                {
+                    var locExt = PXCache<INTran>.GetExtension<INTranExt>(loc);
+                    thisGraph.PickListLines.Current.LineNbr = locExt.UsrPickListLine;
+                    foreach (PLPickListSplit lotSplits in thisGraph.pickSplits.Select().RowCast<PLPickListSplit>().Where(d => d.PLPickListNbr == locExt.UsrPickListNbr && d.PLPickListLine == locExt.UsrPickListLine))
+                    {
+                        if (lotSplits != null)
+                        {
+                            transferGraph.transactions.Current = loc;
+                            foreach (INTranSplit item in transferGraph.splits.Select())
+                            {
+                                if (item != null)
+                                {
+                                    transferGraph.splits.Delete(item);
+                                }
+                            }
+                        }
+                    }
+                }
+                foreach (INTran loc in transferGraph.transactions.Select())
+                {
+                    var locExt = PXCache<INTran>.GetExtension<INTranExt>(loc);
+                    thisGraph.PickListLines.Current.LineNbr = locExt.UsrPickListLine;
+                    foreach (PLPickListSplit lotSplits in thisGraph.pickSplits.Select().RowCast<PLPickListSplit>().Where(d => d.PLPickListNbr == locExt.UsrPickListNbr && d.PLPickListLine == locExt.UsrPickListLine))
+                    {
+                        transferGraph.transactions.Current = loc;
+                        transferGraph.transactions.SetValueExt<INTran.locationID>(loc,lotSplits.LocationID);
+                        if (lotSplits != null)
+                        {
+                            var insert = transferGraph.splits.Insert(new INTranSplit()
+                            {
+                                LocationID = lotSplits.LocationID,
+                                LotSerialNbr = lotSplits.LotSerialNbr,
+                                Qty = lotSplits.Qty,
+                                ExpireDate = loc.ExpireDate
+                            });
+                            transferGraph.splits.Update(insert);
+                            thisGraph.pickSplits.Cache.SetValueExt<PLPickListSplit.released>(lotSplits, true);
+                            thisGraph.pickSplits.Update(lotSplits);
+                        }
+                    }
+                }
+
+                //endofassigning lot serial nbr
+
+                thisGraph.PickLists.Update(thisGraph.PickLists.Current);
+                    thisGraph.Persist();
+                    if (transferGraph.transactions.Select().Count > 0)
+                    {
+                        transferGraph.transfer.Current.Hold = false;
+                        transferGraph.transfer.Update(transferGraph.transfer.Current);
+                        transferGraph.release.Press();
+                    }
+                    graph.Persist();
+                    sn.Complete();
+            //}
+            //    catch (Exception ex)
+            //{
+            //    throw new PXException(ex.Message);
+            //}
+        }
+        }          
+
+        #endregion
+
+        
+
+    }
+}
+]]></CDATA>
+</Graph>

@@ -1,0 +1,32 @@
+﻿<Graph ClassName="TruckMaint" Source="#CDATA" IsNew="True" FileType="NewGraph">
+    <CDATA name="Source"><![CDATA[using System;
+using PX.Data;
+using PX.Objects.GL;
+using PX.Objects.FA;
+using PX.Objects.AR;
+using PX.Objects.EP;
+namespace Dispatch
+{
+	public class TruckMaint : PXGraph<TruckMaint>
+	{
+
+		public PXSave<Truck> Save;
+		public PXCancel<Truck> Cancel;
+        
+
+		public PXSelect<Truck> Trucks;
+
+        protected void Truck_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+            var row = e.Row as Truck;
+            if (row == null) return;
+
+            Branch br = (Branch)PXSelectorAttribute.Select<Branch.branchID>(sender, row, row.BranchID);
+            if (br == null) { return; }
+            sender.SetValueExt<Truck.branchName>(row,br.AcctName);
+        }
+        
+
+	}
+}]]></CDATA>
+</Graph>

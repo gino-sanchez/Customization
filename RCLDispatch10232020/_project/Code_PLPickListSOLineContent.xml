@@ -1,0 +1,69 @@
+﻿<Graph ClassName="PLPickListSOLineContent" Source="#CDATA" IsNew="True" FileType="NewDac">
+    <CDATA name="Source"><![CDATA[using System;
+using PX.Data;
+using PX.Objects.SO;
+using PL;
+
+namespace Dispatch
+{
+  [Serializable]
+  public class PLPickListSOLineContent : IBqlTable
+  {
+    #region RecordID
+    [PXDBIdentity(IsKey = true)]
+    [PXUIField(DisplayName = "Record ID")]
+    public virtual int? RecordID { get; set; }
+    public abstract class recordID : PX.Data.BQL.BqlInt.Field<recordID> { }
+    #endregion
+
+    #region SOOrderNbr
+    [PXDBString(15, IsUnicode = true, InputMask = "")]
+    [PXUIField(DisplayName = "SOOrder Nbr")]
+    public virtual string SOOrderNbr { get; set; }
+    public abstract class sOOrderNbr : PX.Data.BQL.BqlString.Field<sOOrderNbr> { }
+    #endregion
+
+    #region SOOrderType
+    [PXDBString(2, IsFixed = true, InputMask = "")]
+    [PXUIField(DisplayName = "SOOrder Type")]
+    public virtual string SOOrderType { get; set; }
+    public abstract class sOOrderType : PX.Data.BQL.BqlString.Field<sOOrderType> { }
+    #endregion
+
+    #region SOOrderLineNbr
+    [PXDBInt()]
+    [PXUIField(DisplayName = "SOOrder Line Nbr")]
+    public virtual int? SOOrderLineNbr { get; set; }
+    public abstract class sOOrderLineNbr : PX.Data.BQL.BqlInt.Field<sOOrderLineNbr> { }
+    #endregion
+
+    #region PickListNbr
+    [PXDBString(15, IsUnicode = true, InputMask = "")]
+    [PXUIField(DisplayName = "Pick List Nbr")]
+    [PXDBDefault(typeof(PLPickList.pickListNbr))]
+    public virtual string PickListNbr { get; set; }
+    public abstract class pickListNbr : PX.Data.BQL.BqlString.Field<pickListNbr> { }
+    #endregion
+
+    #region PickListLineNbr
+    [PXDBInt()]
+    [PXUIField(DisplayName = "Pick List Line Nbr")]
+    public virtual int? PickListLineNbr { get; set; }
+    public abstract class pickListLineNbr : PX.Data.BQL.BqlInt.Field<pickListLineNbr> { }
+    #endregion
+
+    #region PickQty
+    [PXDBDecimal()]
+    [PXUIField(DisplayName = "Pick Qty")]
+    [PXParent(typeof(Select<
+        SOLine,
+        Where<SOLine.orderType,Equal<Current<sOOrderType>>,
+            And<SOLine.orderNbr,Equal<Current<sOOrderNbr>>,
+            And<SOLine.lineNbr,Equal<Current<sOOrderLineNbr>>>>>>))]
+    [PXFormula(null, typeof(SubCalc<SOLineExt.usrAvailPickQty>))]
+    public virtual Decimal? PickQty { get; set; }
+    public abstract class pickQty : PX.Data.BQL.BqlDecimal.Field<pickQty> { }
+    #endregion
+  }
+}]]></CDATA>
+</Graph>

@@ -1,0 +1,257 @@
+﻿<Graph ClassName="PLPickList" Source="#CDATA" IsNew="True" FileType="NewDac">
+    <CDATA name="Source"><![CDATA[using System;
+using PX.Data;
+using PX.Objects.CS;
+using DispatchSetup;
+using PX.Objects.EP;
+
+namespace PL
+{
+    public abstract class pickListStatus : IBqlField
+    {
+        public class ListAttribute : PXStringListAttribute
+        {
+            public ListAttribute()
+                : base(
+                new string[] { Open, Released, Post,Cancel,OpenPrinted,ReleasedPrinted},
+                new string[] { "Open", "Released" ,"Post","Cancelled", "Open - Printed","Released - Printed"})
+            { }
+        }
+        public const string Open = "N";
+        public const string Released = "R";
+        public const string Post = "T";
+        public const string Cancel = "D";
+        public const string OpenPrinted = "E";
+        public const string ReleasedPrinted = "S";
+        
+        public class open : Constant<string>
+        {
+            public open() : base(Open) { }
+        }
+
+        public class released : Constant<string>
+        {
+            public released() : base(Released) { }
+        }
+
+        public class post : Constant<string>
+        {
+            public post() : base(Post) { }
+        }
+        public class cancel : Constant<string>
+        {
+            public cancel() : base(Cancel) { }
+        }
+        public class releasedPrinted : Constant<string>
+        {
+            public releasedPrinted() : base(ReleasedPrinted) { }
+        }
+        public class openPrinted : Constant<string>
+        {
+            public openPrinted() : base(OpenPrinted) { }
+        }
+
+    }
+
+    [Serializable]
+	public class PLPickList : IBqlTable
+	{
+
+		#region PickListNbr
+		[PXDBString(15, IsUnicode = true, InputMask = ">CCCCCCCCCCCCCCC", IsKey = true)]
+        [PXSelector(typeof(Search<pickListNbr>), typeof(pickListNbr), typeof(pickDate), typeof(status), typeof(description))]
+        [PXUIField(DisplayName = "Pick List Nbr")]
+        [AutoNumber(typeof(DispatchNumberingSetup.pickLIstNumberingID), typeof(AccessInfo.businessDate))]
+        public virtual string PickListNbr { get; set; }
+		public abstract class pickListNbr : PX.Data.BQL.BqlString.Field<pickListNbr> { }
+        #endregion
+
+        #region LineCntr
+        [PXDBInt()]
+        [PXUIField(DisplayName = "Line Cntr.")]
+        [PXDefault(0)]
+        public virtual int? LineCntr { get; set; }
+        public abstract class lineCntr : PX.Data.BQL.BqlInt.Field<lineCntr> { }
+        #endregion
+
+        #region MyCheck
+        [PXDBBool()]
+        [PXUIField(DisplayName = "Check" ,Visible = false)]
+        [PXDefault(false,PersistingCheck = PXPersistingCheck.Nothing)]
+        public virtual bool? MyCheck { get; set; }
+        public abstract class myCheck : PX.Data.BQL.BqlInt.Field<myCheck> { }
+        #endregion
+
+        #region IsCancelled
+        [PXDBBool()]
+        [PXUIField(DisplayName = "Cancelled", Visible = false)]
+        [PXDefault(false, PersistingCheck = PXPersistingCheck.Nothing)]
+        public virtual bool? IsCancelled { get; set; }
+        public abstract class isCancelled : PX.Data.BQL.BqlInt.Field<isCancelled> { }
+        #endregion
+
+        #region PickDate
+        [PXDBDate()]
+		[PXUIField(DisplayName = "Pick Date")]
+        [PXDefault(typeof(AccessInfo.businessDate))]
+		public virtual DateTime? PickDate { get; set; }
+		public abstract class pickDate : PX.Data.BQL.BqlDateTime.Field<pickDate> { }
+		#endregion
+
+		#region Status
+		[PXDBString(1, IsFixed = true)]
+		[PXUIField(DisplayName = "Status",Enabled =false)]
+        [pickListStatus.List]
+        [PXDefault(pickListStatus.Open)]
+		public virtual string Status { get; set; }
+		public abstract class status : PX.Data.BQL.BqlString.Field<status> { }
+		#endregion
+
+		#region DeliveryDate
+		[PXDBDate()]
+		[PXUIField(DisplayName = "Delivery Date")]
+        [PXDefault(typeof(AccessInfo.businessDate))]
+		public virtual DateTime? DeliveryDate { get; set; }
+		public abstract class deliveryDate : PX.Data.BQL.BqlDateTime.Field<deliveryDate> { }
+		#endregion
+
+		#region Description
+		[PXDBString(50, IsUnicode = true, InputMask = "")]
+		[PXUIField(DisplayName = "Description")]
+		public virtual string Description { get; set; }
+		public abstract class description : PX.Data.BQL.BqlString.Field<description> { }
+        #endregion
+
+        #region tstamp
+        public abstract class Tstamp : PX.Data.IBqlField
+        {
+        }
+        protected Byte[] _tstamp;
+        [PXDBTimestamp()]
+        public virtual Byte[] tstamp
+        {
+            get
+            {
+                return this._tstamp;
+            }
+            set
+            {
+                this._tstamp = value;
+            }
+        }
+        #endregion
+        #region CreatedByID
+        public abstract class createdByID : PX.Data.IBqlField
+        {
+        }
+        protected Guid? _CreatedByID;
+        [PXDBCreatedByID()]
+        public virtual Guid? CreatedByID
+        {
+            get
+            {
+                return this._CreatedByID;
+            }
+            set
+            {
+                this._CreatedByID = value;
+            }
+        }
+        #endregion
+        #region CreatedByScreenID
+        public abstract class createdByScreenID : PX.Data.IBqlField
+        {
+        }
+        protected String _CreatedByScreenID;
+        [PXDBCreatedByScreenID()]
+        public virtual String CreatedByScreenID
+        {
+            get
+            {
+                return this._CreatedByScreenID;
+            }
+            set
+            {
+                this._CreatedByScreenID = value;
+            }
+        }
+        #endregion
+        #region CreatedDateTime
+        public abstract class createdDateTime : PX.Data.IBqlField
+        {
+        }
+        protected DateTime? _CreatedDateTime;
+        [PXDBCreatedDateTime()]
+        [PXUIField(DisplayName = PXDBLastModifiedByIDAttribute.DisplayFieldNames.CreatedDateTime, Enabled = false, IsReadOnly = true)]
+        public virtual DateTime? CreatedDateTime
+        {
+            get
+            {
+                return this._CreatedDateTime;
+            }
+            set
+            {
+                this._CreatedDateTime = value;
+            }
+        }
+        #endregion
+        #region LastModifiedByID
+        public abstract class lastModifiedByID : PX.Data.IBqlField
+        {
+        }
+        protected Guid? _LastModifiedByID;
+        [PXDBLastModifiedByID()]
+        public virtual Guid? LastModifiedByID
+        {
+            get
+            {
+                return this._LastModifiedByID;
+            }
+            set
+            {
+                this._LastModifiedByID = value;
+            }
+        }
+        #endregion
+        #region LastModifiedByScreenID
+        public abstract class lastModifiedByScreenID : PX.Data.IBqlField
+        {
+        }
+        protected String _LastModifiedByScreenID;
+        [PXDBLastModifiedByScreenID()]
+        public virtual String LastModifiedByScreenID
+        {
+            get
+            {
+                return this._LastModifiedByScreenID;
+            }
+            set
+            {
+                this._LastModifiedByScreenID = value;
+            }
+        }
+        #endregion
+        #region LastModifiedDateTime
+        public abstract class lastModifiedDateTime : PX.Data.IBqlField
+        {
+        }
+        protected DateTime? _LastModifiedDateTime;
+        [PXDBLastModifiedDateTime()]
+        [PXUIField(DisplayName = PXDBLastModifiedByIDAttribute.DisplayFieldNames.LastModifiedDateTime, Enabled = false, IsReadOnly = true)]
+        public virtual DateTime? LastModifiedDateTime
+        {
+            get
+            {
+                return this._LastModifiedDateTime;
+            }
+            set
+            {
+                this._LastModifiedDateTime = value;
+            }
+        }
+        #endregion
+
+      
+    }
+}]]></CDATA>
+</Graph>

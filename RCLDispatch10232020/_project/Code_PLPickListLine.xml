@@ -1,0 +1,494 @@
+﻿<Graph ClassName="PLPickListLine" Source="#CDATA" IsNew="True" FileType="NewDac">
+    <CDATA name="Source"><![CDATA[using System;
+using PX.Data;
+using PX.Objects.AP;
+using PX.Objects.AR;
+using PX.Objects.EP;
+using PX.Objects.IN;
+using PX.Objects.PO;
+using PX.Objects.SO;
+using PX.Objects.CR;
+using static PX.Objects.FS.ListField_PostTo;
+using PX.Objects.Common;
+using PX.Objects.Common.Bql;
+using PX.Objects.PM;
+using PX.Objects.GL;
+
+namespace PL
+{
+    #region IsClaimedStatus
+    
+    public abstract class PickUpStatus : IBqlField
+    {
+
+        public class ListAttribute: PXStringListAttribute
+        {
+            public ListAttribute() : base(
+                new string[] { NA, Claimed, NotClaimed },
+                new string[] { "Not Applicable", "Claimed", "Not Claimed" })
+            { }
+          
+        }
+
+        public const string NA = "NA";
+        public const string Claimed = "CC";
+        public const string NotClaimed = "NC";
+
+        public class na : Constant<string>
+        {
+            public na() : base(NA) { }
+        }
+        public class claimed : Constant<string>
+        {
+            public claimed() : base(Claimed) { }
+        }
+        public class notClaimed : Constant<string>
+        {
+            public notClaimed() : base(NotClaimed) { }
+        }
+
+    }
+
+    #endregion
+    #region PickStatusList
+    public abstract class pickStatusList : IBqlField
+    {
+        public class ListAttribute : PXStringListAttribute
+        {
+            public ListAttribute()
+                : base(
+                new string[] { Open, PartiallyPicked, FullyPicked, NotPicked ,Closed},
+                new string[] { "Open", "Partially Picked", "Fully Picked", "Not Picked" ,"Closed"})
+            { }
+        }
+        public const string Open = "O";
+        public const string PartiallyPicked = "P";
+        public const string FullyPicked = "F";
+        public const string NotPicked = "N";
+        public const string StagingArea = "STAREA";
+        public const string Closed = "L";
+
+        public class open : Constant<string>
+        {
+            public open() : base(Open) { }
+        }
+        public class partiallyPicked : Constant<string>
+        {
+            public partiallyPicked() : base(PartiallyPicked) { }
+        }
+        public class fullyPicked : Constant<string>
+        {
+            public fullyPicked() : base(FullyPicked) { }
+        }
+        public class notPicked : Constant<string>
+        {
+            public notPicked() : base(NotPicked) { }
+        }
+        public class closed : Constant<string>
+        {
+            public closed() : base(Closed) { }
+        }
+    }
+    #endregion
+
+    [Serializable]
+    public class PLPickListLine : IBqlTable
+    {
+        public abstract class selected : IBqlField { }
+
+        [PXBool]
+        [PXDefault(false, PersistingCheck = PXPersistingCheck.Nothing)]
+        [PXUIField(DisplayName = "Selected")]
+
+        public virtual bool? Selected { get; set; }
+
+        #region PickListNbr
+        [PXDBString(15, IsUnicode = true, InputMask = "", IsKey = true)]
+        [PXUIField(DisplayName = "Pick List Nbr")]
+        [PXDBDefault(typeof(PLPickList.pickListNbr))]
+
+        public virtual string PickListNbr { get; set; }
+        public abstract class pickListNbr : PX.Data.BQL.BqlString.Field<pickListNbr> { }
+        #endregion
+
+        #region LineNbr
+        [PXDBInt(IsKey = true)]
+        [PXLineNbr(typeof(PLPickList.lineCntr))]
+        [PXParent(typeof(Select<
+            PLPickList,
+            Where<PLPickList.pickListNbr, Equal<Current<pickListNbr>>>>))]
+        [PXUIField(DisplayName = "Line Nbr")]
+        public virtual int? LineNbr { get; set; }
+        public abstract class lineNbr : PX.Data.BQL.BqlInt.Field<lineNbr> { }
+        #endregion
+
+        #region SOOrderNbr
+        [PXDBString(15, IsUnicode = true, InputMask = "")]
+        [PXUIField(DisplayName = "Order Nbr")]
+        public virtual string SOOrderNbr { get; set; }
+        public abstract class sOOrderNbr : PX.Data.BQL.BqlString.Field<sOOrderNbr> { }
+        #endregion
+
+        #region SOOrderType
+        [PXDBString(2, IsFixed = true, InputMask = "")]
+        [PXUIField(DisplayName = "Order Type")]
+        public virtual string SOOrderType { get; set; }
+        public abstract class sOOrderType : PX.Data.BQL.BqlString.Field<sOOrderType> { }
+        #endregion
+
+        #region SOLineNbr
+        [PXDBInt()]
+        [PXUIField(DisplayName = "SO Line Nbr")]
+        public virtual int? SOLineNbr { get; set; }
+        public abstract class sOLineNbr : PX.Data.BQL.BqlInt.Field<sOLineNbr> { }
+        #endregion
+
+        #region PickQty
+        [PXDBDecimal()]
+        [PXUIField(DisplayName = "Pick Qty")]
+        [PXDefault(TypeCode.Decimal, "0.00", PersistingCheck = PXPersistingCheck.Nothing)]
+        public virtual Decimal? PickQty { get; set; }
+        public abstract class pickQty : PX.Data.BQL.BqlDecimal.Field<pickQty> { }
+        #endregion
+
+        #region InventoryID
+        [PXDBInt()]
+        [PXUIField(DisplayName = "Item Description")]
+        [PXSelector(typeof(Search<InventoryItem.inventoryID>), SubstituteKey = typeof(InventoryItem.descr))]
+        public virtual int? InventoryID { get; set; }
+        public abstract class inventoryID : PX.Data.BQL.BqlDecimal.Field<inventoryID> { }
+        #endregion
+
+        #region SiteID
+        public abstract class siteID : PX.Data.BQL.BqlInt.Field<siteID> { }
+        [PX.Objects.IN.SiteAvail(typeof(inventoryID))]
+        public virtual int? SiteID { get; set; }
+
+        #endregion
+
+        #region SOLocationID
+        public abstract class sOLocationID : PX.Data.BQL.BqlInt.Field<locationID> { }
+        protected Int32? _LocationID;
+        [LocationAvail(typeof(inventoryID), typeof(INTran.subItemID), typeof(siteID), false, false, true, DisplayName = "SO Location ID")]
+        public virtual Int32? SOLocationID
+        {
+            get
+            {
+                return this._LocationID;
+            }
+            set
+            {
+                this._LocationID = value;
+            }
+        }
+        #endregion
+
+
+        #region LocationID
+
+        public abstract class locationID : PX.Data.BQL.BqlInt.Field<locationID> { }
+        [LocationAvail(typeof(inventoryID), typeof(INTran.subItemID), typeof(siteID), false, false, true, DisplayName = "Location Warehouse")]
+        public virtual Int32? LocationID
+        {
+
+            get
+            {
+                return this._LocationID;
+            }
+            set
+            {
+                this._LocationID = value;
+            }
+        }
+
+        #endregion
+
+        #region ToLocationID
+        public abstract class toLocationID : PX.Data.BQL.BqlInt.Field<toLocationID> { }
+        [PXDBInt()]
+        [PXUIField(DisplayName = "To Location Warehouse")]
+        //[LocationAvail(typeof(inventoryID), typeof(INTran.subItemID), typeof(siteID), false, false, true, DisplayName = "Location Warehouse")]
+        public virtual int? ToLocationID { get; set; }
+        #endregion
+
+        public abstract class uOM : PX.Data.BQL.BqlString.Field<uOM> { }
+        [INUnit(typeof(inventoryID),DisplayName = "UOM")]
+        public virtual string UOM { get; set; }
+
+        #region Picker
+        [PXDBInt()]
+        [PXUIField(DisplayName = "Picker")]
+        [PXSelector(typeof(EPEmployee.bAccountID),
+            typeof(EPEmployee.acctCD),
+            typeof(EPEmployee.acctName), SubstituteKey = typeof(EPEmployee.acctName))]
+        [PXDefault()]
+        public virtual int? Picker { get; set; }
+        public abstract class picker : PX.Data.BQL.BqlInt.Field<picker> { }
+        #endregion
+
+        #region PickOpenQty
+        [PXDBDecimal()]
+
+        [PXUIField(DisplayName = "Pick Open Qty")]
+        [PXDefault(TypeCode.Decimal, "0.00", PersistingCheck = PXPersistingCheck.Nothing)]
+
+        public virtual Decimal? PickOpenQty { get; set; }
+        public abstract class pickOpenQty : PX.Data.BQL.BqlDecimal.Field<pickOpenQty> { }
+        #endregion
+
+        #region OpenOrderQty
+        public abstract class openOrderQty : IBqlField { }
+        [PXDecimal()]
+        [PXUIField(DisplayName = "Open Order Qty")]
+        [PXFormula(typeof(Sub<SOLine.orderQty, SOLine.shippedQty>))]
+
+        public virtual Decimal? OpenOrderQty { get; set; }
+
+        #endregion
+
+        #region PickStatus
+        [PXDBString(1, IsFixed = true, InputMask = "")]
+        [PXUIField(DisplayName = "Pick Status", Enabled = false)]
+        [pickStatusList.List]
+        [PXDefault(pickStatusList.Open, PersistingCheck = PXPersistingCheck.Nothing)]
+        public virtual string PickStatus { get; set; }
+        public abstract class pickStatus : PX.Data.BQL.BqlString.Field<pickStatus> { }
+        #endregion
+
+        #region VendorID
+        public abstract class vendor : PX.Data.BQL.BqlInt.Field<vendor> { }
+        [PXDBInt()]
+        [PXSelector(typeof(Search2<
+            VendorR.bAccountID,
+            InnerJoin<POVendorInventory,
+                On<POVendorInventory.vendorID,Equal<VendorR.bAccountID>>>,
+            Where<VendorR.type,NotEqual<BAccountType.employeeType>,
+                And<Where<POVendorInventory.inventoryID,Equal<Current<inventoryID>>>>>>),
+            typeof(VendorR.acctCD), SubstituteKey = typeof(VendorR.acctCD),DescriptionField = typeof(VendorR.acctName))]
+        [PXUIField(DisplayName = "Vendor")]
+        public virtual Int32? Vendor { get; set; }
+        #endregion
+
+        #region pickremarks
+        [PXDBString(50)]
+        [PXUIField(DisplayName = "Picking Remarks")]
+
+        public virtual string PickingRemarks { get; set; }
+        public abstract class pickingRemarks : PX.Data.BQL.BqlString.Field<pickingRemarks> { }
+        #endregion
+
+
+        #region InvoiceNBr
+        public abstract class invoiceNbr : IBqlField { }
+        [PXString(15)]
+        [PXUIField(DisplayName = "Invoice #",Enabled =false)]
+        [PXDBScalar(typeof(Search<
+            ARTran.refNbr, 
+            Where<ARTran.sOOrderNbr, Equal<sOOrderNbr>, 
+                And<ARTran.sOOrderType, Equal<sOOrderType>,
+                And<ARTran.sOOrderLineNbr,Equal<sOLineNbr>>>>>))]
+        public virtual string InvoiceNbr { get; set; }
+        #endregion
+        #region Type
+        public abstract class invoiceType : IBqlField { }
+        [PXString(15)]
+        [PXUIField(DisplayName = "Invoice Type",Enabled = false)]
+        [PXDBScalar(typeof(Search<
+            ARTran.tranType, 
+            Where<ARTran.sOOrderNbr, Equal<sOOrderNbr>, 
+                And<ARTran.sOOrderType, Equal<sOOrderType>, 
+                And<ARTran.sOOrderLineNbr, Equal<sOLineNbr>>>>>))]
+        [ARDocType.List]
+        public virtual string InvoiceType { get; set; }
+
+        #endregion
+
+        #region Qty
+        [PXDBDecimal()]
+        [PXUIField(DisplayName = "Order Qty")]
+        [PXDefault(TypeCode.Decimal, "0.00", PersistingCheck = PXPersistingCheck.Nothing)]
+        [PXFormula(typeof(Sub<quantity,SOLine.shippedQty>))]
+        public virtual Decimal? Quantity { get; set; }
+        public abstract class quantity : PX.Data.BQL.BqlDecimal.Field<quantity> { }
+        #endregion
+
+        #region ShippingType
+        [PXString(10)]
+        [PXUIField(DisplayName = "Shipping Type")]
+        [PXDBScalar(typeof(Search<
+            SOLineExt.usrConfirmShipment,
+            Where<SOLine.orderNbr, Equal<sOOrderNbr>,
+                And<Where<SOLine.orderType, Equal<sOOrderType>,
+                    And<Where<SOLine.lineNbr, Equal<sOLineNbr>>>>>>>))]
+        [Attrib.List]
+
+        public virtual string ShippingType { get; set; }
+        public abstract class shippingType : IBqlField { }
+        #endregion
+
+        #region IsClaimed
+
+        [PXBool()]
+        [PXUIField(DisplayName = "IsClaimed",Enabled =false)]
+        [PXDefault(false,PersistingCheck = PXPersistingCheck.Nothing)]
+        public virtual bool? IsClaimed { get; set; }
+        public abstract class isClaimed : IBqlField { };
+
+        #endregion
+
+        #region PickUpShippingType Status
+
+        [PXString(2)]
+        [PXUIField(DisplayName = "Status",Enabled = false)]
+        [PXUnboundDefault(typeof(PickUpStatus.na), PersistingCheck = PXPersistingCheck.Nothing)]
+        [PickUpStatus.List]
+        public virtual string PickUpShippingTypeStatus { get; set; }
+        public abstract class pickUpShippingTypeStatus : IBqlField { }
+
+        #endregion
+
+        #region TransferRefNbr
+        public abstract class transferRefNbr : PX.Data.BQL.BqlString.Field<transferRefNbr> { }
+        [PXString(15,IsUnicode = true)]
+        [PXUIField(DisplayName = "Transfer Ref Nbr", Enabled = false)]
+        [PXDBScalar(typeof(Search<INTran.refNbr
+                    ,Where<INTranExt.usrPickListNbr,Equal<pickListNbr>>>))]
+        public virtual string TransferRefNbr { get; set; }
+
+        #endregion
+
+    
+
+        #region tstamp
+        public abstract class Tstamp : PX.Data.IBqlField
+        {
+        }
+        protected Byte[] _tstamp;
+        [PXDBTimestamp()]
+        public virtual Byte[] tstamp
+        {
+            get
+            {
+                return this._tstamp;
+            }
+            set
+            {
+                this._tstamp = value;
+            }
+        }
+        #endregion
+        #region CreatedByID
+        public abstract class createdByID : PX.Data.IBqlField
+        {
+        }
+        protected Guid? _CreatedByID;
+        [PXDBCreatedByID()]
+        public virtual Guid? CreatedByID
+        {
+            get
+            {
+                return this._CreatedByID;
+            }
+            set
+            {
+                this._CreatedByID = value;
+            }
+        }
+        #endregion
+        #region CreatedByScreenID
+        public abstract class createdByScreenID : PX.Data.IBqlField
+        {
+        }
+        protected String _CreatedByScreenID;
+        [PXDBCreatedByScreenID()]
+        public virtual String CreatedByScreenID
+        {
+            get
+            {
+                return this._CreatedByScreenID;
+            }
+            set
+            {
+                this._CreatedByScreenID = value;
+            }
+        }
+        #endregion
+        #region CreatedDateTime
+        public abstract class createdDateTime : PX.Data.IBqlField
+        {
+        }
+        protected DateTime? _CreatedDateTime;
+        [PXDBCreatedDateTime()]
+        [PXUIField(DisplayName = PXDBLastModifiedByIDAttribute.DisplayFieldNames.CreatedDateTime, Enabled = false, IsReadOnly = true)]
+        public virtual DateTime? CreatedDateTime
+        {
+            get
+            {
+                return this._CreatedDateTime;
+            }
+            set
+            {
+                this._CreatedDateTime = value;
+            }
+        }
+        #endregion
+        #region LastModifiedByID
+        public abstract class lastModifiedByID : PX.Data.IBqlField
+        {
+        }
+        protected Guid? _LastModifiedByID;
+        [PXDBLastModifiedByID()]
+        public virtual Guid? LastModifiedByID
+        {
+            get
+            {
+                return this._LastModifiedByID;
+            }
+            set
+            {
+                this._LastModifiedByID = value;
+            }
+        }
+        #endregion
+        #region LastModifiedByScreenID
+        public abstract class lastModifiedByScreenID : PX.Data.IBqlField
+        {
+        }
+        protected String _LastModifiedByScreenID;
+        [PXDBLastModifiedByScreenID()]
+        public virtual String LastModifiedByScreenID
+        {
+            get
+            {
+                return this._LastModifiedByScreenID;
+            }
+            set
+            {
+                this._LastModifiedByScreenID = value;
+            }
+        }
+        #endregion
+        #region LastModifiedDateTime
+        public abstract class lastModifiedDateTime : PX.Data.IBqlField
+        {
+        }
+        protected DateTime? _LastModifiedDateTime;
+        [PXDBLastModifiedDateTime()]
+        [PXUIField(DisplayName = PXDBLastModifiedByIDAttribute.DisplayFieldNames.LastModifiedDateTime, Enabled = false, IsReadOnly = true)]
+        public virtual DateTime? LastModifiedDateTime
+        {
+            get
+            {
+                return this._LastModifiedDateTime;
+            }
+            set
+            {
+                this._LastModifiedDateTime = value;
+            }
+        }
+        #endregion
+
+       
+    }
+}]]></CDATA>
+</Graph>

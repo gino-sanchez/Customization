@@ -1,0 +1,658 @@
+﻿<Graph ClassName="BackloadEntry" Source="#CDATA" IsNew="True" FileType="NewGraph">
+    <CDATA name="Source"><![CDATA[using System;
+using PX.Data;
+using DispatchSetup;
+using System.Collections.Generic;
+using System.Collections;
+using PX.Objects.IN;
+using PX.Objects.PO;
+using PX.Objects.CR;
+using System.Linq;
+using PX.Objects.AP;
+using PX.Objects.SO;
+using PX.Objects.CS;
+using PX.Objects.AR;
+
+namespace Dispatch
+{
+    
+  public class BackloadEntry : PXGraph<BackloadEntry>
+  {
+        public PXSetup<DispatchNumberingSetup> Setup;
+        public PXSave<Backload> Save;
+        public PXCancel<Backload> Cancel;
+        public PXSelect<Backload> BackloadHead;
+        public PXSelect<
+            BackloadLine,
+            Where<BackloadLine.backloadNbr,Equal<Current<Backload.backloadNbr>>>> 
+            BackloadLine;
+        public PXSelect<BackloadSplit, Where<BackloadSplit.backloadNbr, Equal<Current<Backload.backloadNbr>>>> backloadSplits;
+
+
+    public BackloadEntry()
+    {
+            Reports.AddMenuAction(Sample);
+            MyActions.AddMenuAction(Release);
+            MyActions.AddMenuAction(SplitBackloadLine);
+    }
+
+        #region Actions
+        #region Reports
+        public PXAction<Backload> Reports;
+        [PXButton(SpecialType = PXSpecialButtonType.ActionsFolder, MenuAutoOpen = true)]
+        [PXUIField(DisplayName = "Reports", MapEnableRights = PXCacheRights.Select, MapViewRights = PXCacheRights.Select)]
+        public void reports()
+        {
+
+        }
+        #endregion
+        #region Action
+        public PXAction<Backload> MyActions;
+        [PXButton(SpecialType = PXSpecialButtonType.ActionsFolder, MenuAutoOpen = true)]
+        [PXUIField(DisplayName = "Actions", MapEnableRights = PXCacheRights.Select, MapViewRights = PXCacheRights.Select)]
+        public void myActions()
+        {
+
+        }
+        #endregion
+        #region Report
+        public PXAction<Backload> Sample;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "Sample Report")]
+        public IEnumerable sample(PXAdapter adapter)
+        {
+            return adapter.Get();
+        }
+        #endregion
+        #region Release
+        public PXAction<Backload> Release;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "Release")]
+        public IEnumerable release(PXAdapter adapter)
+        {
+            
+            var soGraph = PXGraph.CreateInstance<SOOrderEntry>();
+            var currentSetup = Setup.Current;
+            List<BackloadLine> withReturn = new List<BackloadLine>();
+            List<BackloadLine> withoutReturn = new List<BackloadLine>();
+            var shipmentEntry = PXGraph.CreateInstance<SOShipmentEntry>();
+            foreach (BackloadLine lines in BackloadLine.Select())
+            {
+                if (lines.Qty > 0)
+                {
+                    BackloadType blType = PXSelect<
+                        BackloadType, 
+                        Where<BackloadType.backloadTypeCD, Equal<Required<BackloadType.backloadTypeCD>>>>
+                        .Select(this, lines.BackloadType);
+                    if (lines.BackloadType == blType.BackloadTypeCD && blType.BackloadReturn == true)
+                    {
+                        if (!withReturn.Contains(lines))
+                        {
+                            withReturn.Add(lines);
+                        }
+                    }
+                    if(blType.Issue == true || blType.WithBuffer == true || blType.OneStepStaging == true || blType.OneStepDefaultWarehouseLocation == true || blType.ReturnToDmgWarehouse == true)
+                    {
+                        if (!withoutReturn.Contains(lines))
+                        {
+                            withoutReturn.Add(lines);
+                        }
+                    }
+                }
+            }
+            PXLongOperation.StartOperation(this, delegate
+             {
+             using (PXTransactionScope trn = new PXTransactionScope())
+             {
+                 //try
+                 //{
+                 
+                        
+                         if (withReturn.Count() > 0)
+                         {
+                             CreateCM(this,withReturn);
+                         }
+                 if (withoutReturn.Count() > 0)
+                 {
+                    CreateTransferIssue(this, withoutReturn);  
+                 }
+                 BackloadHead.Cache.SetValueExt<Backload.backloadStatus>(BackloadHead.Current, BackloadStatus.Completed);
+                 BackloadHead.Update(BackloadHead.Current);
+                 Actions.PressSave();
+                foreach (BackloadLine line in BackloadLine.Select())
+                {
+                         SOShipLine shipLine = PXSelect<SOShipLine,Where<SOShipLine.shipmentNbr,Equal<Required<SOShipLine.shipmentNbr>>
+                             ,And<SOShipLine.shipmentType,Equal<Required<SOShipLine.shipmentType>>,And<SOShipLine.lineNbr,Equal<Required<SOShipLine.lineNbr>>>>>>.Select(shipmentEntry,line.ShipmentNbr,line.ShipmentType,line.ShipmentLineNbr);
+                    decimal? total = BackloadLine.Select().RowCast<BackloadLine>().Where(r => r.BackloadLineNbr == line.BackloadLineNbr).Sum(f => f.Qty);
+                    shipmentEntry.Transactions.Cache.SetValue<SOShipLineExt.usrBLQty>(shipLine, total);
+                         shipmentEntry.Transactions.Update(shipLine);
+                }
+                shipmentEntry.Persist();
+                 trn.Complete();
+                 }
+                 //catch (Exception ex)
+                 //    {
+                 //        throw new PXException(ex.Message);
+                 //    }
+                 //}
+             });
+            return adapter.Get();
+        }
+        #endregion
+        #region Split
+        public PXAction<Backload> SplitBackloadLine;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "Split Line")]
+        public void splitBackloadLine()
+        {
+            var doc = BackloadHead.Current;
+            foreach(BackloadLine line in BackloadLine.Select().RowCast<BackloadLine>().Where(d => d.ShipmentNbr == BackloadLine.Current.ShipmentNbr
+            && d.ShipmentType == BackloadLine.Current.ShipmentType && d.ShipmentLineNbr == BackloadLine.Current.ShipmentLineNbr))
+            {
+                decimal? total = BackloadLine.Select().RowCast<BackloadLine>().Where(r => r.BackloadLineNbr == line.BackloadLineNbr).Sum(f => f.Qty);
+                SOShipLine shipLine = PXSelectJoin<
+                    SOShipLine,
+                    LeftJoin<BackloadLine,
+                        On<BackloadLine.shipmentType,Equal<SOShipLine.shipmentType>,
+                        And<BackloadLine.shipmentNbr,Equal<SOShipLine.shipmentNbr>,
+                        And<BackloadLine.shipmentLineNbr,Equal<SOShipLine.lineNbr>>>>>,
+                    Where<SOShipLine.shipmentType,Equal<Required<SOShipLine.shipmentType>>,
+                        And<SOShipLine.shipmentNbr,Equal<Required<SOShipLine.shipmentNbr>>,
+                        And<SOShipLine.lineNbr,Equal<Required<SOShipLine.lineNbr>>,
+                        And<BackloadLine.recordID, Equal<Required<BackloadLine.recordID>>>>>>>
+                    .Select(this, line.ShipmentType,line.ShipmentNbr,line.ShipmentLineNbr,line.RecordID);
+                var shipLineExt = PXCache<SOShipLine>.GetExtension<SOShipLineExt>(shipLine);
+                if (shipLine == null) return;
+                if(line.Qty == 0m)
+                {
+                    throw new PXException("Please input Qty first before splitting the line.");
+                }
+                if(doc.IsCM == true)
+                {
+                    if(total >= shipLine.ShippedQty)
+                    {
+                        throw new PXException("Backload Qty must not be greater than shipped qty");
+                    }
+                }
+                if (doc.IsCM != true)
+                {
+                    if (total >= shipLineExt.UsrAvailBackloadQty)
+                    {
+                        throw new PXException("Backload Qty must not be greater than Shipments available backload qty");
+                    }
+                }
+                BackloadLine newObj = PXCache<BackloadLine>.CreateCopy(line);
+                newObj.RecordID = null;
+                newObj.Qty = 0;
+                BackloadLine.Insert(newObj);
+            }
+        }
+        #endregion
+        #region Allocations
+
+        public PXAction<Backload> Allocations;
+        [PXButton()]
+        [PXUIField(DisplayName = "Allocations")]
+        public void allocations()
+        {
+            backloadSplits.AskExt();
+        }
+
+        #endregion
+        #endregion
+
+        #region Events
+
+        public void Backload_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+            var row = e.Row as Backload;
+            if (row == null) return;
+            PXUIFieldAttribute.SetEnabled<Backload.backloadStatus>(sender, row, false);
+            PXUIFieldAttribute.SetEnabled<Backload.hold>(sender, row, row.BackloadStatus != BackloadStatus.Completed);
+            PXUIFieldAttribute.SetEnabled<Backload.customerID>(sender, row, false);
+            PXUIFieldAttribute.SetEnabled<Backload.customerIDLocation>(sender, row, false);
+            PXUIFieldAttribute.SetEnabled<Backload.backloadDate>(sender, row, row.BackloadStatus != BackloadStatus.Completed);
+            Release.SetEnabled(row.BackloadStatus == BackloadStatus.Open);
+            SplitBackloadLine.SetEnabled(row.BackloadStatus != BackloadStatus.Completed);
+            //BackloadLine.Cache.AllowDelete = true;
+
+
+            //sender.SetValueExt<Backload.siteID>(row, BackloadLine.Current.SiteID);
+        }
+
+        public virtual void Backload_Hold_FieldUpdated(PXCache sender, PXFieldUpdatedEventArgs e)
+        {
+            var row = e.Row as Backload;
+            if (row == null) return;
+
+            if(row.Hold == true)
+            {
+                sender.SetValueExt<Backload.backloadStatus>(row, BackloadStatus.Hold);
+            }
+            else
+            {
+                sender.SetValueExt<Backload.backloadStatus>(row, BackloadStatus.Open);
+            }
+            sender.SetValueExt<Backload.siteID>(row, BackloadLine.Current.SiteID);
+
+        }
+
+        public virtual void BackloadLine_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+            var row = e.Row as BackloadLine;
+            if (row == null) return;
+            PXUIFieldAttribute.SetEnabled(sender, row, false);
+            PXUIFieldAttribute.SetEnabled<BackloadLine.qty>(sender, row, BackloadHead.Current.BackloadStatus != BackloadStatus.Completed);
+            PXUIFieldAttribute.SetEnabled<BackloadLine.backloadType>(sender, row, BackloadHead.Current.BackloadStatus != BackloadStatus.Completed);
+            //BackloadLine.AllowInsert = false;
+            
+        }
+
+        public virtual void BackloadLine_BackloadType_FieldUpdated(PXCache sender, PXFieldUpdatedEventArgs e)
+        {
+            var row = e.Row as BackloadLine;
+            if (row == null) return;
+            BackloadType blType = PXSelect<
+                BackloadType, 
+                Where<BackloadType.backloadTypeCD, Equal<Required<BackloadType.backloadTypeCD>>>>
+                .Select(this, row.BackloadType);
+            SOShipLine shipmentSelect = PXSelect<
+                SOShipLine, 
+                Where<SOShipLine.shipmentNbr, Equal<Required<SOShipLine.shipmentNbr>>, 
+                    And<SOShipLine.shipmentType, Equal<Required<SOShipLine.shipmentType>>,
+                    And<SOShipLine.lineNbr, Equal<Required<SOShipLine.lineNbr>>>>>>
+                .Select(this, row.ShipmentNbr, row.ShipmentType, row.ShipmentLineNbr);
+
+            if (shipmentSelect == null) return;
+            SOShipLineExt shipmentSelectExt = PXCache<SOShipLine>.GetExtension<SOShipLineExt>(shipmentSelect);
+            if (row.BackloadType == blType.BackloadTypeCD && blType.WithBuffer == true)
+            {
+                if (shipmentSelectExt.UsrBufferQty == 0)
+                {
+                    throw new PXException("There is no Buffer Qty in Shipment");
+                }
+            }
+        }
+
+        public virtual void BackloadLine_Qty_FieldUpdated(PXCache sender, PXFieldUpdatedEventArgs e)
+        {
+            var row = e.Row as BackloadLine;
+            if (row == null) return;
+            SOShipLine shipLine = PXSelect<
+                SOShipLine, 
+                Where<SOShipLine.shipmentType,Equal<Required<SOShipLine.shipmentType>>,
+                    And<SOShipLine.shipmentNbr,Equal<Required<SOShipLine.shipmentNbr>>,
+                    And<SOShipLine.lineNbr,Equal<Required<SOShipLine.lineNbr>>>>>>
+                .Select(this,row.ShipmentType,row.ShipmentNbr,row.ShipmentLineNbr);
+            var shipLineExt = PXCache<SOShipLine>.GetExtension<SOShipLineExt>(shipLine);
+            BackloadType type = PXSelect<BackloadType,Where<BackloadType.backloadTypeCD,Equal<Required<BackloadType.backloadTypeCD>>>>.Select(this,row.BackloadType);
+            if (type.WithBuffer == true)
+            {
+                if (row.Qty > shipLine.OpenOrderQty || row.Qty > shipLineExt.UsrBufferQty)
+                {
+                    row.Qty = (decimal)e.OldValue;
+                    throw new PXException("Backload Qty should not be greater than Shipments Open Qty or Shipments Buffer Qty");
+                }
+            }
+        }
+        public virtual void BackloadLine_RowPersisting(PXCache sender, PXRowPersistingEventArgs e)
+        {
+            var row = e.Row as BackloadLine;
+            if (row == null) return;
+            BackloadType type = PXSelect<BackloadType, Where<BackloadType.backloadTypeCD, Equal<Required<BackloadType.backloadTypeCD>>>>.Select(this, row.BackloadType);
+            SOShipLine shipLine = PXSelect<
+               SOShipLine,
+               Where<SOShipLine.shipmentType, Equal<Required<SOShipLine.shipmentType>>,
+                   And<SOShipLine.shipmentNbr, Equal<Required<SOShipLine.shipmentNbr>>,
+                   And<SOShipLine.lineNbr, Equal<Required<SOShipLine.lineNbr>>>>>>
+               .Select(this, row.ShipmentType, row.ShipmentNbr, row.ShipmentLineNbr);
+            var shipLineExt = PXCache<SOShipLine>.GetExtension<SOShipLineExt>(shipLine);
+            decimal? total = BackloadLine.Select().RowCast<BackloadLine>().Where(r => r.BackloadLineNbr == row.BackloadLineNbr).Sum(f => f.Qty);
+            if (type.BackloadReturn == true)
+            {
+                if (total > shipLine.ShippedQty)
+                {
+                    sender.RaiseExceptionHandling<BackloadLine.qty>(row, row.Qty, new PXSetPropertyException("Qty is greater than shipped qty", PXErrorLevel.Error));
+                }
+            }
+            else
+            {
+                if(total > shipLineExt.UsrAvailBackloadQty)
+                {
+                    sender.RaiseExceptionHandling<BackloadLine.qty>(row, row.Qty, new PXSetPropertyException("Qty is greather than available backload qty"));
+                }
+            }
+
+        }
+
+        #endregion
+        #region Method
+
+        public static void CreateCM(BackloadEntry graph, List<BackloadLine> lst)
+        {
+            
+            var soGraph = PXGraph.CreateInstance<SOOrderEntry>();
+            var shipGraph = PXGraph.CreateInstance<SOShipmentEntry>();
+            
+            SOOrder order = (SOOrder)soGraph.Document.Cache.CreateInstance();
+            order.OrderType = graph.Setup.Current.BackloadReturnType;
+            order = soGraph.Document.Insert(order);
+            order = PXCache<SOOrder>.CreateCopy(soGraph.Document.Search<SOOrder.orderNbr>(order.OrderNbr));
+
+            order.CustomerID = graph.BackloadHead.Current.CustomerID;
+            order.CustomerLocationID = graph.BackloadHead.Current.CustomerIDLocation;
+            order.Hold = false;
+            order.DefaultSiteID = graph.BackloadLine.Current.SiteID;
+            order = PXCache<SOOrder>.CreateCopy(soGraph.Document.Update(order));
+            foreach (BackloadLine line in lst)
+            {
+                decimal? total = graph.BackloadLine.Select().RowCast<BackloadLine>().Where(r => r.BackloadLineNbr == line.BackloadLineNbr).Sum(f => f.Qty);
+                INLotSerClass lotClass = PXSelectJoin<INLotSerClass,
+                    LeftJoin<InventoryItem,On<InventoryItem.lotSerClassID,Equal<INLotSerClass.lotSerClassID>>>,
+                    Where<InventoryItem.inventoryID,Equal<Required<InventoryItem.inventoryID>>>>.Select(graph,line.InventoryID);
+                AddInvoiceFilter addInv = soGraph.addinvoicefilter.Select();
+                addInv.DocType = ARDocType.Invoice;
+                addInv.RefNbr = line.InvoiceNbr;
+                soGraph.addinvoicefilter.Update(addInv);
+
+                BackloadSplit splt = PXSelect<BackloadSplit, Where<BackloadSplit.backloadNbr, Equal<Required<BackloadSplit.backloadNbr>>,
+                And<BackloadSplit.backloadLineNbr, Equal<Required<BackloadSplit.backloadLineNbr>>>>>.Select(graph, line.BackloadNbr, line.BackloadLineNbr);
+
+                ARTran arTran = PXSelect<ARTran,Where<ARTran.sOShipmentNbr,Equal<Required<ARTran.sOShipmentNbr>>,
+                    And<ARTran.sOShipmentType,Equal<Required<ARTran.sOShipmentType>>,
+                    And<ARTran.sOShipmentLineNbr,Equal<Required<ARTran.sOShipmentLineNbr>>>>>>.Select(graph,line.ShipmentNbr,line.ShipmentType,line.ShipmentLineNbr);
+                foreach (InvoiceSplits item in soGraph.invoicesplits.Select().RowCast<InvoiceSplits>().Where(d => d.RefNbrARTran == arTran.RefNbr && d.TranTypeARTran == arTran.TranType && d.LineNbrARTran == arTran.LineNbr))
+                {
+                    item.Selected = true;
+                    soGraph.invoicesplits.Update(item);
+                }
+                //if (splt != null)
+                //{
+                //    //Connections 
+                //    //item.RefNbrARTran = invoice nbr
+                //    //item.TranTypeARTran = invoice type
+                //    //item.LineNbrARTran = invoice line nbr
+                //    foreach (InvoiceSplits item in soGraph.invoicesplits.Select().RowCast<InvoiceSplits>().Where(d => d.InventoryID == line.InventoryID && d.LotSerialNbr == splt.LotSerialNbr))
+                //    {
+                //        item.Selected = true;
+                //        soGraph.invoicesplits.Update(item);
+                //    }
+                //}
+                //else
+                //{
+                //    foreach (InvoiceSplits item in soGraph.invoicesplits.Select().RowCast<InvoiceSplits>().Where(d => d.InventoryID == line.InventoryID))
+                //    {
+                //        item.Selected = true;
+                //        soGraph.invoicesplits.Update(item);
+                //    }
+                //}
+                soGraph.addInvoiceOK.Press();
+                soGraph.Transactions.Cache.SetValueExt<SOLine.orderQty>(soGraph.Transactions.Current, total);
+            }
+            soGraph.Persist();
+
+            var shipment = (SOShipment)shipGraph.Document.Cache.CreateInstance();
+            shipment.CustomerID = soGraph.Document.Current.CustomerID;
+            shipment.Operation = SOShipmentType.Receipt;
+            shipment.SiteID = soGraph.Document.Current.DefaultSiteID;
+            shipGraph.Document.Update(shipment);
+
+            AddSOFilter addSOFilter = shipGraph.addsofilter.Select();
+            addSOFilter.OrderType = soGraph.Document.Current.OrderType;
+            addSOFilter.OrderNbr = soGraph.Document.Current.OrderNbr;
+            shipGraph.addsofilter.Update(addSOFilter);
+            foreach (SOShipmentPlan item in shipGraph.soshipmentplan.Select())//shipmentEntry.soshipmentplan.Select())
+            {
+                bool include = false;
+
+                foreach (SOLine line in soGraph.Transactions.Select())
+                {
+                    SOShipmentPlan plan = PXSelectJoin<
+                        SOShipmentPlan,
+                        InnerJoin<SOLineSplit,
+                            On<SOShipmentPlan.planID, Equal<SOLineSplit.planID>>>,
+                        Where<SOLineSplit.orderType, Equal<Required<SOLineSplit.orderType>>,
+                            And<SOLineSplit.orderNbr, Equal<Required<SOLineSplit.orderNbr>>,
+                            And<SOLineSplit.lineNbr, Equal<Required<SOLineSplit.lineNbr>>,
+                            And<SOShipmentPlan.planID, Equal<Required<SOShipmentPlan.planID>>>>>>>
+                        .Select(shipGraph, line.OrderType, line.OrderNbr, line.LineNbr, item.PlanID);
+
+                    if (plan != null)
+                    {
+                        include = true;
+                        break;
+                    }
+                }
+                item.Selected = include;
+                item.PlanDate = shipGraph.Document.Current.ShipDate;
+                shipGraph.soshipmentplan.Cache.Update(item);
+            }
+            shipGraph.addSO.Press();
+            if(shipGraph.Transactions.Select().Count > 0)
+            {
+                foreach (SOLine item in soGraph.Transactions.Select())
+                {
+                    foreach (SOShipLine line in shipGraph.Transactions.Select().RowCast<SOShipLine>().Where(d => d.OrigOrderNbr == item.OrderNbr && d.OrigOrderType == item.OrderType && d.OrigLineNbr == item.LineNbr))
+                    {
+                        shipGraph.Transactions.Cache.SetValueExt<SOShipLine.shippedQty>(line, item.OrderQty);
+                        shipGraph.Transactions.Update(line);
+                    }
+                }
+
+                
+            }
+            shipGraph.Persist();
+
+        }
+        public static void CreateTransferIssue(BackloadEntry graph, List<BackloadLine> lst)
+        {
+            var transferGraph = PXGraph.CreateInstance<INTransferEntry>();
+            var issueGraph = PXGraph.CreateInstance<INIssueEntry>();
+
+            var issueHead = issueGraph.issue.Insert(new INRegister()
+            {
+                Hold = true,
+                TranDesc = "Backload"
+            });
+            var transferHead = transferGraph.transfer.Insert(new INRegister()
+            {
+                SiteID = graph.BackloadLine.Current.SiteID,
+                ToSiteID = graph.BackloadLine.Current.SiteID,
+                TransferType = INTransferType.OneStep
+            });
+            foreach (BackloadLine line in lst)
+            {
+                BackloadType blType = PXSelect<
+                    BackloadType,
+                    Where<BackloadType.backloadTypeCD, Equal<Required<BackloadType.backloadTypeCD>>>>
+                    .Select(graph, line.BackloadType);
+                INItemSite warehouseLoc = PXSelect<
+                    INItemSite,
+                    Where<INItemSite.inventoryID, Equal<Required<INItemSite.inventoryID>>,
+                        And<INItemSite.siteID, Equal<Required<INItemSite.siteID>>>>>
+                    .Select(graph, line.InventoryID, line.SiteID);
+                INLocation myLoc = PXSelect<
+                    INLocation,
+                    Where<INLocationExt.usrDefaultPickingLocation, Equal<boolTrue>,
+                        And<Where<INLocation.siteID, Equal<Required<INLocation.siteID>>>>>>
+                    .Select(graph, line.SiteID);
+                if (myLoc == null) { throw new PXException("Please check the settings of Warehouse Locations"); }
+                INSite siteReturn = PXSelect<INSite, Where<INSite.siteID, Equal<Required<INSite.siteID>>>>.Select(graph, line.SiteID);
+                SOShipLine shipmentSelect = PXSelect<
+                    SOShipLine,
+                    Where<SOShipLine.shipmentNbr, Equal<Required<SOShipLine.shipmentNbr>>,
+                        And<SOShipLine.shipmentType, Equal<Required<SOShipLine.shipmentType>>,
+                        And<SOShipLine.lineNbr, Equal<Required<SOShipLine.lineNbr>>>>>>.Select(graph, line.ShipmentNbr, line.ShipmentType, line.ShipmentLineNbr);
+                foreach (INTransferEntry.INSiteStatusSelected item in transferGraph.sitestatus.Select().RowCast<INTransferEntry.INSiteStatusSelected>().Where(d => d.InventoryID == line.InventoryID && d.LocationID == line.LocationID))
+                {
+                    
+                    item.Selected = true;
+                    item.QtySelected = line.Qty;
+                    transferGraph.sitestatus.Update(item);
+                }
+                transferGraph.addInvSelBySite.PressButton();
+                transferGraph.transactions.Cache.SetValue<INTranExt.usrBackloadNbr>(transferGraph.transactions.Current, line.BackloadNbr);
+                transferGraph.transactions.Cache.SetValue<INTranExt.usrBackloadType>(transferGraph.transactions.Current, line.BackloadType);
+                transferGraph.transactions.Cache.SetValue<INTranExt.usrBackloadID>(transferGraph.transactions.Current, line.RecordID);
+                if(blType.OneStepStaging == true)
+                {
+                    transferGraph.transactions.Cache.SetValue<INTran.toLocationID>(transferGraph.transactions.Current,myLoc.LocationID);
+                }
+                if(blType.OneStepDefaultWarehouseLocation == true)
+                {
+                    transferGraph.transactions.Cache.SetValue<INTran.toLocationID>(transferGraph.transactions.Current, siteReturn.ReceiptLocationID);
+                }
+                if(blType.ReturnToDmgWarehouse == true)
+                {
+                    transferGraph.transactions.Cache.SetValue<INTran.toLocationID>(transferGraph.transactions.Current, siteReturn.ReturnLocationID);
+                }
+                transferGraph.transactions.Update(transferGraph.transactions.Current);
+                if (blType.Issue == true)
+                {
+
+
+                    var insertIssueLine = issueGraph.transactions.Insert(new INTran()
+                    {
+                        InventoryID = line.InventoryID,
+                        SiteID = line.SiteID,
+                        Qty = line.Qty,
+                        LocationID = shipmentSelect.LocationID
+                    });
+                    issueGraph.transactions.Cache.SetValue<INTranExt.usrBackloadNbr>(insertIssueLine, line.BackloadNbr);
+                    issueGraph.transactions.Cache.SetValue<INTranExt.usrBackloadType>(insertIssueLine, line.BackloadType);
+                    issueGraph.transactions.Cache.SetValue<INTranExt.usrBackloadID>(insertIssueLine, line.RecordID);
+                    issueGraph.transactions.Update(insertIssueLine); 
+
+                    transferGraph.transactions.Update(transferGraph.transactions.Current);
+
+                }
+
+            }
+            //delete
+            foreach (INTran loc in transferGraph.transactions.Select())
+            {
+                var locExt = PXCache<INTran>.GetExtension<INTranExt>(loc);
+                graph.BackloadLine.Current.RecordID = locExt.UsrBackloadID;
+                foreach (BackloadSplit lotSplits in graph.backloadSplits.Select().RowCast<BackloadSplit>().Where(d => d.BackloadNbr == locExt.UsrBackloadNbr && d.BackloadRecordID == locExt.UsrBackloadID))
+                {
+                    if (lotSplits != null)
+                    {
+                        transferGraph.transactions.Current = loc;
+                        foreach (INTranSplit item in transferGraph.splits.Select())
+                        {
+                            if (item != null)
+                            {
+                                transferGraph.splits.Delete(item);
+                            }
+                        }
+                    }
+                }
+            }
+            //--end
+
+            //insert
+            foreach (INTran loc in transferGraph.transactions.Select())
+            {
+                var locExt = PXCache<INTran>.GetExtension<INTranExt>(loc);
+                graph.BackloadLine.Current.RecordID = locExt.UsrBackloadID;
+                foreach (BackloadSplit lotSplits in graph.backloadSplits.Select().RowCast<BackloadSplit>().Where(d => d.BackloadNbr == locExt.UsrBackloadNbr && d.BackloadRecordID == locExt.UsrBackloadID))
+                {
+                    transferGraph.transactions.Current = loc;
+                    if (lotSplits != null)
+                    {
+                        var insert = transferGraph.splits.Insert(new INTranSplit()
+                        {
+                            LocationID = loc.LocationID,
+                            LotSerialNbr = lotSplits.LotSerialNbr,
+                            Qty = lotSplits.Qty,
+                            ExpireDate = loc.ExpireDate
+                        });
+                        transferGraph.splits.Update(insert);
+                    }
+                }
+            }
+            #region Issueance inserting allocations
+            foreach (INTran loc in issueGraph.transactions.Select())
+            {
+                var locExt = PXCache<INTran>.GetExtension<INTranExt>(loc);
+                graph.BackloadLine.Current.RecordID = locExt.UsrBackloadID;
+                foreach (BackloadSplit lotSplits in graph.backloadSplits.Select().RowCast<BackloadSplit>().Where(d => d.BackloadNbr == locExt.UsrBackloadNbr && d.BackloadRecordID == locExt.UsrBackloadID))
+                {
+                    if (lotSplits != null)
+                    {
+                        transferGraph.transactions.Current = loc;
+                        foreach (INTranSplit item in issueGraph.splits.Select())
+                        {
+                            if (item != null)
+                            {
+                                issueGraph.splits.Delete(item);
+                            }
+                        }
+                    }
+                }
+            }
+            //--end
+
+            //insert
+            foreach (INTran loc in issueGraph.transactions.Select())
+            {
+                var locExt = PXCache<INTran>.GetExtension<INTranExt>(loc);
+                graph.BackloadLine.Current.RecordID = locExt.UsrBackloadID;
+                foreach (BackloadSplit lotSplits in graph.backloadSplits.Select().RowCast<BackloadSplit>().Where(d => d.BackloadNbr == locExt.UsrBackloadNbr && d.BackloadRecordID == locExt.UsrBackloadID))
+                {
+                    transferGraph.transactions.Current = loc;
+                    if (lotSplits != null)
+                    {
+                        var insert = issueGraph.splits.Insert(new INTranSplit()
+                        {
+                            LocationID = loc.LocationID,
+                            LotSerialNbr = lotSplits.LotSerialNbr,
+                            Qty = lotSplits.Qty,
+                            ExpireDate = loc.ExpireDate
+                        });
+                        issueGraph.splits.Update(insert);
+                    }
+                }
+            }
+
+            #endregion
+            if (transferGraph.transactions.Select().Count > 0)
+            {
+                transferGraph.Actions.PressSave();
+                transferGraph.transfer.Cache.SetValueExt<INRegister.hold>(transferGraph.transfer.Current, false);
+                transferGraph.release.Press();
+            }
+            if(issueGraph.transactions.Select().Count > 0)
+            {
+                issueGraph.Actions.PressSave();
+            }
+            //--end
+
+        }
+
+        #endregion
+
+    }
+    #region CustomSelector
+
+    public class BLoadTypeSelectorAttribute : PXCustomSelectorAttribute
+    {
+        public BLoadTypeSelectorAttribute() : base(typeof(Search<BackloadType.backloadTypeCD,Where<BackloadType.isActive,Equal<True>>>), typeof(BackloadType.backloadTypeCD), typeof(BackloadType.descr))
+        {
+            DescriptionField = typeof(BackloadType.descr);
+        }
+        
+        protected virtual IEnumerable GetRecords()
+        {
+            PXCache cache = this._Graph.Caches[typeof(Backload)];
+            var current = (Backload)cache.Current;
+            PXSelectBase<BackloadType> query = new PXSelect<BackloadType,Where<BackloadType.isActive,Equal<True>>>(this._Graph);
+            if (current.IsCM == true) { query.WhereAnd<Where<BackloadType.backloadReturn, Equal<True>>>(); }
+            if (current.IsCM != true) { query.WhereAnd<Where<BackloadType.backloadReturn, Equal<False>>>(); }
+
+            return query.Select();
+        }
+    }
+    #endregion
+}]]></CDATA>
+</Graph>

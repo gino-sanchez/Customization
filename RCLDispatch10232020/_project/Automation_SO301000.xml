@@ -1,0 +1,10 @@
+﻿<Automation screen="SO301000">
+    <Fields ScreenID="SO301000">
+        <Field IsActive="True" FieldName="USRBUFFER" HideCondition="True" ObjectName="PX.OBJECTS.SO.SOLINE" />
+        <Field IsActive="True" FieldName="USRBUFFERQTY" HideCondition="True" ObjectName="PX.OBJECTS.SO.SOLINE" />
+        <Field IsActive="True" FieldName="USRLOADPLANSTATUS" HideCondition="True" ObjectName="PX.OBJECTS.SO.SOLINE" />
+        <Field IsActive="True" FieldName="USRNEWDELIVERYDATE" HideCondition="True" ObjectName="PX.OBJECTS.SO.SOLINE" />
+        <Field IsActive="True" FieldName="USRQTYONHAND" HideCondition="True" ObjectName="PX.OBJECTS.SO.SOLINE" />
+        <Field IsActive="True" FieldName="USRZONEID" HideCondition="True" ObjectName="PX.OBJECTS.SO.SOLINE" />
+    </Fields>
+</Automation>

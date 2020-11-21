@@ -1,0 +1,541 @@
+﻿<Graph ClassName="DispatchLoadPlanProcess" Source="#CDATA" IsNew="True" FileType="NewGraph">
+    <CDATA name="Source"><![CDATA[using System;
+using PX.Data;
+using PL;
+using PX.Objects.CS;
+using PX.Objects.SO;
+using PX.Objects.IN;
+using PX.Objects.AR;
+using System.Linq;
+using System.Collections;
+using System.Collections.Generic;
+
+namespace Dispatch
+{
+    //#region FilterTable
+    //[Serializable]
+    //public class FilterPlan : IBqlTable
+    //{
+    //    #region DeliveryDate
+
+    //    public abstract class deliveryDate : IBqlField
+    //    {
+    //    }
+    //    [PXDate]
+    //    [PXUIField(DisplayName = "Delivery Date")]
+    //    public virtual DateTime? DeliveryDate { get; set; }
+    //    #endregion
+    //    #region Truck
+    //    public abstract class truckID : IBqlField
+    //    {
+    //    }
+    //    [PXInt()]
+    //    [PXUIField(DisplayName = "Truck")]
+    //    [PXSelector(typeof(Search<
+    //        Truck.truckID,
+    //        Where<Truck.status, Equal<TruckStatus.active>>>),
+    //            typeof(Truck.truckID), typeof(Truck.truckCD), typeof(Truck.driverID), typeof(Truck.truckCapacityCMB), typeof(Truck.truckCapacityKGS), SubstituteKey = typeof(Truck.truckCD))]
+    //    public virtual int? TruckID { get; set; }
+    //    #endregion
+    //    #region DriverName
+    //    public abstract class driverName : IBqlField { }
+    //    [PXString(20)]
+    //    [PXUIField(DisplayName = "Driver Name", Enabled = false)]
+    //    public virtual string DriverName { get; set; }
+    //    #endregion
+    //    #region ConfirmedStat
+    //    public abstract class confirmedStat : IBqlField { }
+    //    [PXString(2)]
+    //    [PXUIField(DisplayName = "Status")]
+    //    [PXUnboundDefault(Status.NotSet)]
+    //    public virtual string ConfirmedStat { get; set; }
+    //    #endregion
+    //    #region Warehouse
+    //    public abstract class warehouse : IBqlField { }
+    //    [PXInt]
+    //    [PXUIField(DisplayName = "Warehouse")]
+    //    [PXSelector(typeof(Search<INSite.siteID>), typeof(INSite.siteCD), SubstituteKey = typeof(INSite.siteCD))]
+    //    public virtual int? Warehouse { get; set; }
+    //    #endregion
+
+    //    #region CurrentCapacityKGS
+    //    public abstract class currentCapacityKGS : IBqlField { }
+    //    [PXDecimal]
+    //    [PXUIField(DisplayName = "Current Capacity KGS", Enabled = false)]
+    //    public virtual Decimal? CurrentCapacityKGS { get; set; }
+    //    #endregion
+    //    #region TotalTruckCapacityKGS
+    //    public abstract class totalTruckCapacityKGS : IBqlField { }
+    //    [PXDecimal]
+    //    [PXUIField(DisplayName = "Total Truck Capacity KGS", Enabled = false)]
+    //    public virtual Decimal? TotalTruckCapacityKGS { get; set; }
+    //    #endregion
+    //    #region RemTruckBalKGS
+    //    public abstract class remTruckBalKGS : IBqlField { }
+    //    [PXDecimal]
+    //    [PXUIField(DisplayName = "Remaining Truck Balance KGS", Enabled = false)]
+    //    public virtual Decimal? RemTruckBalKGS { get; set; }
+    //    #endregion
+    //    #region CurrenCapacityCBM
+    //    public abstract class currentCapacityCBM : IBqlField { }
+    //    [PXDecimal]
+    //    [PXUIField(DisplayName = "Current Capacity CBM", Enabled = false)]
+    //    public virtual Decimal? CurrentCapacityCBM { get; set; }
+    //    #endregion
+    //    #region Show80%
+    //    public abstract class showEightyPercent : IBqlField { }
+    //    [PXBool]
+    //    [PXUIField(DisplayName = "Show 80% Picked")]
+    //    [PXDefault(false, PersistingCheck = PXPersistingCheck.Nothing)]
+    //    public virtual bool? ShowEightyPercent { get; set; }
+    //    #endregion
+    //    #region Show100%
+    //    public abstract class showOneHundredPercent : IBqlField { }
+    //    [PXBool]
+    //    [PXUIField(DisplayName = "Show 100% Picked")]
+    //    [PXDefault(false, PersistingCheck = PXPersistingCheck.Nothing)]
+    //    public virtual bool? ShowOneHundredPercent { get; set; }
+    //    #endregion
+    //    #region SO #
+    //    public abstract class soNumber : IBqlField { }
+    //    [PXString(15)]
+    //    [PXUIField(DisplayName = "SO #")]
+    //    [PXSelector(typeof(Search5<
+    //        SOOrder.orderNbr,
+    //        InnerJoin<SOLine,
+    //            On<SOLine.orderNbr, Equal<SOOrder.orderNbr>,
+    //            And<SOLine.orderType, Equal<SOOrder.orderType>>>,
+    //        InnerJoin<ARTran,
+    //            On<ARTran.sOOrderType, Equal<SOOrder.orderType>,
+    //            And<ARTran.sOOrderNbr, Equal<SOOrder.orderNbr>>>>>,
+    //        Where2<
+    //            Where<SOOrder.requestDate, Equal<Current<deliveryDate>>>,
+    //            Or<Where<Current<FilterLoadPlan.deliveryDate>, IsNull,
+    //            And2<
+    //            Where<SOOrder.status, NotEqual<SOOrderStatus.cancelled>>,
+    //            And<Where<SOOrder.status, NotEqual<SOOrderStatus.voided>,
+    //            And<Where<SOOrder.status, NotEqual<SOOrderStatus.shipping>,
+    //            And<SOOrder.openOrderQty, NotEqual<decimal0>,
+    //            And<Where<SOOrder.orderType, Equal<OrderTypeString.so>,
+    //            And2<
+    //            Where<SOLineExt.usrConfirmShipment, Equal<Attrib.directDelivery>>,
+    //            Or<Where<SOLineExt.usrConfirmShipment, Equal<Attrib.cwStore>,
+    //            And2<
+    //            Where<SOLineExt.usrRerouteStatus, Equal<MyStatus.accepted>>,
+    //            Or<Where<SOLineExt.usrRerouteStatus, Equal<MyStatus.declined>>>>>>>>>>>>>>>>>>,
+    //        Aggregate<GroupBy<SOOrder.orderNbr>>>))]
+    //    public virtual string SONumber { get; set; }
+    //    #endregion
+    //    #region SI #
+    //    public abstract class siNumber : IBqlField { }
+    //    [PXString(15)]
+    //    [PXUIField(DisplayName = "SI #")]
+    //    [PXSelector(typeof(Search5<
+    //        ARInvoice.refNbr,
+    //        InnerJoin<ARTran,
+    //            On<ARTran.refNbr, Equal<ARInvoice.refNbr>,
+    //            And<ARTran.tranType, Equal<ARInvoice.docType>>>,
+    //        InnerJoin<SOLine,
+    //            On<SOLine.orderNbr, Equal<ARTran.sOOrderNbr>,
+    //            And<SOLine.orderType, Equal<ARTran.sOOrderType>,
+    //            And<SOLine.lineNbr, Equal<ARTran.sOOrderLineNbr>>>>,
+    //        InnerJoin<SOOrder,
+    //            On<SOOrder.orderType, Equal<SOLine.orderType>,
+    //            And<SOOrder.orderNbr, Equal<SOLine.orderNbr>>>>>>,
+    //        Where2<
+    //            Where<ARInvoice.docDate, Equal<Current<FilterLoadPlan.deliveryDate>>>,
+    //            Or<Where<Current<FilterLoadPlan.deliveryDate>, IsNull,
+    //            And<Where<SOOrder.status, NotEqual<SOOrderStatus.shipping>,
+    //            And<Where<SOOrder.status, NotEqual<SOOrderStatus.voided>,
+    //            And<Where<SOOrder.status, NotEqual<SOOrderStatus.hold>,
+    //            And<Where<SOOrder.status, NotEqual<SOOrderStatus.cancelled>,
+    //            And<Where<SOOrder.status, NotEqual<SOOrderStatus.completed>,
+    //            And<Where<SOOrder.orderType, Equal<OrderTypeString.so>,
+    //            And2<
+    //            Where<SOLineExt.usrConfirmShipment, Equal<Attrib.directDelivery>>,
+    //            Or<Where<SOLineExt.usrConfirmShipment, Equal<Attrib.cwStore>,
+    //            And2<
+    //            Where<SOLineExt.usrRerouteStatus, Equal<MyStatus.accepted>>,
+    //            Or<Where<SOLineExt.usrRerouteStatus, Equal<MyStatus.declined>>>>>>>>>>>>>>>>>>>>>>,
+    //            Aggregate<GroupBy<ARInvoice.refNbr>>>))]
+    //    public virtual string SINumber { get; set; }
+    //    #endregion
+    //    #region TotalTruckCapacityCBM
+    //    public abstract class totalTruckCapacityCBM : IBqlField { }
+    //    [PXDecimal]
+    //    [PXUIField(DisplayName = "Total Truck Capacity CBM", Enabled = false)]
+    //    public virtual Decimal? TotalTruckCapacityCBM { get; set; }
+    //    #endregion
+    //    #region RemTruckBalCBM
+    //    public abstract class remTruckBalCBM : IBqlField { }
+    //    [PXDecimal]
+    //    [PXUIField(DisplayName = "Remaining Truck Balance CBM", Enabled = false)]
+    //    public virtual Decimal? RemTruckBalCBM { get; set; }
+    //    #endregion
+    //}
+    //#endregion
+    //public class DispatchLoadPlanProcess : PXGraph<DispatchLoadPlanProcess>
+    //{
+
+    //    //public PXSave<MasterTable> Save;
+    //    //public PXCancel<MasterTable> Cancel;
+
+
+    //    public PXFilter<FilterPlan> LoadPlan;
+
+    //    public PXFilter<DetailsTable> DetailsView;
+    //    public PXProcessingJoin<SOLine,
+    //        InnerJoin<SOOrder,
+    //            On<SOOrder.orderType, Equal<SOLine.orderType>,
+    //            And<SOOrder.orderNbr, Equal<SOLine.orderNbr>>>>> LoadPlanProcessing;
+    //    #region LoadPLanProcessingProjection
+
+    //    [PXProjection(typeof(Select2<SOLine,
+    //        LeftJoin<InventoryItem, On<InventoryItem.inventoryID, Equal<SOLine.inventoryID>>,
+    //            LeftJoin<SOOrder, On<SOOrder.orderNbr, Equal<SOLine.orderNbr>, And<SOOrder.orderType, Equal<SOLine.orderType>>>,
+    //                LeftJoin<ARTran, On<ARTran.sOOrderType, Equal<SOLine.orderType>, And<ARTran.sOOrderNbr, Equal<SOLine.orderNbr>, And<ARTran.sOOrderLineNbr, Equal<SOLine.lineNbr>>>>,
+    //                    LeftJoin<ARInvoice, On<ARInvoice.docType, Equal<ARTran.tranType>, And<ARInvoice.refNbr, Equal<ARTran.refNbr>>>,
+    //                         LeftJoin<Customer,
+    //        On<Customer.bAccountID, Equal<SOLine.customerID>>>>>>>>))]
+    //    [Serializable]
+    //    public class SOOrderInventoryLine : IBqlTable
+    //    {
+    //        #region Selected
+    //        public abstract class selected : IBqlField { }
+    //        [PXBool]
+    //        public virtual bool? Selected { get; set; }
+    //        #endregion
+
+    //        #region CustomerID
+    //        public abstract class customerID : IBqlField { }
+    //        [PXDBInt(BqlField = typeof(SOOrder.customerID))]
+    //        [PXUIField(DisplayName = "Customer ID")]
+    //        public virtual int? CustomerID { get; set; }
+    //        #endregion
+
+    //        #region CustomerName
+    //        public abstract class customerName : IBqlField { }
+    //        [PXDBString(BqlField = typeof(Customer.acctName))]
+    //        [PXUIField(DisplayName = "Customer Name")]
+    //        public virtual string CustomerName { get; set; }
+    //        #endregion
+
+    //        #region OrderType
+    //        public abstract class orderType : PX.Data.IBqlField { }
+    //        [PXDBString(2, IsKey = true, IsFixed = true, BqlField = typeof(SOOrder.orderType))]
+    //        [PXSelector(typeof(Search2<
+    //            SOOrderType.orderType,
+    //            InnerJoin<SOOrderTypeOperation,
+    //                On<SOOrderTypeOperation.orderType, Equal<SOOrderType.orderType>,
+    //                And<SOOrderTypeOperation.operation, Equal<SOOrderType.defaultOperation>>>>,
+    //            Where<SOOrderType.requireShipping, Equal<boolFalse>,
+    //                Or<FeatureInstalled<FeaturesSet.inventory>>>>))]
+    //        [PXUIField(DisplayName = "Order Type", Enabled = false)]
+    //        public virtual string OrderType { get; set; }
+    //        #endregion
+
+    //        #region SOOrderNbr
+    //        public abstract class orderNbr : PX.Data.IBqlField { }
+    //        [PXDBString(15, IsKey = true, BqlField = typeof(SOOrder.orderNbr))]
+    //        [PXUIField(DisplayName = "SO #", Enabled = false)]
+    //        public virtual String OrderNbr { get; set; }
+    //        #endregion
+
+    //        #region SOLineNbr
+
+    //        public abstract class lineNbr : PX.Data.IBqlField { }
+    //        [PXDBInt(IsKey = true, BqlField = typeof(SOLine.lineNbr))]
+    //        [PXUIField(DisplayName = "Line Nbr", Enabled = false)]
+    //        public virtual int? LineNbr { get; set; }
+
+    //        #endregion
+
+    //        #region InvoiceType
+
+    //        public abstract class invoiceType : IBqlField { }
+    //        [PXDBString(IsFixed = true, BqlField = typeof(ARInvoice.docType))]
+    //        [PXUIField(DisplayName = "Invoice Type")]
+    //        public virtual string InvoiceType { get; set; }
+    //        #endregion
+
+    //        #region InvoiceNbr
+
+    //        public abstract class invoiceNumber : IBqlField { }
+    //        [PXDBString(IsUnicode = true, BqlField = typeof(ARInvoice.refNbr))]
+    //        [PXUIField(DisplayName = "Invoice #")]
+    //        public virtual string InvoiceNumber { get; set; }
+
+    //        #endregion
+
+    //        #region SiteID
+
+    //        public abstract class siteID : IBqlField { }
+    //        [PXDBInt(BqlField = typeof(SOLine.siteID))]
+    //        [PXUIField(DisplayName = "SiteID")]
+    //        public virtual int? SiteID { get; set; }
+
+    //        #endregion
+
+    //        #region InventoryID 
+    //        public abstract class inventoryID : IBqlField { }
+    //        [PXDBInt(BqlField = typeof(SOLine.inventoryID))]
+    //        [PXUIField(DisplayName = "Inventory ID")]
+    //        //[PXSelector(typeof(Search<InventoryItem.inventoryCD,Where<InventoryItem.inventoryID,Equal<Current<inventoryID>>>>))]
+    //        public virtual int? InventoryID { get; set; }
+    //        #endregion
+
+    //        #region Inventory Description
+
+    //        public abstract class itemDesc : IBqlField { }
+    //        [PXDBString(BqlField = typeof(InventoryItem.descr))]
+    //        public virtual string ItemDesc { get; set; }
+
+    //        #endregion
+
+    //        #region OrderQty
+    //        public abstract class orderQty : IBqlField { }
+    //        [PXDBQuantity(BqlField = typeof(SOLine.orderQty))]
+    //        [PXUIField(DisplayName = "Order Qty")]
+    //        public virtual Decimal? OrderQty { get; set; }
+    //        #endregion
+
+    //        #region Open Picked Qty
+
+    //        public abstract class openPickedQty : IBqlField { }
+    //        [PXDBDecimal(BqlField = typeof(SOLineExt.usrPickListQty))]
+    //        [PXUIField(DisplayName = "Open Picked Qty")]
+    //        public virtual Decimal? OpenPickedQty { get; set; }
+
+    //        #endregion
+
+    //        #region Open Order Qty
+
+    //        public abstract class openOrderQty : IBqlField { }
+    //        [PXDBQuantity(BqlField = typeof(SOLine.openQty))]
+    //        [PXUIField(DisplayName = "Open Order Qty")]
+    //        public virtual Decimal? OpenOrderQty { get; set; }
+
+    //        #endregion
+
+    //        #region UsrPercentagePerItem
+    //        public abstract class percentagePerItem : IBqlField { }
+    //        [PXDecimal]
+    //        [PXUIField(DisplayName = "Percentage")]
+    //        [PXDefault(TypeCode.Decimal, "0.00", PersistingCheck = PXPersistingCheck.Nothing)]
+    //        public virtual Decimal? PercentagePerItem { get; set; }
+    //        #endregion
+
+    //        #region Item Load Qty
+
+    //        public abstract class itemLoadQty : IBqlField { }
+    //        [PXDBDecimal(BqlField = typeof(SOLineExt.usrLoadPlanQty))]
+    //        [PXUIField(DisplayName = "Item Load Qty")]
+    //        [PXDefault(TypeCode.Decimal, "0.00", PersistingCheck = PXPersistingCheck.Nothing)]
+    //        public virtual Decimal? ItemLoadQty { get; set; }
+    //        #endregion
+
+    //        #region KGS
+
+    //        public abstract class kgs : IBqlField { }
+    //        [PXDBDecimal(6, BqlField = typeof(SOLine.unitWeigth))]
+    //        [PXUIField(DisplayName = "KGS")]
+    //        public virtual Decimal? Kgs { get; set; }
+
+    //        #endregion
+
+    //        #region CBM
+
+    //        public abstract class cbm : IBqlField { }
+    //        [PXDBDecimal(6, BqlField = typeof(SOLine.unitVolume))]
+    //        [PXUIField(DisplayName = "CBM")]
+    //        public virtual Decimal? Cbm { get; set; }
+
+    //        #endregion
+
+    //        #region TotalKGS
+
+    //        public abstract class totalKGS : IBqlField { }
+    //        [PXDecimal]
+    //        [PXUIField(DisplayName = "Total KGS")]
+    //        [PXFormula(typeof(Mult<kgs, itemLoadQty>))]
+    //        public virtual Decimal? TotalKGS { get; set; }
+    //        #endregion
+
+    //        #region TotalCBM
+
+    //        public abstract class totalCBM : IBqlField { }
+    //        [PXDecimal]
+    //        [PXUIField(DisplayName = "Total CBM")]
+    //        [PXFormula(typeof(Mult<cbm, itemLoadQty>))]
+    //        public virtual Decimal? TotalCBM { get; set; }
+
+    //        #endregion
+
+    //        #region ShippingType
+
+    //        public abstract class shippingType : IBqlField { }
+    //        [PXDBString(BqlField = typeof(SOLineExt.usrConfirmShipment))]
+    //        [PXUIField(DisplayName = "Shipping Type")]
+    //        [Attrib.List]
+    //        public virtual string ShippingType { get; set; }
+
+    //        #endregion
+
+
+
+    //    }
+
+    //    #endregion
+
+    //    #region IEnumerable
+
+    //    protected virtual IEnumerable loadPlanProcessing()
+    //    {
+    //        FilterPlan filter = LoadPlan.Current;
+
+    //        PXResultset<SOLine> lines = new PXResultset<SOLine>();
+
+    //        foreach (SOOrder order in SplitOrder.Select())
+    //        {
+    //            if (order.Selected != false)
+    //            {
+    //                foreach (PXResult<SOLine> line in PXSelectJoin<
+    //                    SOLine,
+    //                    LeftJoin<InventoryItem,
+    //                        On<InventoryItem.inventoryID, Equal<SOLine.inventoryID>>,
+    //                    LeftJoin<SOOrder,
+    //                        On<SOOrder.orderNbr, Equal<SOLine.orderNbr>,
+    //                        And<SOOrder.orderType, Equal<SOLine.orderType>>>>>,
+    //                    Where<SOLine.orderNbr, Equal<Required<SOLine.orderNbr>>,
+    //                        And<SOLine.orderType, Equal<Required<SOLine.orderType>>,
+    //                    And2<
+    //                        Where<SOLine.siteID, Equal<Current<FilterLoadPlan.warehouse>>,
+    //                        Or<Current<FilterLoadPlan.warehouse>, IsNull>>,
+    //                        And<Where<InventoryItem.stkItem, Equal<True>,
+    //                        And<Where<SOLine.openQty, NotEqual<decimal0>,
+    //                     And2<
+    //                        Where<SOLineExt.usrConfirmShipment, Equal<Attrib.directDelivery>>,
+    //                        Or<Where<SOLineExt.usrConfirmShipment, Equal<Attrib.cwStore>>>>>>>>>>>>
+    //                    .Select(this, order.OrderNbr, order.OrderType))
+    //                {
+    //                    lines.Add(line);
+    //                }
+    //            }
+    //        }
+    //        return lines;
+    //    }
+
+    //    #endregion
+
+    //    public PXSelectJoin<SOOrder,
+    //        LeftJoin<ARTran,
+    //            On<ARTran.sOOrderNbr, Equal<SOOrder.orderNbr>,
+    //            And<ARTran.sOOrderType, Equal<SOOrder.orderType>>>,
+    //        LeftJoin<ARInvoice,
+    //            On<ARInvoice.refNbr, Equal<ARTran.refNbr>,
+    //            And<ARInvoice.docType, Equal<ARTran.tranType>>>>>> SplitOrder;
+    //    #region Projection
+    //    [PXProjection(typeof(Select2<SOOrder,
+    //        LeftJoin<ARTran,On<ARTran.sOOrderNbr,Equal<SOOrder.orderNbr>,And<ARTran.sOOrderType,Equal<SOOrder.orderType>>>,
+    //        LeftJoin<ARInvoice,On<ARInvoice.refNbr,Equal<ARTran.refNbr>,And<ARInvoice.docType,Equal<ARTran.tranType>>>,
+    //             LeftJoin<Customer,
+    //        On<Customer.bAccountID, Equal<SOOrder.customerID>>>>>>))]
+    //    [Serializable]
+    //    public class SplitSOorderInvoice : IBqlTable
+    //    {
+    //        #region Selected
+    //        public abstract class selected : IBqlField { }
+    //        [PXBool]
+    //        public virtual bool? Selected { get; set; }
+    //        #endregion
+
+    //        #region CustomerID
+    //        public abstract class customerID : IBqlField { }
+    //        [PXDBInt(BqlField = typeof(SOOrder.customerID))]
+    //        [PXUIField(DisplayName = "Customer ID")]
+    //        public virtual int? CustomerID { get; set; }
+    //        #endregion
+
+    //        #region CustomerName
+    //        public abstract class customerName : IBqlField { }
+    //        [PXDBString(BqlField = typeof(Customer.acctName))]
+    //        [PXUIField(DisplayName = "Customer Name")]
+    //        public virtual string CustomerName { get; set; }
+    //        #endregion
+
+    //        #region OrderType
+    //        public abstract class orderType : PX.Data.IBqlField { }
+    //        [PXDBString(2, IsKey = true, IsFixed = true, BqlField = typeof(SOOrder.orderType))]
+    //        [PXSelector(typeof(Search2<
+    //            SOOrderType.orderType,
+    //            InnerJoin<SOOrderTypeOperation,
+    //                On<SOOrderTypeOperation.orderType, Equal<SOOrderType.orderType>,
+    //                And<SOOrderTypeOperation.operation, Equal<SOOrderType.defaultOperation>>>>,
+    //            Where<SOOrderType.requireShipping, Equal<boolFalse>,
+    //                Or<FeatureInstalled<FeaturesSet.inventory>>>>))]
+    //        [PXUIField(DisplayName = "Order Type", Enabled = false)]
+    //        public virtual string OrderType { get; set; }
+    //        #endregion
+
+    //        #region SOOrderNbr
+    //        public abstract class orderNbr : PX.Data.IBqlField { }
+    //        [PXDBString(15, IsKey = true, BqlField = typeof(SOOrder.orderNbr))]
+    //        [PXUIField(DisplayName = "SO #", Enabled = false)]
+    //        public virtual String OrderNbr { get; set; }
+    //        #endregion
+
+    //        #region InvoiceType
+
+    //        public abstract class invoiceType : IBqlField { }
+    //        [PXDBString(IsFixed = true, BqlField = typeof(ARInvoice.docType))]
+    //        [PXUIField(DisplayName = "Invoice Type")]
+    //        public virtual string InvoiceType { get; set; }
+    //        #endregion
+
+    //        #region InvoiceNbr
+
+    //        public abstract class invoiceNumber : IBqlField { }
+    //        [PXDBString(IsUnicode = true,BqlField = typeof(ARInvoice.refNbr))]
+    //        [PXUIField(DisplayName = "Invoice #")]
+    //        public virtual string InvoiceNumber { get; set; }
+
+    //        #endregion
+
+    //        #region OrderQty
+    //        public abstract class orderQty : IBqlField { }
+    //        [PXDBQuantity(BqlField = typeof(SOOrder.orderQty))]
+    //        [PXUIField(DisplayName = "Order Qty")]
+    //        public virtual Decimal? OrderQty { get; set; }
+    //        #endregion
+
+    //        #region PickQty
+
+    //        public abstract class pickQty : IBqlField { }
+    //        [PXDBDecimal(BqlField = typeof(SOOrderExt.usrPickQty))]
+    //        [PXUIField(DisplayName = "Pick Qty")]
+    //        public virtual Decimal? PickQty { get; set; }
+
+    //        #endregion
+
+    //        #region Percentage
+
+    //        public abstract class percentage : IBqlField { }
+    //        [PXDecimal]
+    //        [PXUIField(DisplayName = "Percentage")]
+    //        public virtual Decimal? Percentage { get; set; }
+
+    //        #endregion
+    //    }
+
+    //    #endregion
+        
+    //    [Serializable]
+    //    public class DetailsTable : IBqlTable
+    //    {
+
+    //    }
+
+       
+    //}
+}]]></CDATA>
+</Graph>

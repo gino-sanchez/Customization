@@ -1,0 +1,60 @@
+﻿<DAC type="PX.Objects.SO.SOOrder">
+    <Field FieldName="UsrZone" TypeName="string" MapDbTable="SOOrder" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[				[PXDBString(20)]
+		[PXUIField(DisplayName="Zone")]
+]]></CDATA>
+    </Field>
+    <Field FieldName="UsrForecastDate" TypeName="date" MapDbTable="SOOrder" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[				[PXDBDate]
+		[PXUIField(DisplayName="Forecast Date")]
+]]></CDATA>
+    </Field>
+    <Field FieldName="UsrBalanceQty" TypeName="decimal" MapDbTable="SOOrder" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[				[PXDBDecimal]
+		[PXUIField(DisplayName="Balance Qty")]
+[PXDefault(TypeCode.Decimal, "0.00", PersistingCheck = PXPersistingCheck.Nothing)]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrPickListNbr" TypeName="string" MapDbTable="SOOrder" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBString(15)]
+[PXUIField(DisplayName="PickListNbr")]
+]]></CDATA>
+    </Field>
+    <Field FieldName="UsrPickQty" TypeName="decimal" MapDbTable="SOOrder" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBDecimal]
+[PXUIField(DisplayName="PickQty")]
+[PXDefault(TypeCode.Decimal, "0.00",PersistingCheck = PXPersistingCheck.Nothing)]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrPercentage" TypeName="decimal" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDecimal]
+[PXUIField(DisplayName="Percentage")]
+]]></CDATA>
+    </Field>
+    <Field FieldName="UsrPercent" TypeName="decimal" MapDbTable="SOOrder" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBDecimal]
+[PXUIField(DisplayName="Percent")]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrInvoiceNbr" TypeName="string" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXString(15)]
+[PXUIField(DisplayName="Invoice #")]
+
+using PX.Objects.AR;
+using PX.Objects.SO;
+
+[PXDBScalar(typeof(Search<ARTran.refNbr,Where<ARTran.sOOrderNbr,Equal<SOOrder.orderNbr>,And<ARTran.sOOrderType,Equal<SOOrder.orderType>>>>))]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrOrderType" TypeName="string" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXString(2)]
+[PXUIField(DisplayName="Order Type")]
+        [PXDBScalar(typeof(Search<ARTran.tranType, Where<ARTran.sOOrderNbr, Equal<SOOrder.orderNbr>, And<ARTran.sOOrderType, Equal<SOOrder.orderType>>>>))]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrInvoice" TypeName="string" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXString(15)]
+[PXUIField(DisplayName="Invoice #")]
+using PX.Objects.AR;]]></CDATA>
+    </Field>
+    <Field FieldName="UsrType" TypeName="string" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXString(3)]
+[PXUIField(DisplayName="Order Type")]
+        [PXDBScalar(typeof(Search<ARTran.tranType, Where<ARTran.sOOrderNbr, Equal<SOOrder.orderNbr>, And<ARTran.sOOrderType, Equal<SOOrder.orderType>>>>))]]]></CDATA>
+    </Field>
+</DAC>

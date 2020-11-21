@@ -1,0 +1,287 @@
+﻿<Graph ClassName="DTMFEntry" Source="#CDATA" IsNew="True" FileType="NewGraph">
+    <CDATA name="Source"><![CDATA[using System;
+using System.Collections;
+using System.Collections.Generic;
+using DispatchSetup;
+using PX.Data;
+
+namespace Dispatch
+{
+	public class DTMFEntry : PXGraph<DTMFEntry,DTMFMaster>
+	{
+        #region Selects
+        public PXSelect<DTMFMaster> DTMFMasterView;
+        public PXSelect<PlateNoMaint> MyPlateView;
+        public PXSelect<DBTools,Where<DBTools.refNbr,Equal<Current<DTMFMaster.refNbr>>>> ToolsView;
+        public PXSelect<DBVehicle,Where<DBVehicle.refNbr,Equal<Current<DTMFMaster.refNbr>>>> VehicleView;
+        public PXSelect<DBTire, Where<DBTire.refNbr, Equal<Current<DTMFMaster.refNbr>>>> TireView;
+        public PXSelect<DBPlateNo, Where<DBPlateNo.refNbr, Equal<Current<DTMFMaster.refNbr>>>> PlateNoView;
+        public PXSetup<DispatchNumberingSetup> Setup;
+
+        #endregion
+
+        #region Initialize
+
+        public DTMFEntry()
+        {
+            MyAction.AddMenuAction(DispatchOut);
+            MyAction.AddMenuAction(DispatchIn);
+            MyOverride.AddMenuAction(OverrideOut);
+            MyOverride.AddMenuAction(OverrideIn);
+        }
+
+        #endregion
+
+        #region ActionBtn
+
+        public PXAction<DTMFMaster> MyAction;
+        [PXButton(SpecialType = PXSpecialButtonType.Report, MenuAutoOpen = true)]
+        [PXUIField(DisplayName = "Action")]
+        public void myAction()
+        {
+
+        }
+        public PXAction<DTMFMaster> MyOverride;
+        [PXButton(SpecialType = PXSpecialButtonType.Report, MenuAutoOpen = true)]
+        [PXUIField(DisplayName = "Override Action")]
+        public void myOverride()
+        {
+
+        }
+
+
+        #endregion
+        #region PXACtions
+
+        #region Out
+        public PXAction<DTMFMaster> DispatchOut;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "Truck Out")]
+        protected IEnumerable dispatchOut (PXAdapter myAdapter)
+        {
+            var myCurrent = DTMFMasterView.Current;
+            var condition = myCurrent.DeliveryDate == null;
+
+            foreach (DTMFMaster master in myAdapter.Get())
+                {
+                    if (!condition)
+                    {
+                    DTMFMasterView.Cache.SetValueExt<DTMFMaster.actualDepartureDate>(master, DateTime.Now);
+                    DTMFMasterView.Update(master);
+                    }
+                Persist();
+
+                yield return master;
+                }            
+        }
+        #endregion
+
+        #region In
+
+        public PXAction<DTMFMaster> DispatchIn;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "Truck In" )]
+        public virtual IEnumerable dispatchIn(PXAdapter myAdapter)
+        {
+            DTMFMasterView.Cache.SetValueExt<DTMFMaster.actualReturnDate>(DTMFMasterView.Current, DateTime.Now);
+            DTMFMasterView.Update(DTMFMasterView.Current);
+            Persist();
+            return myAdapter.Get();
+        }
+
+        #endregion
+
+        #region Override Truck Out
+        public PXAction<DTMFMaster> OverrideOut;
+        [PXButton(CommitChanges =true)]
+        [PXUIField(DisplayName = "Out")]
+        public virtual IEnumerable overrideOut (PXAdapter myadapter)
+        {
+            
+            DTMFMasterView.Cache.SetValueExt<DTMFMaster.lastTruckOutDate> (DTMFMasterView.Current, DTMFMasterView.Current.ActualDepartureDate);
+            DTMFMasterView.Update(DTMFMasterView.Current);
+            DTMFMasterView.Cache.SetValueExt<DTMFMaster.actualDepartureDate>(DTMFMasterView.Current, DateTime.Now);
+            DTMFMasterView.Update(DTMFMasterView.Current);
+            Persist();
+            return myadapter.Get();
+        }
+
+        #region Override Truck In
+        public PXAction<DTMFMaster> OverrideIn;
+        [PXButton(CommitChanges =true)]
+        [PXUIField(DisplayName = "In")]
+        public virtual IEnumerable overrideIn(PXAdapter adapter)
+        {
+            DTMFMasterView.Cache.SetValueExt<DTMFMaster.lastTruckInDate>(DTMFMasterView.Current, DTMFMasterView.Current.ActualReturnDate);
+            DTMFMasterView.Update(DTMFMasterView.Current);
+            DTMFMasterView.Cache.SetValueExt<DTMFMaster.actualReturnDate>(DTMFMasterView.Current, DateTime.Now);
+            DTMFMasterView.Update(DTMFMasterView.Current);
+            Persist();
+            return adapter.Get();
+        }
+        #endregion
+
+        #endregion
+
+        #endregion
+
+        #region EventHandler
+        #region FieldUpdated
+        public void DBVehicle_Codeid_FieldUpdated(PXCache sender, PXFieldUpdatedEventArgs e)
+        {
+            var row = e.Row as DBVehicle;
+            if (row == null) return;
+
+            VehicleMaint vehicle = PXSelect<VehicleMaint,Where<VehicleMaint.codeid,Equal<Required<VehicleMaint.codeid>>>>.Select(this, row.Codeid);
+            sender.SetValueExt<DBVehicle.description>(row, vehicle.Description);
+            sender.SetValueExt<DBVehicle.amount>(row, vehicle.Amount);
+        }
+
+        public void DBTools_Codeid_FieldUpdated(PXCache sender, PXFieldUpdatedEventArgs e)
+        {
+            var row = e.Row as DBTools;
+            if (row == null) return;
+
+            ToolsMaint tools = PXSelect<ToolsMaint, Where<ToolsMaint.codeid, Equal<Required<ToolsMaint.codeid>>>>.Select(this, row.Codeid);
+            sender.SetValueExt<DBTools.description>(row, tools.Description);
+            sender.SetValueExt<DBTools.amount>(row, tools.Amount);
+        }
+
+        public void DBTire_Codeid_FieldUpdated(PXCache sender, PXFieldUpdatedEventArgs e)
+        {
+            var row = e.Row as DBTire;
+            if (row == null) return;
+
+            TireMaint tire = PXSelect<TireMaint, Where<TireMaint.codeid, Equal<Required<TireMaint.codeid>>>>.Select(this, row.Codeid);
+            sender.SetValueExt<DBTire.description>(row, tire.Description);
+            sender.SetValueExt<DBTire.amount>(row, tire.Amount);
+        }
+
+        public void DBPlateNo_Codeid_FieldUpdated(PXCache sender, PXFieldUpdatedEventArgs e)
+        {
+            var row = e.Row as DBPlateNo;
+            if (row == null) return;
+
+            PlateNoMaint plateNo = PXSelect<PlateNoMaint, Where<PlateNoMaint.codeid, Equal<Required<PlateNoMaint.codeid>>>>.Select(this, row.Codeid);
+            sender.SetValueExt<DBPlateNo.description>(row, plateNo.Description);
+            sender.SetValueExt<DBPlateNo.amount>(row, plateNo.Amount);
+        }
+        #endregion
+
+        #region RowInserted
+        public void DTMFMaster_RowInserted(PXCache sender, PXRowInsertedEventArgs e)
+        {
+            var isDirtry = false;
+            DBPlateNo line = new DBPlateNo();   
+            DBVehicle lineVehicle = new DBVehicle();
+            DBTools lineTools = new DBTools();
+            DBTire lineTire = new DBTire();
+
+            #region PlateNoInfo
+            List<PlateNoMaint> myList = new List<PlateNoMaint>();
+            foreach (PlateNoMaint lines in PXSelect<PlateNoMaint,Where<PlateNoMaint.preload,Equal<True>>>.Select(this))
+            {
+                if (!myList.Contains(lines))
+                {
+                    myList.Add(lines);
+                }
+            }
+            foreach(PlateNoMaint myLines in myList)
+            {
+                PXTrace.WriteInformation(myLines.Codeid.ToString());
+                line.Codeid = myLines.Codeid;
+                PlateNoView.Update(line);
+            }
+            #endregion
+
+            #region VehicleInfo
+
+            List<VehicleMaint> myVehicle = new List<VehicleMaint>();
+            foreach(VehicleMaint vehicle in PXSelect<VehicleMaint, Where<VehicleMaint.preload, Equal<True>>>.Select(this))
+            {
+                if (!myVehicle.Contains(vehicle))
+                {
+                    myVehicle.Add(vehicle);
+                }
+            }
+            foreach(VehicleMaint vehicleLine in myVehicle)
+            {
+                lineVehicle.Codeid = vehicleLine.Codeid;
+                VehicleView.Update(lineVehicle);
+            }
+            #endregion
+
+            #region TireInfo
+            List<TireMaint> myTire = new List<TireMaint>();
+            foreach (TireMaint tire in PXSelect<TireMaint, Where<TireMaint.preload, Equal<True>>>.Select(this))
+            {
+                if (!myTire.Contains(tire))
+                {
+                    myTire.Add(tire);
+                }
+            }
+            foreach (TireMaint tireLine in myTire)
+            {
+                lineTire.Codeid = tireLine.Codeid;
+                TireView.Update(lineTire);
+            }
+            #endregion
+
+            #region ToolsInfo
+
+            List<ToolsMaint> myTools = new List<ToolsMaint>();
+            foreach (ToolsMaint tool in PXSelect<ToolsMaint, Where<ToolsMaint.preload, Equal<True>>>.Select(this))
+            {
+                if (!myTools.Contains(tool))
+                {
+                    myTools.Add(tool);
+                }
+            }
+            foreach (ToolsMaint toolLine in myTools)
+            {
+                lineTools.Codeid = toolLine.Codeid;
+                ToolsView.Update(lineTools);
+            }
+
+            #endregion
+
+            ToolsView.Cache.IsDirty = isDirtry;
+            PlateNoView.Cache.IsDirty = isDirtry;
+            TireView.Cache.IsDirty = isDirtry;
+            VehicleView.Cache.IsDirty = isDirtry;
+        }
+        #endregion
+
+        #region RowSelected
+
+        protected void DTMFMaster_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+            var row = e.Row as DTMFMaster;
+            if (row == null) return;
+            var myDispatchOut = DTMFMasterView.Current.ActualDepartureDate != null;
+            var myDispatchIn = DTMFMasterView.Current.ActualReturnDate != null;
+            var myOverrideButton = myDispatchOut;
+            PXUIFieldAttribute.SetEnabled<DTMFMaster.actualDepartureDate>(sender, row, false);
+            PXUIFieldAttribute.SetEnabled<DTMFMaster.actualReturnDate>(sender, row, false);
+            PXUIFieldAttribute.SetVisible<DTMFMaster.lastTruckOutDate>(sender, row, false);
+            PXUIFieldAttribute.SetVisible<DTMFMaster.lastTruckInDate>(sender, row, false);
+            DispatchOut.SetEnabled(!myDispatchOut);
+            DispatchIn.SetEnabled(!myDispatchIn && myDispatchOut);
+            MyOverride.SetVisible(DTMFMasterView.Current.ActualDepartureDate != null);
+
+        }
+
+        #endregion
+
+        protected void DTMFMaster_RowPersisting(PXCache sender, PXRowPersistingEventArgs e)
+        {
+            var row = e.Row as DTMFMaster;
+            if (row == null) return;
+
+            sender.Update(row);
+
+        }
+        #endregion
+    }
+}]]></CDATA>
+</Graph>

@@ -1,0 +1,18 @@
+﻿<Graph ClassName="DTMFToolsMaint" Source="#CDATA" IsNew="True" FileType="NewGraph">
+    <CDATA name="Source"><![CDATA[using System;
+using PX.Data;
+
+namespace Dispatch
+{
+	public class DTMFToolsMaint : PXGraph<DTMFToolsMaint>
+	{
+
+		public PXSave<ToolsMaint> Save;
+		public PXCancel<ToolsMaint> Cancel;
+
+
+		public PXSelect<ToolsMaint> Tools;
+
+	}
+}]]></CDATA>
+</Graph>

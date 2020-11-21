@@ -1,0 +1,38 @@
+﻿<DAC type="PX.Objects.IN.INTran">
+    <Field FieldName="UsrPickListNbr" TypeName="string" MapDbTable="INTran" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBString(15)]
+[PXUIField(DisplayName="PickListNbr")]
+]]></CDATA>
+    </Field>
+    <Field FieldName="UsrTripTicketNbr" TypeName="string" MapDbTable="INTran" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBString(15)]
+[PXUIField(DisplayName="TripTicketNbr")]
+]]></CDATA>
+    </Field>
+    <Field FieldName="UsrPickListLine" TypeName="int" MapDbTable="INTran" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBInt]
+[PXUIField(DisplayName="PickListLine")]
+]]></CDATA>
+    </Field>
+    <Field FieldName="UsrTripTicketLine" TypeName="int" MapDbTable="INTran" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBInt]
+[PXUIField(DisplayName="TripTicketLine")]
+]]></CDATA>
+    </Field>
+    <Field FieldName="UsrBackloadNbr" TypeName="string" MapDbTable="INTran" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBString(15)]
+[PXUIField(DisplayName="BackloadNbr")]
+]]></CDATA>
+    </Field>
+    <Field FieldName="UsrBackloadType" TypeName="string" MapDbTable="INTran" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBString(10)]
+[PXUIField(DisplayName="BackloadType")]
+using Dispatch;
+[PXSelector(typeof(Search<BackloadType.backloadTypeCD, Where<BackloadType.isActive, Equal<True>>>), typeof(BackloadType.backloadTypeCD), typeof(BackloadType.descr), SubstituteKey = typeof(BackloadType.descr))]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrBackloadID" TypeName="int" MapDbTable="INTran" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBInt]
+[PXUIField(DisplayName="BackloadID")]
+]]></CDATA>
+    </Field>
+</DAC>

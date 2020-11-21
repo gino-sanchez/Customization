@@ -1,0 +1,298 @@
+﻿<DAC type="PX.Objects.SO.SOLine">
+    <Field FieldName="UsrBuffer" TypeName="bool" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBBool]
+[PXUIField(DisplayName="Buffer")]
+[PXDefault(false, PersistingCheck=PXPersistingCheck.Nothing)]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrBufferQty" TypeName="decimal" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBDecimal]
+[PXUIField(DisplayName="BufferQty")]
+]]></CDATA>
+    </Field>
+    <Field FieldName="UsrNewDeliveryDate" TypeName="date" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBDate]
+[PXUIField(DisplayName="NewDeliveryDate")]
+]]></CDATA>
+    </Field>
+    <Field FieldName="UsrNewSiteID" TypeName="int" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBInt]
+    [PXUIField(DisplayName="New Whse")]
+using PX.Objects.IN;
+    [PXSelector(typeof(Search<INSite.siteID>),
+typeof(INSite.siteCD),
+SubstituteKey=typeof(INSite.siteCD))]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrRerouteStatus" TypeName="string" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[                             [PXDBString(10)]
+    [PXUIField(DisplayName="Request Status")]
+using Dispatch;
+[GridStatus.List]
+    [PXDefault(GridStatus.NullValue,PersistingCheck = PXPersistingCheck.Nothing)]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrBarcode" TypeName="string" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBString(30)]
+[PXUIField(DisplayName="Barcode")]
+]]></CDATA>
+    </Field>
+    <Field FieldName="UsrRejectWhse" TypeName="int" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBInt]
+    [PXUIField(DisplayName="Reject Whse")]
+using PX.Objects.IN;
+    [PXSelector(typeof(Search<INSite.siteID>),
+typeof(INSite.siteCD),
+SubstituteKey=typeof(INSite.siteCD))]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrDescReason" TypeName="string" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBString(256)]
+    [PXUIField(DisplayName="Reason for Rejection")]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrDriverName" TypeName="int" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXInt]
+[PXUIField(DisplayName="Driver Name")]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrShipmentNbr" TypeName="string" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[                      [PXString(15)]
+    [PXUIField(DisplayName="Shipment #")]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrTripTicketNbr" TypeName="string" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[                            [PXString(15)]
+    [PXUIField(DisplayName="Trip Ticket No.")]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrLoadPlanStatus" TypeName="string" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[                      [PXDBString(2)]
+    [PXUIField(DisplayName="LoadPlanStatus")]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrTruck" TypeName="int" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXInt]
+    [PXUIField(DisplayName="Truck")]
+using Dispatch;
+    [PXSelector(typeof(Search<Truck.truckID>), typeof(Truck.truckID), typeof(Truck.truckCD), typeof(Truck.driverID), typeof(Truck.model), typeof(Truck.status), typeof(Truck.truckCapacityCMB), typeof(Truck.truckCapacityKGS), SubstituteKey = typeof(Truck.truckCD))]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrTotalKgs" TypeName="decimal" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDecimal]
+    [PXUIField(DisplayName="TotalKgs")]
+using PX.Objects.SO;
+        [PXFormula(typeof(Mult<SOLine.unitWeigth,SOLineExt.usrLoadPlanQty>))]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrTotalCBM" TypeName="decimal" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[                      [PXDecimal]
+    [PXUIField(DisplayName="TotalCBM")]
+using PX.Objects.SO;
+        [PXFormula(typeof(Mult<SOLine.unitVolume,SOLineExt.usrLoadPlanQty>))]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrTruckCBMBal" TypeName="decimal" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[                        [PXDecimal]
+    [PXUIField(DisplayName="Truck CBM Bal.")]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrLoadPlanQty" TypeName="decimal" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[                        [PXDBDecimal]
+    [PXUIField(DisplayName="Item Load Qty")]
+    [PXDefault(TypeCode.Decimal, "0.00",PersistingCheck = PXPersistingCheck.Nothing)]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrPickListQty" TypeName="decimal" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[                                    [PXDBDecimal]
+    [PXDefault(TypeCode.Decimal, "0.00", PersistingCheck = PXPersistingCheck.Nothing)]
+    [PXUIField(DisplayName="Pick Qty.")]
+using PX.Objects.SO;
+    [PXFormula(null,typeof(SumCalc<SOOrderExt.usrPickQty>))]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrPickListOpenQty" TypeName="decimal" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[                                   [PXDBDecimal]
+    
+    [PXDefault(TypeCode.Decimal, "0.00", PersistingCheck = PXPersistingCheck.Nothing)]
+        using PX.Objects.SO;
+        [PXFormula(null,typeof(SumCalc<SOOrderExt.usrBalanceQty>))]
+        [PXFormula(typeof(Sub<SOLine.openQty, SOLineExt.usrPickListQty>))]
+        [PXUIField(DisplayName="Pick Open Qty.")]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrPickListDate" TypeName="date" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[                                    [PXDBDate]
+    [PXUIField(DisplayName="Pick List Date")]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrSelected" TypeName="bool" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[ [PXBool]
+    [PXUIField(DisplayName="Selected")]
+    [PXDefault(false,PersistingCheck = PXPersistingCheck.Nothing)]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrLoadItemQty" TypeName="decimal" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[  [PXDecimal]
+    [PXUIField(DisplayName="Item Load Qty")]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrRemarks" TypeName="string" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[ [PXDBString(150)]
+    [PXUIField(DisplayName="Remarks")]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrForeCastDate" TypeName="date" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[ [PXDBDate]
+    [PXUIField(DisplayName="Forecast Date")]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrPercentagePerItem" TypeName="decimal" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDecimal]
+    [PXUIField(DisplayName="Percentage")]
+    [PXDefault(TypeCode.Decimal,"0.00", PersistingCheck = PXPersistingCheck.Nothing)]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrSIType" TypeName="string" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXString(10)]
+    [PXUIField(DisplayName="Order Type")]
+using PX.Objects.AR;
+using PX.Objects.SO;
+        [PXDBScalar(typeof(Search<ARTran.tranType, Where<ARTran.sOOrderNbr, Equal<SOLine.orderNbr>, And<ARTran.sOOrderType, Equal<SOLine.orderType>, And<ARTran.sOOrderLineNbr, Equal<SOLine.lineNbr>>>>>))]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrPickListReference" TypeName="string" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[    [PXDBString(256)]
+    [PXUIField(DisplayName="PickListReference")]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrSINum" TypeName="string" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[ [PXString(15)]
+    [PXUIField(DisplayName="Invoice #")]
+using PX.Objects.AR;
+using PX.Objects.SO;
+        [PXDBScalar(typeof(Search<ARTran.refNbr, Where<ARTran.sOOrderNbr, Equal<SOLine.orderNbr>, And<ARTran.sOOrderType, Equal<SOLine.orderType>, And<ARTran.sOOrderLineNbr, Equal<SOLine.lineNbr>>>>>))]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrOpenQty" TypeName="decimal" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDecimal]
+    [PXUIField(DisplayName="Open Order Qty")]
+using PX.Objects.SO;
+    [PXFormula(typeof(Sub<SOLine.orderQty, SOLine.shippedQty>))]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrLoaded" TypeName="bool" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBBool]
+    [PXUIField(DisplayName="Shipped")]
+    [PXDefault(false,PersistingCheck = PXPersistingCheck.Nothing)]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrBalanceQty" TypeName="decimal" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBDecimal]
+    [PXUIField(DisplayName="Balance Qty")]
+using PX.Objects.SO;
+    [PXFormula(typeof(Sub<SOLine.openQty, SOLineExt.usrPickListQty>))]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrRequestForTransfer" TypeName="bool" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBBool]
+    [PXUIField(DisplayName="RequestForTransfer")]
+    [PXDefault(false,PersistingCheck = PXPersistingCheck.Nothing)]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrAvailableQty" TypeName="decimal" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBDecimal]
+        [PXUIField(DisplayName = "Available Qty")]
+using PX.Objects.IN;
+[PXUnboundDefault(typeof(Search<
+             INSiteStatusSummary.qtyOnHand,
+            Where<INSiteStatusSummary.inventoryID, Equal<Current<SOLine.inventoryID>>,
+                And<INSiteStatusSummary.siteID, Equal<Current<SOLine.siteID>>>>>), PersistingCheck = PXPersistingCheck.Nothing)]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrRequestType" TypeName="string" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBString(2)]
+    [PXUIField(DisplayName="Request Type")]
+using Dispatch;
+[RequestTypeV2.List]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrOldSiteID" TypeName="int" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBInt]
+    [PXUIField(DisplayName="OldSiteID")]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrRerouteTransferRequestDate" TypeName="date" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[    [PXDBDate]
+    [PXUIField(DisplayName="RerouteTransferRequestDate")]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrRerouteTransferApproveStatusDate" TypeName="date" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[    [PXDBDate]
+    [PXUIField(DisplayName="RerouteTransferApproveStatusDate")]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrTransferRefNbr" TypeName="string" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBString(15)]
+    [PXUIField(DisplayName="TransferRefNbr")]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrRequestorID" TypeName="guid" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBGuid]
+    [PXUIField(DisplayName="RequestorID")]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrRequestQty" TypeName="decimal" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBDecimal]
+    [PXUIField(DisplayName="RequestQty")]
+    [PXDefault(TypeCode.Decimal , "0.00", PersistingCheck = PXPersistingCheck.Nothing)]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrForecastConfirmed" TypeName="bool" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBBool]
+    [PXUIField(DisplayName="Forecast Confirmed")]
+    [PXDefault(false,PersistingCheck = PXPersistingCheck.Nothing)]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrShippingStatus" TypeName="string" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBString(5)]
+    [PXUIField(DisplayName="ShippingStatus")]
+using Dispatch;
+[ShippingStatus.List]
+[PXDefault(ShippingStatus.Pending,PersistingCheck = PXPersistingCheck.Nothing)]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrBackloadNbr" TypeName="string" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBString(15)]
+    [PXUIField(DisplayName="BackloadNbr")]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrBackloadType" TypeName="string" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[    [PXDBString(10)]
+    [PXUIField(DisplayName="BackloadType")]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrPickListStatus" TypeName="string" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBString(5)]
+    [PXUIField(DisplayName="Picklist Status")]
+using PL;
+    [pickStatusList.List]
+    [PXDefault(pickStatusList.Open,PersistingCheck = PXPersistingCheck.Nothing)]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrRequestingWarehouse" TypeName="int" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBInt]
+    [PXUIField(DisplayName="RequestingWarehouse")]
+using PX.Objects.IN;
+[PXSelector(typeof(Search<INSite.siteID>),
+typeof(INSite.siteCD),
+SubstituteKey=typeof(INSite.siteCD))]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrTransferLink" TypeName="string" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[ [PXDBString(15)]
+    [PXUIField(DisplayName="TransferLink")]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrAvailPickQty" TypeName="decimal" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[    [PXDBDecimal]
+    [PXUIField(DisplayName="Available Pick Qty")]
+using PX.Objects.SO;
+    [PXFormula(typeof(SOLine.openQty))]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrAvailableLoadQty" TypeName="decimal" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBDecimal]
+    [PXUIField(DisplayName="Available Load Qty")]
+using PX.Objects.SO;
+    [PXFormula(typeof(SOLineExt.usrPickListQty))]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrForPicking" TypeName="bool" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBBool]
+    [PXUIField(DisplayName="ForPicking")]
+    [PXDefault(false,PersistingCheck = PXPersistingCheck.Nothing)]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrShipped" TypeName="bool" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBBool]
+[PXUIField(DisplayName="Shipped")]
+]]></CDATA>
+    </Field>
+    <Field FieldName="UsrShippingReference" TypeName="string" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBString(1000)]
+[PXUIField(DisplayName="ShippingReference")]
+]]></CDATA>
+    </Field>
+    <Field FieldName="UsrForecastPickQty" TypeName="decimal" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBDecimal]
+[PXDefault(TypeCode.Decimal, "0.00", PersistingCheck = PXPersistingCheck.Nothing)]
+[PXFormula(typeof(SOLine.orderQty))]
+[PXUIField(DisplayName="Pick Qty (Scheduling)")]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrPickLocationID" TypeName="int" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[//[SOLocationAvail(typeof(SOLine.inventoryID), typeof(SOLine.subItemID), typeof(SOLine.siteID), typeof(SOLine.tranType), typeof(SOLine.invtMult))]
+[PXInt]
+[PXUIField(DisplayName="Location ID")]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrSchedulingType" TypeName="string" MapDbTable="SOLine" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBString(2)]
+[PXUIField(DisplayName="SchedulingType")]
+using Dispatch;
+[ShippingStatus.List]
+[PXDefault(ShippingStatus.Pending,PersistingCheck = PXPersistingCheck.Nothing)]]]></CDATA>
+    </Field>
+</DAC>

@@ -1,0 +1,743 @@
+﻿<Graph ClassName="DispatchPickUp" Source="#CDATA" IsNew="True" FileType="NewGraph">
+    <CDATA name="Source"><![CDATA[using System;
+using PX.Data;
+using PX.Objects.SO;
+using PL;
+using PX.Objects.CS;
+using PX.Objects.AR;
+using PX.Objects.IN;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using PL;
+
+namespace Dispatch
+{
+    [Serializable]
+    public class PickUpFilterTable : IBqlTable
+    {
+        #region Requested Date
+        public abstract class requestedDateFrom : IBqlField { }
+        [PXDate()]
+        [PXUIField(DisplayName = "Requested Date From")]
+        public virtual DateTime? RequestedDateFrom { get; set; }
+        #endregion
+
+        #region Requested Date
+        public abstract class requestedDateTo : IBqlField { }
+        [PXDate()]
+        [PXUIField(DisplayName = "Requested Date To")]
+        public virtual DateTime? RequestedDateTo { get; set; }
+        #endregion
+
+
+        #region Pick Date
+        public abstract class pickDateFrom : IBqlField { }
+        [PXDate()]
+        [PXUIField(DisplayName = "Pick Date From")]
+        public virtual DateTime? PickDateFrom { get; set; }
+        #endregion
+        #region Pick Date
+        public abstract class pickDateTo : IBqlField { }
+        [PXDate()]
+        [PXUIField(DisplayName = "Pick Date To")]
+        public virtual DateTime? PickDateTo { get; set; }
+        #endregion
+
+        #region Invoice Nbr
+
+        public abstract class invoiceNbr : IBqlField { }
+        [PXString(15)]
+        [PXUIField(DisplayName = "Invoice #")]
+        [PXSelector(typeof(Search5<
+            ARTran.refNbr,
+            InnerJoin<SOLine,
+                On<SOLine.orderNbr,Equal<ARTran.sOOrderNbr>,
+                And<SOLine.orderType,Equal<ARTran.sOOrderType>,
+                And<SOLine.lineNbr,Equal<ARTran.sOOrderLineNbr>>>>,
+            InnerJoin<ARInvoice,
+                On<ARInvoice.refNbr,Equal<ARTran.refNbr>>,
+            LeftJoin<PLPickListLine,
+                On<PLPickListLine.sOOrderNbr,Equal<SOLine.orderNbr>,
+                And<PLPickListLine.sOOrderType,Equal<SOLine.orderType>,
+                And<PLPickListLine.sOLineNbr,Equal<SOLine.lineNbr>>>>,
+            InnerJoin<PLPickList,
+                On<PLPickList.pickListNbr,Equal<PLPickListLine.pickListNbr>>>>>>
+            , 
+            Where<SOLineExt.usrConfirmShipment, Equal<Attrib.pickup>,
+                And<Where<SOLine.completed, Equal<boolFalse>>>>, 
+            Aggregate<
+                GroupBy<ARInvoice.refNbr>>>),typeof(ARInvoice.docType),typeof(ARInvoice.refNbr))]
+        
+        public virtual string InvoiceNbr { get; set; }
+
+        #endregion
+
+        #region SalesOrder Nbr
+        public abstract class salesOrderNbr : IBqlField { }
+        [PXString(15)]
+        [PXUIField(DisplayName = "SO #")]
+        [PXSelector(typeof(Search5<
+            SOLine.orderNbr,
+            LeftJoin<PLPickListLine,
+                On<PLPickListLine.sOOrderNbr, Equal<SOLine.orderNbr>,
+                And<PLPickListLine.sOOrderType, Equal<SOLine.orderType>,
+                And<PLPickListLine.sOLineNbr, Equal<SOLine.lineNbr>>>>,
+            InnerJoin<SOOrder,
+                On<SOOrder.orderNbr, Equal<SOLine.orderNbr>,
+                And<SOOrder.orderType, Equal<SOLine.orderType>>>,
+            LeftJoin<Customer,
+                On<Customer.bAccountID, Equal<SOLine.customerID>>,
+            LeftJoin<INSite,
+                On<INSite.siteID, Equal<SOLine.siteID>>,
+            LeftJoin<InventoryItem,
+                On<InventoryItem.inventoryID, Equal<SOLine.inventoryID>>,
+            LeftJoin<PLPickList,
+                On<PLPickList.pickListNbr, Equal<PLPickListLine.pickListNbr>>>>>>>>,
+            Where<SOLineExt.usrConfirmShipment, Equal<Attrib.pickup>,
+                And<Where<SOLine.completed, Equal<boolFalse>>>>,
+            Aggregate<
+                GroupBy<SOLine.orderNbr>>>),typeof(SOOrder.orderType),typeof(SOOrder.orderNbr))]
+        public virtual string SalesOrderNbr { get; set; }
+        #endregion
+    }
+
+    [PXProjection(typeof(Select5<
+        SOLine,
+        LeftJoin<PLPickListLine,
+            On<PLPickListLine.sOOrderNbr, Equal<SOLine.orderNbr>,
+            And<PLPickListLine.sOOrderType, Equal<SOLine.orderType>,
+            And<PLPickListLine.sOLineNbr, Equal<SOLine.lineNbr>>>>,
+        InnerJoin<SOOrder,
+            On<SOOrder.orderNbr, Equal<SOLine.orderNbr>,
+            And<SOOrder.orderType, Equal<SOLine.orderType>>>,
+        LeftJoin<Customer,
+            On<Customer.bAccountID, Equal<SOLine.customerID>>,
+        LeftJoin<INSite, 
+            On<INSite.siteID, Equal<SOLine.siteID>>,
+        LeftJoin<InventoryItem,
+            On<InventoryItem.inventoryID,Equal<SOLine.inventoryID>>,
+        LeftJoin<PLPickList,
+            On<PLPickList.pickListNbr,Equal<PLPickListLine.pickListNbr>>,
+        LeftJoin<SOOrderType,
+            On<SOOrderType.orderType,Equal<SOOrder.orderType>>,
+        LeftJoin<ARTran,
+            On<ARTran.sOOrderType,Equal<SOLine.orderType>,
+            And<ARTran.sOOrderNbr,Equal<SOLine.orderNbr>,
+            And<ARTran.sOOrderLineNbr,Equal<SOLine.lineNbr>>>>,
+        LeftJoin<ARInvoice,
+            On<ARInvoice.docType,Equal<ARTran.tranType>,
+            And<ARInvoice.refNbr,Equal<ARTran.refNbr>>>>>>>>>>>>,
+        Where<SOLineExt.usrConfirmShipment,Equal<Attrib.pickup>,
+            And<Where<SOLine.completed,Equal<boolFalse>,
+                And<Where<SOOrderTypeExt.usrDispatch,Equal<True>,
+                And<Where<ARInvoice.status,Equal<ARDocStatus.closed>,
+                    And<Where<ARInvoice.curyDocBal,Equal<decimal0>>>>>>>>>>,
+        Aggregate<GroupBy<SOLine.orderNbr,GroupBy<SOLine.orderType,GroupBy<SOLine.lineNbr>>>>>))]
+    [Serializable]
+    public class SOPLPickListLine : IBqlTable
+    {
+        public abstract class selected : IBqlField { }
+        [PXBool()]
+        [PXUIField(DisplayName = "Selected")]
+        public virtual bool? Selected { get; set; }
+
+        #region OrderType
+        public abstract class orderType : PX.Data.IBqlField { }
+        [PXDBString(2, IsKey = true, IsFixed = true, BqlField = typeof(SOOrder.orderType))]
+        [PXSelector(typeof(Search2<
+            SOOrderType.orderType,
+            InnerJoin<SOOrderTypeOperation,
+                On<SOOrderTypeOperation.orderType, Equal<SOOrderType.orderType>,
+                And<SOOrderTypeOperation.operation, Equal<SOOrderType.defaultOperation>>>>,
+            Where<SOOrderType.requireShipping, Equal<boolFalse>,
+                Or<FeatureInstalled<FeaturesSet.inventory>>>>))]
+        [PXUIField(DisplayName = "Order Type", Enabled = false)]
+        public virtual string OrderType { get; set; }
+        #endregion
+
+        #region SOOrderNbr
+        public abstract class orderNbr : PX.Data.IBqlField { }
+        [PXDBString(15, IsKey = true, BqlField = typeof(SOOrder.orderNbr))]
+        [PXUIField(DisplayName = "SO #", Enabled = false)]
+        public virtual String OrderNbr { get; set; }
+        #endregion
+
+        #region SOLineNbr
+        public abstract class lineNbr : PX.Data.IBqlField { }
+        [PXDBInt(IsKey = true, BqlField = typeof(SOLine.lineNbr))]
+        [PXUIField(DisplayName = "Line Nbr", Enabled = false)]
+        public virtual int? LineNbr { get; set; }
+        #endregion
+
+        #region PickDate
+        public abstract class pickDate : PX.Data.IBqlField { }
+        [PXDBDate(BqlField = typeof(PLPickList.pickDate))]
+        [PXUIField(DisplayName = "Pick Date")]
+        public virtual DateTime? PickDate { get; set; }
+
+        #endregion
+
+        #region InvoiceNBr
+        public abstract class invoiceNbr : IBqlField { }
+        [PXString(15)]
+        [PXUIField(DisplayName = "Invoice #", Enabled = false)]
+        [PXUnboundDefault(typeof(Search<
+            ARTran.refNbr,
+            Where<ARTran.sOOrderNbr, Equal<Current<orderNbr>>,
+                And<ARTran.sOOrderType, Equal<Current<orderType>>,
+                And<ARTran.sOOrderLineNbr, Equal<Current<lineNbr>>>>>>))]
+        public virtual string InvoiceNbr { get; set; }
+        #endregion
+
+        #region InvoiceNBr
+        public abstract class docType : IBqlField { }
+        [PXString(2, IsFixed = true)]
+        [PXUIField(DisplayName = "Invoice type", Enabled = false)]
+        [ARDocType.List]
+        [PXUnboundDefault(typeof(Search<
+            ARTran.tranType,
+            Where<ARTran.sOOrderNbr, Equal<Current<orderNbr>>,
+                And<ARTran.sOOrderType, Equal<Current<orderType>>,
+                And<ARTran.sOOrderLineNbr, Equal<Current<lineNbr>>>>>>))]
+        public virtual string DocType { get; set; }
+        #endregion
+
+        #region Requested Date
+        public abstract class requestedDate : IBqlField { }
+        [PXDBDate(BqlField = typeof(SOLine.requestDate))]
+        [PXUIField(DisplayName = "Requested Date")]
+        public virtual DateTime? RequestedDate { get; set; }
+        #endregion
+
+        #region Requested Date
+        public abstract class forecastDate : IBqlField { }
+        [PXDBDate(BqlField = typeof(SOLineExt.usrForeCastDate))]
+        [PXUIField(DisplayName = "Forecast Date")]
+        public virtual DateTime? ForecastDate { get; set; }
+        #endregion
+
+        #region CustomerID
+        public abstract class customerID : IBqlField { }
+        [PXDBInt(BqlField = typeof(SOLine.customerID))]
+        [PXUIField(DisplayName = "Customer ID")]
+        public virtual int? CustomerID { get; set; }
+        #endregion
+
+        #region CustomerName
+        public abstract class customerName : IBqlField { }
+        [PXDBString(50, BqlField = typeof(Customer.acctName))]
+        [PXUIField(DisplayName = "Customer Name")]
+        public virtual string CustomerName { get; set; }
+        #endregion
+
+        #region OrderQty
+
+        public abstract class orderQty : IBqlField { }
+        [PXDBDecimal(BqlField = typeof(SOLine.orderQty))]
+        [PXUIField(DisplayName = "Order Qty")]
+        public virtual Decimal? OrderQty { get; set; }
+
+        #endregion
+
+        #region Picked Qty
+
+        public abstract class pickedQty : IBqlField { }
+        [PXDBDecimal(BqlField = typeof(SOLineExt.usrPickListQty))]
+        [PXUIField(DisplayName = "Picked Qty")]
+        public virtual Decimal? PickedQty { get; set; }
+
+        #endregion
+
+        #region ClaimQty
+        public abstract class claimQty : IBqlField { }
+        [PXDecimal()]
+        [PXUIField(DisplayName = "Claim Qty")]
+        [PXDefault(TypeCode.Decimal, "0.00", PersistingCheck = PXPersistingCheck.Nothing)]
+        public virtual Decimal? ClaimQty { get; set; }
+
+        #endregion
+
+        #region Warehouse
+
+        public abstract class warehouse : IBqlField { }
+        [PXDBInt(BqlField = typeof(INSite.siteID))]
+        [PXUIField(DisplayName = "Warehouse")]
+        [PXSelector(typeof(Search<INSite.siteID>), SubstituteKey = typeof(INSite.siteCD))]
+        public virtual int? Warehouse { get; set; }
+        #endregion
+
+        #region Location
+        public abstract class location : IBqlField { }
+        [PXString(15)]
+        [PXUIField(DisplayName = "Location",Visible = false)]
+        public virtual string Location { get; set; }
+
+        #endregion
+        #region InventoryID
+
+        public abstract class inventoryID : IBqlField { }
+        [PXDBInt(BqlField = typeof(SOLine.inventoryID))]
+        [PXUIField(DisplayName = "Inventory ID")]
+        [PXSelector(typeof(Search<InventoryItem.inventoryID>), SubstituteKey = typeof(InventoryItem.inventoryCD))]
+        public virtual int? InventoryID { get; set; }
+
+        #endregion
+
+        #region ItemName
+        public abstract class itemName : IBqlField { }
+        [PXDBString(256, BqlField = typeof(InventoryItem.descr))]
+        [PXUIField(DisplayName = "Item Description")]
+        public virtual string ItemName { get; set; }
+        #endregion
+
+        #region ShippingType
+
+        public abstract class shippingType : IBqlField { }
+        [PXDBString(5,BqlField = typeof(SOLineExt.usrConfirmShipment))]
+        [PXUIField(DisplayName = "Shipping Type")]
+        [Attrib.List]
+        public virtual string ShippingType { get; set; }
+
+        #endregion
+
+        #region Correct Qty
+
+        public abstract class correctQty : IBqlField { }
+        [PXDecimal]
+        [PXUIField(DisplayName = "Correct Qty")]
+        [PXDefault(TypeCode.Decimal, "0.00", PersistingCheck = PXPersistingCheck.Nothing)]
+        public virtual Decimal? CorrectQty { get; set; }
+        #endregion
+    }
+    public class DispatchPickUp : PXGraph<DispatchPickUp>
+    {
+        public PXCancel<SOPLPickListLine> Cancel;
+        public PXFilter<PickUpFilterTable> MasterView;
+        public PXSelectJoin<
+            SOPLPickListLine,
+            InnerJoin<SOLine,
+                On<SOLine.orderType, Equal<SOPLPickListLine.orderType>,
+                And<SOLine.orderNbr, Equal<SOPLPickListLine.orderNbr>,
+                And<SOLine.lineNbr, Equal<SOPLPickListLine.lineNbr>>>>>,
+            Where<SOLineExt.usrConfirmShipment, Equal<Attrib.pickup>>>
+            CorrectShipmentSplit;
+        public PXProcessing<SOPLPickListLine> DetailsView;
+        
+
+        #region IENumerable
+
+        public IEnumerable detailsView()
+        {
+            var filter = MasterView.Current;
+            PXSelectBase<SOPLPickListLine> query = new PXSelect<SOPLPickListLine>(this);
+            if (filter.RequestedDateFrom != null && filter.RequestedDateTo != null)
+            {
+                query
+                    .WhereAnd<
+                    Where<SOPLPickListLine.requestedDate, Between<Current<PickUpFilterTable.requestedDateFrom>,Current<PickUpFilterTable.requestedDateTo>>>>();
+            }
+            if (filter.PickDateFrom != null && filter.PickDateTo != null)
+            {
+                query
+                    .WhereAnd<
+                    Where<SOPLPickListLine.pickDate, Between<Current<PickUpFilterTable.pickDateFrom>, Current<PickUpFilterTable.pickDateTo>>>>();
+            }
+            if (filter.SalesOrderNbr != null)
+            {
+                query
+                    .WhereAnd<
+                    Where<SOPLPickListLine.orderNbr, Equal<Current<PickUpFilterTable.salesOrderNbr>>>>();
+            }
+            
+            
+            foreach (SOPLPickListLine line in query.Select())
+            {
+                if (filter.InvoiceNbr != null)
+                {
+                    if (filter.InvoiceNbr == line.InvoiceNbr)
+                    {
+                        yield return line;
+                    }
+                }
+                
+                else
+                {
+                    yield return line;
+                }
+            }
+        }
+
+        public IEnumerable correctShipmCreantSplit()
+        {
+            var filter = MasterView.Current;
+            PXSelectBase<SOPLPickListLine> query = new PXSelect<SOPLPickListLine>(this);
+
+            if (filter.RequestedDateFrom != null && filter.RequestedDateTo != null)
+            {
+                query
+                    .WhereAnd<
+                    Where<SOPLPickListLine.requestedDate, Between<Current<PickUpFilterTable.requestedDateFrom>, Current<PickUpFilterTable.requestedDateTo>>>>();
+            }
+            if (filter.PickDateFrom != null && filter.PickDateTo != null)
+            {
+                query
+                    .WhereAnd<
+                    Where<SOPLPickListLine.pickDate, Between<Current<PickUpFilterTable.pickDateFrom>, Current<PickUpFilterTable.pickDateTo>>>>();
+            }
+            if (filter.SalesOrderNbr != null)
+            {
+                query
+                    .WhereAnd<
+                    Where<SOPLPickListLine.orderNbr, Equal<Current<PickUpFilterTable.salesOrderNbr>>>>();
+            }
+
+
+            foreach (SOPLPickListLine list in query.Select())
+            {
+                if(filter.InvoiceNbr != null)
+                {
+                    if(filter.InvoiceNbr == list.InvoiceNbr)
+                    {
+                        yield return list;
+                    }
+                }
+                
+                else
+                {
+                    yield return list;
+                }
+            }
+        }
+
+        #endregion
+
+
+        #region Method
+
+        public static void PickUpProcess(List<SOPLPickListLine> pickLines,DispatchPickUp graph)
+        {
+            List<SOOrder> myOrder = new List<SOOrder>();
+            List<SOLine> myLines = new List<SOLine>();
+            foreach (SOPLPickListLine myLine in pickLines)
+            {
+                if (myLine.Selected == true)
+                {
+                    var select = PXSelect<
+                        SOLine, 
+                        Where<SOLine.orderNbr, Equal<Required<SOLine.orderNbr>>,
+                            And<SOLine.orderType, Equal<Required<SOLine.orderType>>,
+                            And<SOLine.lineNbr, Equal<Required<SOLine.lineNbr>>>>>>
+                        .Select(graph, myLine.OrderNbr, myLine.OrderType, myLine.LineNbr);
+                    var orderSelect = PXSelect<
+                        SOOrder, 
+                        Where<SOOrder.orderNbr, Equal<Required<SOOrder.orderNbr>>,
+                            And<SOOrder.orderType, Equal<Required<SOOrder.orderType>>>>>
+                        .Select(graph, myLine.OrderNbr, myLine.OrderType);
+                    if (!myLines.Contains(select))
+                    {
+                        myLines.Add(select);
+                        if (!myOrder.Contains(orderSelect))
+                        {
+                            myOrder.Add(orderSelect);
+                        }
+                        else
+                        {
+                            continue;
+                        }
+                    }
+                }
+            }
+            foreach (SOOrder ord in myOrder)
+            {
+                if (myLines.Count() <= 0)
+                {
+                    continue;
+                }
+                else
+                {
+                    CreateShipment(ord, myLines,graph);
+
+                }
+            }
+
+
+            return;
+        }
+
+        public static void CreateShipment(SOOrder soOrder, List<SOLine> soLines,DispatchPickUp graph)
+        {
+            SOShipmentEntry shipmentEntry = PXGraph.CreateInstance<SOShipmentEntry>();
+
+            var groupbywh = soLines.GroupBy(l => l.SiteID);
+
+            foreach (var soline in groupbywh)
+            {
+                int? value = soline.Key;
+
+                var shipment = (SOShipment)shipmentEntry.Document.Cache.CreateInstance();
+                shipment.CustomerID = soOrder.CustomerID;
+                shipment.SiteID = value;
+                shipmentEntry.Document.Update(shipment);
+
+                AddSOFilter addSOFilter = shipmentEntry.addsofilter.Select();
+                addSOFilter.OrderType = soOrder.OrderType;
+                addSOFilter.OrderNbr = soOrder.OrderNbr;
+                shipmentEntry.addsofilter.Update(addSOFilter);
+
+                foreach (SOShipmentPlan item in shipmentEntry.soshipmentplan.Select())//shipmentEntry.soshipmentplan.Select())
+                {
+                    bool include = false;
+                    foreach (SOLine line in soLines)
+                    {
+                        SOShipmentPlan plan = PXSelectJoin<
+                            SOShipmentPlan,
+                            InnerJoin<SOLineSplit,
+                                On<SOShipmentPlan.planID, Equal<SOLineSplit.planID>>>,
+                            Where<SOLineSplit.orderType, Equal<Required<SOLineSplit.orderType>>,
+                                And<SOLineSplit.orderNbr, Equal<Required<SOLineSplit.orderNbr>>,
+                                And<SOLineSplit.lineNbr, Equal<Required<SOLineSplit.lineNbr>>,
+                                And<SOShipmentPlan.planID, Equal<Required<SOShipmentPlan.planID>>>>>>>
+                            .Select(shipmentEntry, line.OrderType, line.OrderNbr, line.LineNbr, item.PlanID);
+
+                        if (plan != null)
+                        {
+                            include = true;
+                            break;
+                        }
+                    }
+
+                    item.Selected = include;
+                    shipmentEntry.soshipmentplan.Cache.Update(item);
+                }
+                shipmentEntry.addSO.Press();
+                shipmentEntry.Document.Cache.SetValue<SOShipmentExt.usrShippingType>(shipmentEntry.Document.Current, "P");
+                shipmentEntry.Document.Update(shipmentEntry.Document.Current);
+                if (shipmentEntry.Transactions.Select().Count > 0)
+                {
+                    
+                    foreach (SOShipLine line in shipmentEntry.Transactions.Select())
+                    {
+                        INTran tran = PXSelect<
+                            INTran, 
+                            Where<INTran.sOOrderType, Equal<Required<INTran.sOOrderType>>,
+                                And<INTran.sOOrderNbr, Equal<Required<INTran.sOOrderNbr>>,
+                                And<INTran.sOOrderLineNbr, Equal<Required<INTran.sOOrderLineNbr>>>>>>
+                            .Select(graph, line.OrigOrderType, line.OrigOrderNbr, line.OrigLineNbr);
+                                INLocation myLoc = PXSelect<
+                                    INLocation,
+                                    Where<INLocationExt.usrDefaultPickingLocation, Equal<boolTrue>,
+                                        And<Where<INLocation.siteID, Equal<Required<INLocation.siteID>>>>>>
+                                    .Select(graph, line.SiteID);
+                        foreach (SOPLPickListLine picks in graph.DetailsView.Select().RowCast<SOPLPickListLine>().Where(d => d.OrderNbr == line.OrigOrderNbr && d.OrderType == line.OrigOrderType && d.LineNbr == line.OrigLineNbr))
+                        {
+                            var lineExt = PXCache<SOShipLine>.GetExtension<SOShipLineExt>(line);
+                            line.ShippedQty = picks.ClaimQty;
+                            shipmentEntry.Transactions.Update(line);
+                            lineExt.UsrShippingType = picks.ShippingType;
+                            shipmentEntry.Transactions.Update(line);
+                        }
+                        if (tran != null)
+                        {
+                            line.LocationID = myLoc.LocationID;
+                            shipmentEntry.Transactions.Update(line);
+                            List<PLPickListSplit> pickSplits = new List<PLPickListSplit>();
+                            foreach (PLPickListSplit pSplits in PXSelectJoin<
+                                PLPickListSplit,
+                                InnerJoin<PLPickListLine,
+                                    On<PLPickListLine.pickListNbr, Equal<PLPickListSplit.pLPickListNbr>,
+                                    And<PLPickListSplit.pLPickListLine, Equal<PLPickListLine.lineNbr>>>>,
+                                Where<PLPickListLine.sOOrderNbr, Equal<Required<PLPickListLine.sOOrderNbr>>,
+                                    And<PLPickListLine.sOOrderType, Equal<Required<PLPickListLine.sOOrderType>>,
+                                    And<PLPickListLine.sOLineNbr, Equal<Required<PLPickListLine.sOLineNbr>>>>>>
+                                .Select(graph, line.OrigOrderNbr, line.OrigOrderType, line.OrigLineNbr))
+                            {
+                                if (!graph.HasLoadPlanSplit(pSplits))
+                                {
+                                    if (!pickSplits.Contains(pSplits))
+                                    {
+                                        pickSplits.Add(pSplits);
+                                    }
+                                }
+                            }
+                            foreach (PLPickListSplit mySplits in pickSplits)
+                            {
+                                var insertShipmentSplit = shipmentEntry.splits.Insert(new SOShipLineSplit()
+                                {
+                                    InventoryID = line.InventoryID,
+                                    SiteID = line.SiteID,
+                                    LocationID = myLoc.LocationID
+                                });
+                                shipmentEntry.splits.Cache.SetValueExt<SOShipLineSplit.lotSerialNbr>(insertShipmentSplit, mySplits.LotSerialNbr);
+                                shipmentEntry.splits.Update(insertShipmentSplit);
+                            }
+
+                        }
+                        else
+                        {
+                            INItemSite defaultWarehouse = PXSelect<
+                                INItemSite, 
+                                Where<INItemSite.siteID, Equal<Required<INItemSite.siteID>>, 
+                                    And<INItemSite.inventoryID, Equal<Required<INItemSite.inventoryID>>>>>
+                                .Select(graph, line.SiteID, line.InventoryID);
+                            line.LocationID = defaultWarehouse.DfltReceiptLocationID;
+                            shipmentEntry.Transactions.Update(line);
+                        }
+                    }
+                    
+                }
+            }
+            PXRedirectHelper.TryRedirect(shipmentEntry, PXRedirectHelper.WindowMode.NewWindow);
+        }
+
+        public static void CorrectShippingType(List<SOPLPickListLine> list, DispatchPickUp graph)
+        {
+            var soGraph = PXGraph.CreateInstance<SOOrderEntry>();
+            foreach(SOPLPickListLine line in list)
+            {
+                SOLine select = PXSelect<
+                    SOLine,
+                    Where<SOLine.orderType, Equal<Required<SOLine.orderType>>,
+                        And<SOLine.orderNbr, Equal<Required<SOLine.orderNbr>>,
+                        And<SOLine.lineNbr, Equal<Required<SOLine.lineNbr>>>>>>
+                    .Select(graph, line.OrderType, line.OrderNbr, line.LineNbr);
+                if (line.Selected == true)
+                {
+                   
+                    if (select.OpenQty == line.CorrectQty)
+                    {
+                        soGraph.Transactions.Cache.SetValueExt<SOLineExt.usrConfirmShipment>(select, line.ShippingType);
+                        soGraph.Transactions.Update(select);
+                    }else if(select.OpenQty != line.CorrectQty)
+                    {
+                        soGraph.Transactions.Cache.SetValueExt<SOLine.orderQty>(select, select.OrderQty - line.CorrectQty);
+                        soGraph.Transactions.Update(select);
+
+                        var myInsertedLine = soGraph.Transactions.Insert(new SOLine()
+                        {
+                            InventoryID = line.InventoryID,
+                            OrderQty = line.CorrectQty
+                        });
+                        soGraph.Transactions.SetValueExt<SOLineExt.usrConfirmShipment>(myInsertedLine, line.ShippingType);
+                        soGraph.Transactions.Update(myInsertedLine);
+                        
+                    }
+                } 
+            }
+            soGraph.Actions.PressSave();
+
+        }
+
+        private IEnumerable ProcessBtn(PXAdapter adapter, bool all,DispatchPickUp graph)
+        {
+            DetailsView.SetSelected<SOPLPickListLine.selected>();
+            DetailsView.SetProcessDelegate(list => CorrectShippingType(list, graph));
+            foreach (var record in this.Actions[all ? "ProcessAll" : "Process"].Press(adapter))
+                yield return record;
+        }
+        #endregion
+
+        #region Constructor
+
+
+        public DispatchPickUp()
+        {
+            DispatchPickUp graph = this;
+            DetailsView.SetSelected<SOPLPickListLine.selected>();
+            DetailsView.SetProcessDelegate(list => PickUpProcess(list,graph));
+
+        }
+
+        #endregion
+
+        #region Function
+
+        public bool HasLoadPlanSplit(PLPickListSplit pSplits)
+        {
+            SOShipLineSplit lSplit = PXSelect<
+                SOShipLineSplit, 
+                Where<SOShipLineSplit.lotSerialNbr, Equal<Required<SOShipLineSplit.lotSerialNbr>>>>
+                .Select(this, pSplits.LotSerialNbr);
+            if (lSplit != null) return true;
+            return false;
+        }
+
+        #endregion
+
+        #region Actions
+
+
+        public PXAction<SOPLPickListLine> ProcessShippingType;
+        [PXProcessButton()]
+        [PXUIField(DisplayName = "Process")]
+        public virtual IEnumerable processShippingType(PXAdapter adapter)
+        {
+
+            return ProcessBtn(adapter, false,this);
+        }
+
+        public PXAction<SOPLPickListLine> CorrectShipment;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "Correct Shipping Type")]
+        public virtual IEnumerable correctShipment(PXAdapter adapter)
+        {
+
+            if (CorrectShipmentSplit.AskExt() == WebDialogResult.OK)
+            {
+                //ProcessShippingType.Press();
+            }
+            return adapter.Get();
+        }
+
+        #endregion
+
+        #region LinkCommand
+
+        public PXAction<SOPLPickListLine> MySOOrder;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "MySO", Visible = false)]
+        public virtual void mySOOrder()
+        {
+            var graph = PXGraph.CreateInstance<SOOrderEntry>();
+            graph.Document.Current = graph.Document.Search<SOOrder.orderNbr>(this.DetailsView.Current.OrderNbr, this.DetailsView.Current.OrderType);
+            throw new PXRedirectRequiredException(graph, "SOOrder Redirect")
+            {
+                Mode = PXBaseRedirectException.WindowMode.NewWindow
+            };
+        }
+
+        public PXAction<SOPLPickListLine> MySI;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "Invoice", Visible = false)]
+        public virtual void mySI()
+        {
+
+            var graph = PXGraph.CreateInstance<SOInvoiceEntry>();
+            SOPLPickListLine invoiceCurrent = DetailsView.Current;
+            graph.Document.Current = graph.Document.Search<ARInvoice.refNbr>(invoiceCurrent.InvoiceNbr, invoiceCurrent.DocType);
+            throw new PXRedirectRequiredException(graph, "Invoice Redirect")
+            {
+                Mode = PXBaseRedirectException.WindowMode.NewWindow
+            };
+        }
+
+        #endregion
+
+        #region Event
+        protected void SOPLPickListLine_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+            var row = e.Row as SOPLPickListLine;
+            
+            if (row == null) {
+                return; }
+
+            PXUIFieldAttribute.SetEnabled<SOPLPickListLine.correctQty>(sender, row, true);
+            PXUIFieldAttribute.SetEnabled<SOPLPickListLine.shippingType>(sender, row, true);
+            PXUIFieldAttribute.SetEnabled<SOPLPickListLine.selected>(sender, row, true);
+            PXUIFieldAttribute.SetEnabled<SOPLPickListLine.claimQty>(sender, row, true);
+        }
+
+        #endregion
+    }
+}]]></CDATA>
+</Graph>

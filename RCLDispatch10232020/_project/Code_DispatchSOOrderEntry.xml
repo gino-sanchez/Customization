@@ -1,0 +1,180 @@
+﻿<Graph ClassName="DispatchSOOrderEntry" Source="#CDATA" IsNew="True" FileType="NewGraph">
+    <CDATA name="Source"><![CDATA[using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Text;
+using PX.CCProcessingBase;
+using PX.Common;
+using PX.Data;
+using PX.Objects.AP;
+using PX.Objects.AR;
+using PX.Objects.CA;
+using PX.Objects.CM;
+using PX.Objects.CR;
+using PX.Objects.CS;
+using PX.Objects.DR;
+using PX.Objects.EP;
+using PX.Objects.GL;
+using PX.Objects.IN;
+using PX.Objects.PM;
+using PX.Objects.PO;
+using PX.Objects.TX;
+using POLine = PX.Objects.PO.POLine;
+using POOrder = PX.Objects.PO.POOrder;
+using System.Threading.Tasks;
+using PX.CarrierService;
+using CRLocation = PX.Objects.CR.Standalone.Location;
+using PX.Objects.AR.CCPaymentProcessing;
+using PX.Objects.AR.CCPaymentProcessing.Common;
+using PX.Objects.AR.CCPaymentProcessing.Helpers;
+using PX.Objects.AR.CCPaymentProcessing.Interfaces;
+using ARRegisterAlias = PX.Objects.AR.Standalone.ARRegisterAlias;
+using PX.Objects.AR.MigrationMode;
+using PX.Objects.Common;
+using PX.Objects.Common.Discount;
+using PX.Objects.Common.Extensions;
+using PX.Objects.IN.Overrides.INDocumentRelease;
+using PX.CS.Contracts.Interfaces;
+using Message = PX.CarrierService.Message;
+using PX.TaxProvider;
+using PX.Data.DependencyInjection;
+using PX.LicensePolicy;
+using PX.Objects.Extensions.PaymentTransaction;
+using PX.Objects.SO.GraphExtensions.CarrierRates;
+using PX.Objects;
+using PX.Objects.SO;
+using PL;
+using Dispatch;
+namespace PX.Objects.SO
+{
+    public class DispatchSOOrderEntry_Extension : PXGraphExtension<SOOrderEntry>
+    {
+        public override void Initialize()
+        {
+            Base.action.AddMenuAction(DispatchDD);
+        }
+        #region Method
+
+        public void POCreate(List<SOLine> line, SOOrderEntry graph)
+        {
+            var POGraph = PXGraph.CreateInstance<POOrderEntry>();
+            foreach (SOLine lines in line)
+            {
+                var inserted = POGraph.Document.Insert(new POOrder()
+                {
+                    OrderType = POOrderType.DropShip,
+                    
+                });
+                POGraph.Document.Update(inserted);
+                POGraph.Document.Cache.SetValueExt<POOrder.vendorID>(inserted,lines.VendorID);
+                POGraph.CurrentDocument.SetValueExt<POOrder.shipToBAccountID>(inserted, lines.CustomerID);
+                POLine poLine = (POLine)POGraph.Transactions.Cache.CreateInstance();
+                var soLineExt = PXCache<SOLine>.GetExtension<SOLineExt>(lines);
+                var poLineExt = PXCache<POLine>.GetExtension<POLineExt>(poLine);
+                poLineExt.UsrSOOrderNbr = lines.OrderNbr;
+                poLineExt.UsrSOOrderType = lines.OrderType;
+                poLineExt.UsrSOOrderLineNbr = lines.LineNbr;
+                poLineExt.UsrSOShippingType = soLineExt.UsrConfirmShipment;
+                poLine.InventoryID = lines.InventoryID;
+                poLine.OrderQty = lines.OrderQty;
+                poLine.SiteID = lines.SiteID;
+                POGraph.Transactions.Insert(poLine);
+            }
+            POGraph.Actions.PressSave();
+            //throw new PXRedirectRequiredException(POGraph, "P");
+        }
+
+        #endregion
+        #region Event Handlers
+
+        protected void SOLine_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+            var row = e.Row as SOLine;
+            if (row == null) { return; }
+            var rowExt = sender.GetExtension<SOLineExt>(row);
+            if (row.ShipComplete == SOShipComplete.BackOrderAllowed && row.Completed == false)
+            {
+                PXUIFieldAttribute.SetEnabled<SOLineExt.usrConfirmShipment>(sender, row, true);
+            }
+        }
+
+        protected void SOLine_RowInserting(PXCache sender, PXRowInsertingEventArgs e)
+        {
+            var row = e.Row as SOLine;
+            if (row == null) return;
+            sender.SetDefaultExt<SOLineExt.usrShippingStatus>(row);
+        }
+
+        protected void SOLine_UsrShippingStatus_FieldDefaulting(PXCache sender, PXFieldDefaultingEventArgs e)
+        {
+            var row = e.Row as SOLine;
+            if (row == null) return;
+            var rowExt = sender.GetExtension<SOLineExt>(row);
+            if(rowExt != null)
+            {
+                if(rowExt.UsrConfirmShipment == Attrib.CWStore || rowExt.UsrConfirmShipment == Attrib.Pickup || rowExt.UsrConfirmShipment == Attrib.DirectDelivery)
+                {
+                    e.NewValue = ShippingStatus.Pending;
+                }
+                else
+                {
+                    e.NewValue = null;
+                }
+            }
+        }
+
+        #endregion
+
+        #region Actions
+
+        public PXAction<SOOrder> DispatchDD;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "Dispatch Direct Delivery")]
+        public IEnumerable dispatchDD (PXAdapter adapter)
+        {
+            
+            List<SOLine> soLists = new List<SOLine>();
+            foreach (SOLine lines in Base.Transactions.Select().RowCast<SOLine>().Where(d => d.OrderNbr == Base.Document.Current.OrderNbr && d.OrderType == Base.Document.Current.OrderType))
+            {
+                var select = PXSelect<POLine, Where<POLineExt.usrSOOrderType,Equal<Required<POLineExt.usrSOOrderType>>,And<POLineExt.usrSOOrderNbr,Equal<Required<POLineExt.usrSOOrderNbr>>,
+                    And<POLineExt.usrSOOrderLineNbr,Equal<Required<POLineExt.usrSOOrderLineNbr>>>>>>.Select(Base,lines.OrderType,lines.OrderNbr,lines.LineNbr);
+                   SOLineExt linesExt = PXCache<SOLine>.GetExtension<SOLineExt>(lines);
+                if (select.Count() > 0) { throw new PXException("Order # {0} line {1} item ID {2} is already created for P.O", lines.OrderNbr, lines.LineNbr, lines.InventoryID); }
+                else {
+                    if (linesExt.UsrConfirmShipment == Attrib.DirectDelivery)
+                    {
+                        if (lines.VendorID == null)
+                        {
+                            throw new PXException("SO # {0} inventory ID {1} Vendor is Empty", lines.OrderNbr, lines.InventoryID);
+                        }
+                        else if (!soLists.Contains(lines))
+                        {
+                            soLists.Add(lines);
+                        }
+                    }
+                }             
+            }
+            using (PXTransactionScope scp = new PXTransactionScope())
+            {
+                try
+                {
+                    PXLongOperation.StartOperation(Base, delegate () { 
+                    POCreate(soLists,Base);
+                    scp.Complete();
+                    });
+                }
+                catch (Exception ex)
+                {
+                    throw new PXException(ex.Message);
+                }
+            }
+                
+            return adapter.Get();
+        }
+
+        #endregion
+    }
+}]]></CDATA>
+</Graph>

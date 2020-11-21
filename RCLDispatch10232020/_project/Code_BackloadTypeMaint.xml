@@ -1,0 +1,28 @@
+﻿<Graph ClassName="BackloadTypeMaint" Source="#CDATA" IsNew="True" FileType="NewGraph">
+    <CDATA name="Source"><![CDATA[using System;
+using PX.Data;
+
+namespace Dispatch
+{
+  public class BackloadTypeMaint : PXGraph<BackloadTypeMaint>
+  {
+
+    public PXSave<BackloadType> Save;
+    public PXCancel<BackloadType> Cancel;
+    public PXSelect<BackloadType> BackloadTypes;
+
+        #region Events
+        protected void BackloadType_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+            var row = e.Row as BackloadType;
+            if (row == null) return;
+            PXUIFieldAttribute.SetEnabled<BackloadType.damage>(sender, row, row.BackloadReturn  == true && row.Goods != true);
+            PXUIFieldAttribute.SetEnabled<BackloadType.goods>(sender, row, row.BackloadReturn  == true && row.Damage != true);
+        }
+
+
+
+        #endregion
+    }
+}]]></CDATA>
+</Graph>

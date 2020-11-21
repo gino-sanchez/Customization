@@ -1,0 +1,15 @@
+﻿<Graph ClassName="GenericInquiryDesigner" Source="#CDATA" IsNew="True" FileType="ExistingGraph">
+    <CDATA name="Source"><![CDATA[using System;
+using PX.Objects;
+using PX.Data;
+
+namespace PX.Data.Maintenance.GI
+{
+	public class GenericInquiryDesigner_Extension : PXGraphExtension<GenericInquiryDesigner>
+	{
+		#region Event Handlers
+
+		#endregion
+	}
+}]]></CDATA>
+</Graph>

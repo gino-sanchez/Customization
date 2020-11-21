@@ -1,0 +1,602 @@
+﻿<Graph ClassName="PLPickListProcess" Source="#CDATA" IsNew="True" FileType="NewGraph">
+    <CDATA name="Source"><![CDATA[using PX.Data;
+using PX.Objects.AR;
+using PX.Objects.SO;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using PX.Objects.EP;
+using PX.Objects.IN;
+using PX.Objects.CS;
+using PX.Objects.AP;
+using Dispatch;
+using System.Linq;
+using DispatchSetup;
+using PX.Objects.GL;
+using PX.Objects.CR;
+using DispatchExtension;
+namespace PL
+{   
+    #region StringList
+    public abstract class Attrib : IBqlField
+    {
+        public class ListAttribute : PXStringListAttribute
+        {
+            public ListAttribute()
+                : base(
+                new string[] { CWStore, Pickup, DirectDelivery },
+                new string[] { "CW Store Delivery", "Pick-up", "Direct Delivery" })
+            { }
+        }
+
+        public const string CWStore = "S";
+        public const string Pickup = "P";
+        public const string DirectDelivery = "D";
+
+        public class directDelivery : Constant<string>
+        {
+            public directDelivery() : base(DirectDelivery) { }
+        }
+            
+        public class cwStore : Constant<string>
+        {
+            public cwStore() : base(CWStore) { }
+        }
+
+        public class pickup : Constant<string>
+        {
+            public pickup() : base(Pickup) { }
+        }
+    }
+    #endregion
+
+    #region Graph
+    public class PLPickListProcess : PXGraph<PLPickListProcess>
+    {        
+        #region PXSelects
+
+        public PXCancel<SOLineFilter> Cancel;
+
+        public PXSetup<DispatchNumberingSetup> DispatchSetup;
+        public PXFilter<SOLineFilter> LineFilter;
+        public PXSelect<SOOrderType> OrderTypeCurrent;
+        
+        [PXFilterable()]
+        public PXFilteredProcessingJoin<
+            SOLine,SOLineFilter,
+            LeftJoin<ARTran,
+                On<ARTran.sOOrderNbr,Equal<SOLine.orderNbr>,
+                And<ARTran.sOOrderType,Equal<SOLine.orderNbr>>>,
+            LeftJoin<ARInvoice,
+                On<ARInvoice.refNbr,Equal<ARTran.refNbr>,
+                And<ARInvoice.docType,Equal<ARTran.tranType>>>,
+            LeftJoin<SOOrder,
+                On<SOOrder.orderNbr,Equal<SOLine.orderNbr>,
+                And<SOOrder.orderType,Equal<SOOrder.orderType>>>>>>> 
+            SOOrders;
+
+
+        #endregion
+        #region IEnumerable
+        protected virtual IEnumerable sOOrders()
+        {
+
+            SOLineFilter filter = LineFilter.Current;
+            var disp = DispatchSetup.Current;
+            
+            #region BaseQuery
+                PXSelectBase<SOLine> query = new PXSelectJoinGroupBy<SOLine,
+               LeftJoin<SOOrder, On<SOOrder.orderNbr, Equal<SOLine.orderNbr>, And<SOOrder.orderType, Equal<SOLine.orderType>>>,
+               LeftJoin<ARTran, On<ARTran.sOOrderNbr, Equal<SOLine.orderNbr>, And<ARTran.sOOrderType, Equal<SOLine.orderType>, And<ARTran.sOOrderLineNbr, Equal<SOLine.lineNbr>>>>,
+               LeftJoin<ARInvoice, On<ARInvoice.refNbr, Equal<ARTran.refNbr>, And<ARInvoice.docType, Equal<ARTran.tranType>>>,
+               LeftJoin<SOOrderType, On<SOOrderType.orderType, Equal<SOOrder.orderType>>>>>>,
+                                       Where2<
+                                           Where<SOOrder.status, Equal<SOOrderStatus.open>,
+                                               Or<SOOrder.status, Equal<SOOrderStatus.backOrder>>>,
+                                           And2<
+                                               Where<SOLine.openQty, Greater<decimal0>,
+                                                   And<SOLineExt.usrAvailPickQty, Greater<decimal0>,
+                                                   And<SOLineExt.usrShippingStatus,Equal<ShippingStatus.forPicking>>>>,
+                                               And<
+                                               Where<SOLineExt.usrConfirmShipment, NotEqual<Attrib.directDelivery>,
+                                                   And<Where<SOOrderTypeExt.usrDispatch, Equal<True>,
+                                                       And<Where<SOLineExt.usrForeCastDate,IsNotNull>>>>>>>>,Aggregate<GroupBy<SOLine.orderNbr,GroupBy<SOLine.orderType,GroupBy<SOLine.lineNbr>>>>>(this);
+
+            #region Filter
+            if (filter.RequestedDateFrom != null && filter.RequestedDateTo != null)
+            {
+                query
+                    .WhereAnd<
+                    Where<SOLine.requestDate, Between<Current<SOLineFilter.requestedDateFrom>, Current<SOLineFilter.requestedDateTo>>>>();
+            }
+
+                if (filter.DateFrom != null && filter.DateTo != null)
+                {
+                    query
+                        .WhereAnd<
+                        Where<SOLine.orderDate, Between<Current<SOLineFilter.dateFrom>, Current<SOLineFilter.dateTo>>
+                           >>();
+
+                }
+                else if (filter.DateFrom != null)
+                {
+                    query
+                        .WhereAnd<
+                        Where<SOLine.orderDate, Equal<Current<SOLineFilter.dateFrom>>
+                           >>();
+
+                }
+
+                if (filter.SalesEmployee != null)
+                {
+                    query
+                        .WhereAnd<
+                        Where<SOLine.salesPersonID, Equal<Current<SOLineFilter.salesEmployee>>>>();
+                }
+
+                if (filter.CustomerID != null)
+                {
+                    query
+                        .WhereAnd<
+                        Where<SOLine.customerID, Equal<Current<SOLineFilter.customerID>>>>();
+                }
+                if(filter.CustomerLocationID != null)
+                {
+                    query.WhereAnd<Where<SOOrder.customerLocationID, Equal<Current<SOLineFilter.customerLocationID>>>>();
+                }
+                if (filter.OrderNbr != null)
+                {
+                    query
+                        .WhereAnd<
+                        Where<SOLine.orderNbr, Equal<Current<SOLineFilter.orderNbr>>>>();
+                }
+                if (filter.Vendor != null)
+                {
+                    query
+                        .WhereAnd<
+                        Where<SOLine.vendorID, Equal<Current<SOLineFilter.vendor>>>>();
+                }
+                if (filter.Status != null)
+                {
+                    query.WhereAnd<Where<SOLineExt.usrConfirmShipment, Equal<Current<SOLineFilter.status>>>>();
+                }
+
+                if(filter.SiteID != null)
+                {
+                    query.WhereAnd<Where<SOLine.siteID,Equal<Current<SOLineFilter.siteID>>>>();
+                }
+                if(filter.BranchID != null)
+                {
+                    query.WhereAnd<Where<SOLine.branchID, Equal<Current<SOLineFilter.branchID>>>>();
+                }
+                if(filter.myInvoice != null)
+                {
+                    query.WhereAnd<Where<ARInvoice.refNbr, Equal<Current<SOLineFilter.MyInvoice>>>>();
+                }
+                
+                foreach(PXResult<SOLine,SOOrder,ARTran,ARInvoice,SOOrderType> orders in query.Select())
+                {
+                    
+                    var orderItems = orders.GetItem<SOLine>();
+                    foreach(SOLine cacheRecord in Caches[typeof(SOLine)].Cached)
+                    {
+                        if(cacheRecord.OrderType == orderItems.OrderType && cacheRecord.OrderNbr == orderItems.OrderNbr && cacheRecord.LineNbr == orderItems.LineNbr)
+                        {
+                            SOLineExt recordExt = PXCache<SOLine>.GetExtension<SOLineExt>(cacheRecord);
+                            SOOrders.Cache.SetValueExt<SOLineExt.usrSelected>(orders, recordExt.UsrSelected);
+                        }
+                    }
+                yield return orders;
+                }
+        #endregion
+        #endregion
+    }
+        #endregion  
+
+        #region  Constructor
+        public PLPickListProcess()
+        {
+            PLPickListProcess graph = null;
+            DispatchNumberingSetup setup = DispatchSetup.Current;
+            SOOrders.SetSelected<SOLineExt.usrSelected>();
+            SOOrders.SetProcessDelegate((List<SOLine> line) =>
+            {
+                graph = PXGraph.CreateInstance<PLPickListProcess>();
+                PickItems(line,setup,graph);
+            });
+
+        }
+        #endregion
+        
+        #region Methods
+        public static void PickItems(List<SOLine> myLine, DispatchNumberingSetup setup,PLPickListProcess thisGraph) 
+        {
+            PLPickListEntry graph = PXGraph.CreateInstance<PLPickListEntry>();
+            bool hasError = false;
+            if (setup.RequireInvPay == true)
+            {
+                
+                foreach (SOLine lines in myLine)
+                {
+                    ARTran select = PXSelectJoin<
+                        ARTran,
+                        InnerJoin<ARInvoice,
+                            On<ARInvoice.docType,Equal<ARTran.tranType>,
+                            And<ARTran.refNbr,Equal<ARInvoice.refNbr>>>>,
+                        Where<ARTran.sOOrderType,Equal<Required<ARTran.sOOrderType>>,
+                        And<ARTran.sOOrderNbr,Equal<Required<ARTran.sOOrderNbr>>,And<ARTran.sOOrderLineNbr,Equal<Required<ARTran.sOOrderLineNbr>>,And<Where<ARInvoice.status,Equal<ARDocStatus.closed>>>>>>>
+                        .Select(thisGraph, lines.OrderType, lines.OrderNbr, lines.LineNbr);
+                    {
+                        if(select == null)
+                        {
+                            hasError = true;
+                            PXProcessing.SetError<SOLine>(myLine.IndexOf(lines), "Order Nbr "+ lines.OrderNbr +" needs to be settled on Payments" );
+                        }
+                    }
+                }
+            }
+            if (hasError)
+            {
+                throw new PXException("There are orders that needs to be settled on Payments and Application");
+            }
+            
+                foreach (SOLine order in myLine)
+                {
+                    var picklist = graph.PickLists.Insert(new PLPickList()
+                    {
+                    });
+                    foreach (PXResult<SOLine> line in PXSelectJoin<
+                        SOLine,
+                        LeftJoin<InventoryItem,
+                            On<InventoryItem.inventoryID, Equal<SOLine.inventoryID>>>,
+                        Where<SOLine.orderType, Equal<Required<SOLine.orderType>>,
+                            And<SOLine.orderNbr, Equal<Required<SOLine.orderNbr>>,
+                            And<SOLine.lineNbr,Equal<Required<SOLine.lineNbr>>,
+                            And<Where<SOLine.openQty, Greater<decimal0>,
+                                        And<Where<SOLineExt.usrAvailPickQty, Greater<decimal0>,
+                                            And<SOLineExt.usrConfirmShipment, IsNotNull>>>>>>>>>
+                        .Select(graph, order.OrderType, order.OrderNbr,order.LineNbr))// from order insert the lines to Picklist.
+                    {
+                        SOLine lineItem = line.GetItem<SOLine>();
+                        SOLineExt solineExt = PXCache<SOLine>.GetExtension<SOLineExt>(lineItem);
+                        InventoryItem defltReceipt = PXSelect<InventoryItem,Where<InventoryItem.inventoryID,Equal<Required<InventoryItem.inventoryID>>>>.Select(thisGraph,lineItem.InventoryID);
+                    var pickListLines = graph.PickListLines.Insert(new PLPickListLine()
+                    {
+                        SOOrderType = lineItem.OrderType,
+                        SOOrderNbr = lineItem.OrderNbr,
+                        SOLineNbr = lineItem.LineNbr,
+                        PickOpenQty = solineExt.UsrPickListOpenQty,
+                        Quantity = lineItem.OrderQty,
+                        Vendor = lineItem.VendorID,
+                        InventoryID = lineItem.InventoryID,
+                        SiteID = lineItem.SiteID,
+                        SOLocationID = lineItem.LocationID,
+                        UOM = lineItem.UOM
+                    });
+                        graph.AddPickContent(pickListLines, lineItem, 0m);
+                    }
+                }
+                PXRedirectHelper.TryRedirect(graph, PXRedirectHelper.WindowMode.Same);
+            
+        }
+        #endregion
+
+        #region DAC
+        public class SOLineFilter : IBqlTable
+        {
+            #region CustomerID
+            [PXInt()]
+            [PXUIField(DisplayName = "Customer Name")]
+            [PXSelector(typeof(Search5<Customer.bAccountID,
+                InnerJoin<SOOrder,On<SOOrder.customerID,Equal<Customer.bAccountID>>,
+                InnerJoin<SOLine,On<SOLine.orderType,Equal<SOOrder.orderType>,And<SOLine.orderNbr,Equal<SOOrder.orderNbr>>>,
+                LeftJoin<ARTran,On<ARTran.sOOrderType,Equal<SOLine.orderType>,And<ARTran.sOOrderNbr,Equal<SOLine.orderNbr>,And<ARTran.sOOrderLineNbr,Equal<SOLine.lineNbr>>>>,
+                LeftJoin<ARInvoice,On<ARInvoice.docType,Equal<ARTran.tranType>,And<ARInvoice.refNbr,Equal<ARTran.refNbr>>>,
+                InnerJoin<SOOrderType,On<SOOrderType.orderType,Equal<SOOrder.orderType>>>>>>>,
+               Where2<
+                    Where<SOOrder.status, Equal<SOOrderStatus.open>,
+                    Or<SOOrder.status, Equal<SOOrderStatus.backOrder>>>,
+                     And2<
+                        Where<SOLine.openQty, Greater<decimal0>,
+                        And<SOLineExt.usrAvailPickQty, Greater<decimal0>,
+                        And<SOLineExt.usrShippingStatus, Equal<ShippingStatus.forPicking>>>>,
+                        And<SOLineExt.usrConfirmShipment, NotEqual<Attrib.directDelivery>,
+                        And<SOOrderTypeExt.usrDispatch, Equal<True>,
+                        And2<Where<SOLineExt.usrForeCastDate, IsNotNull>,
+                        And2<Where<SOOrder.requestDate, GreaterEqual<Current<SOLineFilter.requestedDateFrom>>, Or<Current<SOLineFilter.requestedDateFrom>, IsNull>>,
+                        And2<Where<SOOrder.requestDate, LessEqual<Current<SOLineFilter.requestedDateTo>>, Or<Current<SOLineFilter.requestedDateTo>, IsNull>>,
+                        And2<Where<SOOrder.orderDate, GreaterEqual<Current<SOLineFilter.dateFrom>>, Or<Current<SOLineFilter.dateFrom>, IsNull>>,
+                        And2<Where<SOOrder.orderDate, LessEqual<Current<SOLineFilter.dateTo>>, Or<Current<SOLineFilter.dateTo>, IsNull>>,
+                        And2<Where<ARInvoice.refNbr, Equal<Current<SOLineFilter.MyInvoice>>, Or<Current<SOLineFilter.MyInvoice>, IsNull>>,
+                        And2<Where<SOLineExt.usrConfirmShipment, Equal<Current<SOLineFilter.status>>, Or<Current<SOLineFilter.status>, IsNull>>,
+                        And2<Where<SOLine.salesPersonID, Equal<Current<SOLineFilter.salesEmployee>>, Or<Current<SOLineFilter.salesEmployee>, IsNull>>,
+                        And2<Where<SOLine.vendorID, Equal<Current<SOLineFilter.vendor>>, Or<Current<SOLineFilter.vendor>, IsNull>>,
+                        And2<Where<SOLine.siteID, Equal<Current<SOLineFilter.siteID>>, Or<Current<SOLineFilter.siteID>, IsNull>>,
+                        And<Where<SOLine.branchID, Equal<Current<SOLineFilter.branchID>>, Or<Current<SOLineFilter.branchID>, IsNull>>>>>>>>>>>>>>>>>,
+                Aggregate<GroupBy<Customer.bAccountID>>>),typeof(Customer.acctCD),typeof(Customer.acctName),SubstituteKey = typeof(Customer.acctCD),DescriptionField = typeof(Customer.acctName))]
+            public virtual int? CustomerID { get; set; }
+            public abstract class customerID : IBqlField { }
+            #endregion // 4
+            #region OrderNbr
+            [PXString(15)]
+            [PXUIField(DisplayName = "SO Order No.")]
+            [PXSelector(typeof(Search5<
+                SOOrder.orderNbr,
+                LeftJoin<SOLine, 
+                    On<SOLine.orderNbr, Equal<SOOrder.orderNbr>, 
+                    And<SOLine.orderType, Equal<SOOrder.orderType>>>,
+                LeftJoin<ARTran, 
+                    On<ARTran.sOOrderNbr, Equal<SOOrder.orderNbr>, 
+                    And<ARTran.sOOrderType, Equal<SOOrder.orderType>>>,
+                LeftJoin<ARInvoice, 
+                    On<ARInvoice.refNbr, Equal<ARTran.refNbr>, 
+                    And<ARInvoice.docType, Equal<ARTran.tranType>>>,
+                LeftJoin<SOOrderType,
+                    On<SOOrderType.orderType,Equal<SOOrder.orderType>>>>>>,
+                Where2<
+                    Where<SOOrder.status, Equal<SOOrderStatus.open>,
+                    Or<SOOrder.status, Equal<SOOrderStatus.backOrder>>>,
+                     And2<
+                        Where<SOLine.openQty, Greater<decimal0>,
+                        And<SOLineExt.usrAvailPickQty, Greater<decimal0>,
+                        And<SOLineExt.usrShippingStatus, Equal<ShippingStatus.forPicking>>>>,
+                        And<SOLineExt.usrConfirmShipment, NotEqual<Attrib.directDelivery>,
+                        And<SOOrderTypeExt.usrDispatch, Equal<True>,
+                        And2<Where<SOLineExt.usrForeCastDate, IsNotNull>,
+                        And2<Where<SOOrder.requestDate, GreaterEqual<Current<SOLineFilter.requestedDateFrom>>, Or<Current<SOLineFilter.requestedDateFrom>, IsNull>>,
+                        And2<Where<SOOrder.requestDate, LessEqual<Current<SOLineFilter.requestedDateTo>>, Or<Current<SOLineFilter.requestedDateTo>, IsNull>>,
+                        And2<Where<SOOrder.orderDate, GreaterEqual<Current<SOLineFilter.dateFrom>>, Or<Current<SOLineFilter.dateFrom>, IsNull>>,
+                        And2<Where<SOOrder.orderDate, LessEqual<Current<SOLineFilter.dateTo>>, Or<Current<SOLineFilter.dateTo>, IsNull>>,
+                        And2<Where<ARInvoice.refNbr, Equal<Current<SOLineFilter.MyInvoice>>, Or<Current<SOLineFilter.MyInvoice>, IsNull>>,
+                        And2<Where<SOOrder.customerID, Equal<Current<SOLineFilter.customerID>>, Or<Current<SOLineFilter.customerID>, IsNull>>,
+                        And2<Where<SOLineExt.usrConfirmShipment, Equal<Current<SOLineFilter.status>>, Or<Current<SOLineFilter.status>, IsNull>>,
+                        And2<Where<SOLine.salesPersonID, Equal<Current<SOLineFilter.salesEmployee>>, Or<Current<SOLineFilter.salesEmployee>, IsNull>>,
+                        And2<Where<SOLine.vendorID, Equal<Current<SOLineFilter.vendor>>, Or<Current<SOLineFilter.vendor>, IsNull>>,
+                        And2<Where<SOLine.siteID, Equal<Current<SOLineFilter.siteID>>, Or<Current<SOLineFilter.siteID>, IsNull>>,
+                        And<Where<SOLine.branchID, Equal<Current<SOLineFilter.branchID>>, Or<Current<SOLineFilter.branchID>, IsNull>>>>>>>>>>>>>>>>>>,
+                Aggregate<
+                    GroupBy<SOOrder.orderType,
+                    GroupBy<SOOrder.orderNbr>>>>),
+                typeof(SOOrder.orderNbr),typeof(SOOrder.orderType),typeof(SOOrder.customerID_Customer_acctName))]
+            public virtual string OrderNbr { get; set; }
+            public abstract class orderNbr : IBqlField { }
+            #endregion  // 3
+
+            #region Range_Date
+            #region DateFromRequestedOn
+            [PXDate]
+            [PXUIField(DisplayName = "SO Requested On Date From")]
+            public virtual DateTime? RequestedDateFrom { get; set; }
+            public abstract class requestedDateFrom : IBqlField { }
+            #endregion
+
+            #region DateToRequestedOn
+            [PXDate]
+            [PXUIField(DisplayName = "SO Requested On Date To")]
+            public virtual DateTime? RequestedDateTo { get; set; }
+            public abstract class requestedDateTo : IBqlField { }
+            #endregion
+
+            #region DateFrom
+            [PXDate]
+            [PXUIField(DisplayName = "SO Date From")]
+            public virtual DateTime? DateFrom { get; set; }
+            public abstract class dateFrom : IBqlField { }
+            #endregion
+
+            #region DateTo
+            [PXDate]
+            [PXUIField(DisplayName = "SO Date To")]
+            public virtual DateTime? DateTo { get; set; }
+            public abstract class dateTo : IBqlField { }
+            #endregion
+
+
+            #endregion // 1
+
+            #region Invoice
+            [PXString]
+            [PXUIField(DisplayName = "Invoice No.")]
+            [PXSelector(typeof(Search5<
+                ARInvoice.refNbr,
+                LeftJoin<ARTran,
+                    On<ARTran.refNbr,Equal<ARInvoice.refNbr>,
+                    And<ARTran.tranType,Equal<ARInvoice.docType>>>,
+                LeftJoin<SOOrder,
+                    On<SOOrder.orderNbr,Equal<ARTran.sOOrderNbr>,
+                    And<SOOrder.orderType,Equal<ARTran.sOOrderType>>>,
+                LeftJoin<SOLine,
+                    On<SOLine.orderNbr,Equal<SOOrder.orderNbr>,
+                    And<SOLine.orderType,Equal<SOOrder.orderType>>>,
+                LeftJoin<SOOrderType,
+                    On<SOOrderType.orderType,Equal<SOLine.orderType>>>>>>,
+                Where2<
+                    Where<SOOrder.status, Equal<SOOrderStatus.open>,
+                    Or<SOOrder.status, Equal<SOOrderStatus.backOrder>>>,
+                     And2<
+                        Where<SOLine.openQty, Greater<decimal0>,
+                        And<SOLineExt.usrAvailPickQty, Greater<decimal0>,
+                        And<SOLineExt.usrShippingStatus, Equal<ShippingStatus.forPicking>>>>,
+                        And<SOLineExt.usrConfirmShipment, NotEqual<Attrib.directDelivery>,
+                        And<SOOrderTypeExt.usrDispatch, Equal<True>,
+                        And2<Where<SOLineExt.usrForeCastDate, IsNotNull>,
+                        And2<Where<SOOrder.requestDate, GreaterEqual<Current<SOLineFilter.requestedDateFrom>>, Or<Current<SOLineFilter.requestedDateFrom>, IsNull>>,
+                        And2<Where<SOOrder.requestDate, LessEqual<Current<SOLineFilter.requestedDateTo>>, Or<Current<SOLineFilter.requestedDateTo>, IsNull>>,
+                        And2<Where<SOOrder.orderDate, GreaterEqual<Current<SOLineFilter.dateFrom>>, Or<Current<SOLineFilter.dateFrom>, IsNull>>,
+                        And2<Where<SOOrder.orderDate, LessEqual<Current<SOLineFilter.dateTo>>, Or<Current<SOLineFilter.dateTo>, IsNull>>,
+                        And2<Where<SOOrder.customerID, Equal<Current<SOLineFilter.customerID>>, Or<Current<SOLineFilter.customerID>, IsNull>>,
+                        And2<Where<SOLineExt.usrConfirmShipment, Equal<Current<SOLineFilter.status>>, Or<Current<SOLineFilter.status>, IsNull>>,
+                        And2<Where<SOLine.salesPersonID, Equal<Current<SOLineFilter.salesEmployee>>, Or<Current<SOLineFilter.salesEmployee>, IsNull>>,
+                        And2<Where<SOLine.vendorID, Equal<Current<SOLineFilter.vendor>>, Or<Current<SOLineFilter.vendor>, IsNull>>,
+                        And2<Where<SOLine.siteID, Equal<Current<SOLineFilter.siteID>>, Or<Current<SOLineFilter.siteID>, IsNull>>,
+                        And<Where<SOLine.branchID, Equal<Current<SOLineFilter.branchID>>, Or<Current<SOLineFilter.branchID>, IsNull>>>>>>>>>>>>>>>>>, 
+                Aggregate<
+                    GroupBy<ARInvoice.refNbr>>>)
+                ,typeof(ARInvoice.refNbr),typeof(ARInvoice.docType))]
+            public virtual string myInvoice { get; set; }
+            public abstract class MyInvoice : IBqlField { }
+            #endregion // 2
+
+            #region Shipping Type
+            [PXString(10)]
+            [PXUIField(DisplayName = "Shipping Type")]
+            [PXDefault(PersistingCheck = PXPersistingCheck.Nothing)]
+            [DispatchAttrib.List]
+            public virtual string Status { get; set; }
+            public abstract class status :IBqlField { }
+            #endregion
+
+            #region Sales Employee
+            [SalesPerson(DisplayName = "Sales Employee")]
+          
+            public virtual int? SalesEmployee { get; set; }
+            public abstract class salesEmployee : IBqlField { }
+            #endregion
+
+            #region Vendor
+
+            [PXInt]
+            [PXUIField(DisplayName ="Vendor Name")]
+            [PXSelector(typeof(Search<Vendor.bAccountID>),typeof(Vendor.bAccountID),typeof(Vendor.acctCD),typeof(Vendor.acctName),SubstituteKey = typeof(Vendor.acctName))]
+            public virtual int? Vendor { get; set; }
+            public abstract class vendor : IBqlField { }
+            #endregion
+
+            #region ErrorCount
+
+            public abstract class errorCount : IBqlField { }
+            [PXString()]
+            [PXUIField(DisplayName = "ErrorCount")]
+            public virtual string ErrorCount { get; set; }
+
+            #endregion
+
+            #region Warehouse
+            public abstract class siteID : IBqlField { }
+            [Site(DisplayName = "Warehouse",DescriptionField = typeof(INSite.descr))]
+            public virtual int? SiteID { get; set; }
+            #endregion
+
+            #region BranchID
+            public abstract class branchID : IBqlField { }
+            [Branch(DisplayName = "Branch Name",DescriptionField = typeof(Branch.acctName))]
+            public virtual int? BranchID { get; set; }
+            #endregion
+
+            #region CustomerLocation
+
+            public abstract class customerLocationID : PX.Data.BQL.BqlInt.Field<customerLocationID> { }
+            [PXInt()]
+            [PXUIField(DisplayName = "Customer Location")]
+            [PXSelector(typeof(Search<Location.locationID,Where<Location.bAccountID,Equal<Current<SOLineFilter.customerID>>>>),SubstituteKey = typeof(Location.locationCD),DescriptionField = typeof(Location.descr))]
+            public virtual int? CustomerLocationID { get; set; }
+
+            #endregion
+
+        }
+        #endregion
+
+        #region EventHandler
+
+        public virtual void SOLineFilter_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+            SOLineFilter row = (SOLineFilter)e.Row;
+
+            if (row == null) return;
+
+            if (row.DateFrom == null)
+            {
+                //row.DateTo = null;
+                sender.SetValue<SOLineFilter.dateTo>(row, null);
+            }
+
+            if (row.RequestedDateFrom == null)
+            {
+                sender.SetValue<SOLineFilter.requestedDateTo>(row, null);
+            }
+        }
+
+        public virtual void SOLineFilter_RowUpdated(PXCache sender, PXRowUpdatedEventArgs e)
+        {
+            var row =  e.Row as SOLineFilter;
+            var rowOld = e.OldRow as SOLineFilter;
+            if (row == null) return;
+            if (row.RequestedDateFrom != null && row.RequestedDateTo != null)
+            {
+                if (SOOrders.Select().Count == 0)
+                {
+                    if (LineFilter.Ask("Information", "No Records Found", MessageButtons.OK,MessageIcon.Information) == WebDialogResult.OK)
+                    {
+                        return;
+                    }
+                }
+            }
+        }
+
+        public virtual void SOLine_RowSelected(PXCache cache, PXRowSelectedEventArgs e)
+        {
+            var row = (SOLine)e.Row;
+            if (row == null) return;
+
+            PXUIFieldAttribute.SetEnabled<SOLine.locationID>(cache, null, true);
+        }
+
+        #endregion
+        #region CacheAttached
+        [PXMergeAttributes(Method = MergeMethod.Append)]
+        [PXUIField(DisplayName = "Order Qty")]
+        protected virtual void SOLine_OrderQty_CacheAttached(PXCache cache) { }
+        [PXMergeAttributes(Method = MergeMethod.Append)]
+        [PXUIField(DisplayName = "Customer ID")]
+        protected virtual void SOLine_CustomerID_CacheAttached(PXCache cache) { }
+        [PXMergeAttributes(Method = MergeMethod.Append)]
+        [PXUIField(DisplayName = "Vendor ID")]
+        protected virtual void SOLine_VendorID_CacheAttached(PXCache cache) { }
+
+        #endregion
+        #region LinkCommand
+
+        public PXAction<SOOrder> MyInvoice;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "myInvoice",Visible = false)]
+        public virtual void myInvoice()
+        {
+            var graph = PXGraph.CreateInstance<SOInvoiceEntry>();
+           
+                ARTran mySelect = PXSelect<
+                    ARTran,
+                    Where
+                    <ARTran.sOOrderNbr, Equal<Required<ARTran.sOOrderNbr>>,
+                        And<Where<ARTran.sOOrderType, Equal<Required<ARTran.sOOrderType>>,
+                            And<Where<ARTran.sOOrderLineNbr, Equal<Required<ARTran.sOOrderLineNbr>>>>>>>>
+                    .Select(this, SOOrders.Current.OrderNbr, SOOrders.Current.OrderType,SOOrders.Current.LineNbr);
+                graph.Document.Current = graph.Document.Search<ARInvoice.refNbr>(mySelect.RefNbr, mySelect.TranType);
+                throw new PXRedirectRequiredException(graph, "Invoice Redirect")
+                {
+                    Mode = PXBaseRedirectException.WindowMode.NewWindow
+                };
+        }
+
+        public PXAction<SOOrder> MySOLink;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "SO")]
+        public virtual void mySOLink()
+        {
+            SOOrderEntry graph = PXGraph.CreateInstance<SOOrderEntry>();
+            SOLine lplineCurrent = SOOrders.Current;
+
+            graph.Document.Current = graph.Document.Search<SOOrder.orderNbr>(lplineCurrent.OrderNbr, lplineCurrent.OrderType);
+
+            throw new PXRedirectRequiredException(graph, "SOOrder Redirect")
+            {
+                Mode = PXBaseRedirectException.WindowMode.NewWindow
+            };
+        }
+
+        #endregion
+
+
+    }
+    #endregion
+}]]></CDATA>
+</Graph>

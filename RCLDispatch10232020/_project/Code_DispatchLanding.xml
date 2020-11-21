@@ -1,0 +1,1161 @@
+﻿<Graph ClassName="DispatchLanding" Source="#CDATA" IsNew="True" FileType="NewGraph">
+    <CDATA name="Source"><![CDATA[using System;
+using PX.Data;
+using PX.Objects.AR;
+using PX.Objects.CS;
+using PX.Objects.IN;
+using PX.Objects.SO;
+using PL;
+using static PX.Objects.FS.SharedClasses;
+using PX.Objects.Common;
+using PX.Objects.Common.Bql;
+using PX.Objects.CR;
+using PX.Objects.PO;
+using System.Collections.Generic;
+using System.Collections;
+using System.Linq;
+using PX.Objects.AP;
+using PX.Objects.PO;
+using PX.Objects.EP;
+using PX.Objects.CR;
+using DispatchExtension;
+
+namespace Dispatch
+{
+    #region ShippingStatus
+
+    public abstract class ShippingStatus : IBqlField
+    {
+        public class ListAttribute : PXStringListAttribute
+        {
+            public ListAttribute() : base(
+                new string[] { Pending,Picked,  Delivered, Shipping,ForServiceCall, CustomerAdvise, StockArrival,Transfer, Reroute, PO,CustomerClaimed,PartialCustomerClaimed, PartialDelivered,ForPicking,PickReleased },
+                new string[] { "Pending","Picked",  "Delivered", "Shipping", "For Service Call", "Call - Customer Advise", "Call - Stock Arrival","Request - Transfer", "Request - Reroute", "Request - P.O","Claimed","Partial Claimed", "Partial Delivered","For Picking","Picked Released" }
+                )
+            { }
+        }
+        public const string Pending = "PD";
+        public const string Picked = "P";
+        public const string Delivered = "D";
+        public const string Shipping = "SP";
+        public const string ForPicking = "FP";
+        public const string ForServiceCall = "SC";
+        public const string CustomerAdvise = "CA";
+        public const string StockArrival = "SA";
+        public const string Transfer = "TR";
+        public const string Reroute = "RR";
+        public const string PO = "PO";
+        public const string CustomerClaimed = "CD";
+        public const string PartialCustomerClaimed = "PC";
+        public const string PartialDelivered = "DP";
+        public const string PickCancelled = "CP";
+        public const string PickReleased = "PP";
+
+        public class pickReleased : Constant<string>
+        {
+            public pickReleased() : base(PickReleased) { }
+        }
+        public class pickCancelled : Constant<string>
+        {
+            public pickCancelled() : base(PickCancelled) { }
+        }
+        public class picked : Constant<string>
+        {
+            public picked() : base(Picked) { }
+        }
+        public class partialDelivered : Constant<string>
+        {
+            public partialDelivered() : base(PartialDelivered) { }
+        }
+        public class customerClaimed : Constant<string>
+        {
+            public customerClaimed() : base(CustomerClaimed) { }
+        }
+        public class partialCustomerClaimed : Constant<string>
+        {
+            public partialCustomerClaimed() : base(PartialCustomerClaimed) { }
+        }
+        public class delivered : Constant<string>
+        {
+            public delivered() : base(Delivered) { }
+        }
+        public class shipping : Constant<string>
+        {
+            public shipping() : base(Shipping) { }
+        }
+        public class pending : Constant<string>
+        {
+            public pending() : base(Pending) { }
+        }
+        public class forPicking : Constant<string>
+        {
+            public forPicking() : base(ForPicking) { }
+        }
+        public class forServiceCall : Constant<string>
+        {
+            public forServiceCall() : base(ForServiceCall) { }
+        }
+        public class customerAdvise : Constant<string>
+        {
+            public customerAdvise() : base(CustomerAdvise) { }
+        }
+        public class stockArrival : Constant<string>
+        {
+            public stockArrival() : base(StockArrival) { }
+        }
+    }
+
+
+    public abstract class RequestTypeV2 : IBqlField
+    {
+        public class ListAttribute : PXStringListAttribute
+        {
+            public ListAttribute()
+                : base(
+                new string[] { Transfer, Reroute, PO, ForServiceCall, CustomerAdvise, StockArrival },
+                new string[] { "Request - Transfer", "Request - Reroute", "Request - P.O", "Call - Confirmation", "Call - Customer Advise", "Call - Stock Arrival" })
+            { }
+        }
+
+        public const string Transfer = "TR";
+        public const string Reroute = "RR";
+        public const string PO = "PO";
+        public const string ForServiceCall = "SC";
+        public const string ForPicking = "FP";
+        public const string CustomerAdvise = "CA";
+        public const string StockArrival = "SA";
+
+
+        public class transfer : Constant<string>
+        {
+            public transfer() : base(Transfer) { }
+        }
+        public class reroute : Constant<string>
+        {
+            public reroute() : base(Reroute) { }
+        }
+        public class pO : Constant<string>
+        {
+            public pO() : base(PO) { }
+        }
+        public class forServiceCall : Constant<string>
+        {
+            public forServiceCall() : base(ForServiceCall) { }
+        }
+        public class customerAdvise : Constant<string>
+        {
+            public customerAdvise() : base(CustomerAdvise) { }
+        }
+        public class stockArrival : Constant<string>
+        {
+            public stockArrival() : base(StockArrival) { }
+        }
+    }
+
+
+    #endregion
+    public class DispatchLanding : PXGraph<DispatchLanding>
+    {
+        public PXCancel<SOOrder> Cancel;
+
+        #region MyActions
+        public abstract class MyAction : IBqlField
+        {
+            public class ListAttribute : PXStringListAttribute
+            {
+                public ListAttribute()
+                    : base(
+                    new string[] { Reroute, Transfer, PurchaseOrder },
+                    new string[] { "Reroute Request", "Transfer Request", "Request P.O" })
+                { }
+            }
+            public const string Accept = "AD";
+            public const string Decline = "DD";
+            public const string Reroute = "PD";
+            public const string Transfer = "TR";
+            public const string PurchaseOrder = "PO";
+
+        }
+        #endregion
+        #region RequestStatus
+
+        public abstract class MyStatus : IBqlField
+        {
+            public class ListAttribute : PXStringListAttribute
+            {
+                public ListAttribute()
+                    : base(
+                    new string[] { Accepted, Declined, },
+                    new string[] { "Accepted", "Declined" })
+                { }
+            }
+            public const string Accepted = "AD";
+            public const string Declined = "DD";
+            public const string Pending = "PD";
+
+
+            public class accepted : Constant<string>
+            {
+                public accepted() : base(Accepted) { }
+            }
+            public class declined : Constant<string>
+            {
+                public declined() : base(Declined) { }
+            }
+            public class pending : Constant<string>
+            {
+                public pending() : base(Pending) { }
+            }
+        }
+        #endregion
+        #region GridStatus
+
+        public abstract class GridStatus : IBqlField
+        {
+            public class ListAttribute : PXStringListAttribute
+            {
+                public ListAttribute()
+                    : base(
+                    new string[] { Accepted, Declined, Pending, NullValue },
+                    new string[] { "Accepted", "Declined", "Pending", " " })
+                { }
+            }
+            public const string Accepted = "AD";
+            public const string Declined = "DD";
+            public const string NullValue = "NS";
+            public const string Pending = "PD";
+
+            public class pending : Constant<string>
+            {
+                public pending() : base(Pending) { }
+            }
+            public class accepted : Constant<string>
+            {
+                public accepted() : base(Accepted) { }
+            }
+            public class declined : Constant<string>
+            {
+                public declined() : base(Declined) { }
+            }
+            public class nullValue : Constant<string>
+            {
+                public nullValue() : base(NullValue) { }
+            }
+
+        }
+
+        #endregion
+
+
+
+        #region RequestType2
+
+        #endregion
+        #region Filters
+        [Serializable]
+        public class Filters : IBqlTable
+        {
+            #region Dates
+            public abstract class deliveryDateFrom : IBqlField { }
+            [PXDate()]
+            [PXUIField(DisplayName = "Requested On Date From")]
+            public virtual DateTime? DeliveryDateFrom { get; set; }
+            public abstract class deliveryDateTo : IBqlField { }
+            [PXDate()]
+            [PXUIField(DisplayName = "Requested On Date To")]
+            public virtual DateTime? DeliveryDateTo { get; set; }
+            #endregion
+            #region CustomerName
+            public abstract class customerName : IBqlField { }
+            [PXInt()]
+            [PXUIField(DisplayName = "Customer Name")]
+
+            [PXSelector(typeof(Search5<
+                Customer.bAccountID,
+                InnerJoin<SOOrder,
+                    On<SOOrder.customerID, Equal<Customer.bAccountID>>,
+                InnerJoin<SOLine,
+                    On<SOLine.orderNbr, Equal<SOOrder.orderNbr>,
+                    And<SOLine.orderType, Equal<SOOrder.orderType>>>,
+                InnerJoin<SOOrderType,
+                    On<SOOrderType.orderType, Equal<SOOrder.orderType>>,
+                LeftJoin<ARTran, On<ARTran.sOOrderNbr, Equal<SOLine.orderNbr>, And<ARTran.sOOrderType, Equal<SOLine.orderType>, And<ARTran.sOOrderLineNbr, Equal<SOLine.lineNbr>>>>,
+                LeftJoin<ARInvoice, On<ARInvoice.refNbr, Equal<ARTran.refNbr>, And<ARInvoice.docType, Equal<ARTran.tranType>>>>>>>>,
+               Where2<
+                    Where<SOOrder.status, Equal<SOOrderStatus.open>,
+                        Or<SOOrder.status, Equal<SOOrderStatus.backOrder>>>,
+                    And2<
+                        Where<SOLineExt.usrConfirmShipment, IsNotNull,
+                        And<SOLineExt.usrSchedulingType, NotEqual<ShippingStatus.forPicking>,
+                        And<Where<SOLineExt.usrShippingStatus, NotEqual<ShippingStatus.forServiceCall>,
+                        Or<SOLineExt.usrForecastConfirmed, Equal<True>>>>>>,
+                        And2<
+                            Where<SOOrderTypeExt.usrDispatch, Equal<True>,
+                                And<SOLine.openQty, Greater<decimal0>>>,
+                            And2<Where<SOOrder.requestDate, GreaterEqual<Current<Filters.deliveryDateFrom>>, Or<Current<Filters.deliveryDateFrom>, IsNull>>,
+                                And2<Where<SOOrder.requestDate, LessEqual<Current<Filters.deliveryDateTo>>, Or<Current<Filters.deliveryDateTo>, IsNull>>,
+                                    And2<Where<ARInvoice.refNbr, Equal<Current<Filters.invoiceNbr>>, Or<Current<Filters.invoiceNbr>, IsNull>>,
+                                            And2<Where<SOLineExt.usrConfirmShipment, Equal<Current<Filters.shippingType>>, Or<Current<Filters.shippingType>, IsNull>>,
+                                                    And<Where<SOOrder.orderNbr,Equal<Current<Filters.orderNbr>>,Or<Current<Filters.orderNbr>,IsNull>>>>>>>>>>,
+                Aggregate<
+                    GroupBy<Customer.bAccountID>>>), typeof(Customer.acctCD), typeof(Customer.acctName), SubstituteKey = typeof(Customer.acctCD), DescriptionField = typeof(Customer.acctName))]
+            public virtual int? CustomerName { get; set; }
+            #endregion
+            #region OrderNbr
+            public abstract class orderNbr : IBqlField { }
+            [PXString(15)]
+            [PXUIField(DisplayName = "Order No.")]
+            [PXSelector(typeof(Search5<
+                SOOrder.orderNbr,
+                LeftJoin<SOOrderType,
+                    On<SOOrderType.orderType, Equal<SOOrder.orderType>>,
+                LeftJoin<SOLine,
+                    On<SOLine.orderType, Equal<SOOrder.orderType>,
+                    And<SOLine.orderNbr, Equal<SOOrder.orderNbr>>>,
+                LeftJoin<ARTran,On<ARTran.sOOrderNbr,Equal<SOLine.orderNbr>,And<ARTran.sOOrderType,Equal<SOLine.orderType>,And<ARTran.sOOrderLineNbr,Equal<SOLine.lineNbr>>>>,
+                LeftJoin<ARInvoice,On<ARInvoice.refNbr,Equal<ARTran.refNbr>,And<ARInvoice.docType,Equal<ARTran.tranType>>>>>>>,
+                Where2<
+                    Where<SOOrder.status, Equal<SOOrderStatus.open>,
+                        Or<SOOrder.status, Equal<SOOrderStatus.backOrder>>>,
+                    And2<
+                        Where<SOLineExt.usrConfirmShipment, IsNotNull,
+                        And<SOLineExt.usrSchedulingType, NotEqual<ShippingStatus.forPicking>,
+                        And<Where<SOLineExt.usrShippingStatus, NotEqual<ShippingStatus.forServiceCall>,
+                        Or<SOLineExt.usrForecastConfirmed, Equal<True>>>>>>,
+                        And2<
+                            Where<SOOrderTypeExt.usrDispatch, Equal<True>,
+                                And<SOLine.openQty,Greater<decimal0>>>,
+                            And2<Where<SOOrder.requestDate,GreaterEqual<Current<Filters.deliveryDateFrom>>,Or<Current<Filters.deliveryDateFrom>,IsNull>>,
+                                And2<Where<SOOrder.requestDate,LessEqual<Current<Filters.deliveryDateTo>>,Or<Current<Filters.deliveryDateTo>,IsNull>>,
+                                    And2<Where<ARInvoice.refNbr,Equal<Current<Filters.invoiceNbr>>,Or<Current<Filters.invoiceNbr>,IsNull>>,
+                                        And2<Where<SOOrder.customerID,Equal<Current<Filters.customerName>>,Or<Current<Filters.customerName>,IsNull>>,
+                                            And<Where<SOLineExt.usrConfirmShipment,Equal<Current<Filters.shippingType>>,Or<Current<Filters.shippingType>,IsNull>>>>>>>>>>,
+                Aggregate<
+                    GroupBy<SOOrder.orderNbr,
+                    GroupBy<SOOrder.orderType>>>>), Filterable = true)]
+            public virtual string OrderNbr { get; set; }
+            #endregion
+            #region ShippingType
+            public abstract class shippingType : IBqlField { }
+            [PXString(5)]
+            [PXUIField(DisplayName = "Shipping Type")]
+            [DispatchAttrib.List]
+            public virtual string ShippingType { get; set; }
+            #endregion
+            #region invoiceNbr
+            public abstract class invoiceNbr : IBqlField { }
+            [PXString(15)]
+            [PXUIField(DisplayName = "Invoice No.")]
+
+            [PXSelector(typeof(Search5<
+                ARInvoice.refNbr,
+                InnerJoin<ARTran,
+                    On<ARTran.tranType, Equal<ARInvoice.docType>,
+                    And<ARTran.refNbr, Equal<ARInvoice.refNbr>>>,
+                InnerJoin<SOLine,
+                    On<SOLine.orderType, Equal<ARTran.sOOrderType>,
+                    And<SOLine.orderNbr, Equal<ARTran.sOOrderNbr>,
+                    And<SOLine.lineNbr, Equal<ARTran.sOOrderLineNbr>>>>,
+                InnerJoin<SOOrder,
+                    On<SOOrder.orderType, Equal<SOLine.orderType>,
+                    And<SOOrder.orderNbr, Equal<SOLine.orderNbr>>>,
+                InnerJoin<SOOrderType,
+                    On<SOOrderType.orderType, Equal<SOOrder.orderType>>>>>>,
+                 Where2<
+                    Where<SOOrder.status, Equal<SOOrderStatus.open>,
+                        Or<SOOrder.status, Equal<SOOrderStatus.backOrder>>>,
+                    And2<
+                        Where<SOLineExt.usrConfirmShipment, IsNotNull,
+                        And<SOLineExt.usrSchedulingType, NotEqual<ShippingStatus.forPicking>,
+                        And<Where<SOLineExt.usrShippingStatus, NotEqual<ShippingStatus.forServiceCall>,
+                        Or<SOLineExt.usrForecastConfirmed, Equal<True>>>>>>,
+                        And2<
+                            Where<SOOrderTypeExt.usrDispatch, Equal<True>,
+                                And<SOLine.openQty, Greater<decimal0>>>,
+                            And2<Where<SOOrder.requestDate, GreaterEqual<Current<Filters.deliveryDateFrom>>, Or<Current<Filters.deliveryDateFrom>, IsNull>>,
+                                And2<Where<SOOrder.requestDate, LessEqual<Current<Filters.deliveryDateTo>>, Or<Current<Filters.deliveryDateTo>, IsNull>>,
+                                    And2<Where<SOOrder.orderNbr, Equal<Current<Filters.orderNbr>>, Or<Current<Filters.orderNbr>, IsNull>>,
+                                        And2<Where<SOOrder.customerID, Equal<Current<Filters.customerName>>, Or<Current<Filters.customerName>, IsNull>>,
+                                            And<Where<SOLineExt.usrConfirmShipment, Equal<Current<Filters.shippingType>>, Or<Current<Filters.shippingType>, IsNull>>>>>>>>>>,
+                Aggregate<
+                    GroupBy<ARInvoice.refNbr,
+                    GroupBy<ARInvoice.docType>>>>), Filterable = true)]
+            public virtual string InvoiceNbr { get; set; }
+            #endregion
+            #region CustomerLocationID
+
+            public abstract class customerLocationID : IBqlField { }
+            [PXInt]
+            [PXUIField(DisplayName = "Customer Location")]
+            [PXSelector(typeof(Search<
+                Location.locationID,
+                Where<Location.bAccountID,Equal<Current<customerName>>>>),SubstituteKey = typeof(Location.locationCD), DescriptionField = typeof(Location.descr))]
+            public virtual int? CustomerLocationID { get; set; }
+
+            #endregion
+        }
+        #endregion
+
+        #region Projection
+
+        [PXProjection(typeof(Select5<
+            SOLine,
+            LeftJoin<SOOrder,
+                On<SOOrder.orderNbr, Equal<SOLine.orderNbr>,
+                And<SOOrder.orderType, Equal<SOLine.orderType>>>,
+            LeftJoin<InventoryItem,
+                On<InventoryItem.inventoryID, Equal<SOLine.inventoryID>>,
+            LeftJoin<INSite,
+                On<INSite.siteID, Equal<SOLine.siteID>>,
+            LeftJoin<Customer,
+                On<Customer.bAccountID, Equal<SOLine.customerID>>,
+            LeftJoin<INSiteStatus,
+                On<INSiteStatus.inventoryID, Equal<InventoryItem.inventoryID>,
+                And<InventoryItem.stkItem, Equal<boolTrue>,
+                And<INSiteStatus.siteID, NotEqual<SiteAttribute.transitSiteID>>>>,
+            LeftJoin<Note,
+                On<Note.noteID,Equal<SOLine.noteID>>,
+            LeftJoin<SOAddress,
+                On<SOAddress.addressID, Equal<SOOrder.shipAddressID>>,
+            LeftJoin<SOOrderType,
+                On<SOOrderTypeExt.usrDispatch,Equal<True>>>>>>>>>>,
+            Where
+                //<SOLineExt.usrPickListQty, Equal<decimal_0>,
+                <Where<SOLine.completed, NotEqual<boolTrue>,
+                    And2<
+                        Where<SOLineExt.usrConfirmShipment, Equal<Attrib.cwStore>,
+                        And<SOLineExt.usrSchedulingType, NotEqual<ShippingStatus.forPicking>,
+                        And<Where<SOLineExt.usrShippingStatus, NotEqual<ShippingStatus.forServiceCall>,
+                        Or<SOLineExt.usrForecastConfirmed, Equal<True>>>>>>,
+                        And2<
+                            Where<SOOrder.status, Equal<SOOrderStatus.open>>,
+                            Or<Where<SOOrder.status, Equal<SOOrderStatus.backOrder>
+                                        >>>>>>,
+            Aggregate<
+                GroupBy<SOLine.orderNbr,
+                GroupBy<SOLine.orderType,
+                GroupBy<SOLine.lineNbr>>>>>))]
+        [Serializable]
+        public class SORerouting : IBqlTable
+        {
+
+            #region PXNote
+            public abstract class noteID : PX.Data.BQL.BqlGuid.Field<noteID> { }
+            [PXNote(BqlField = typeof(Note.noteID))]
+            [PXUIField(DisplayName = "Notes")]
+            public virtual Guid? NoteID { get; set; }
+            #endregion
+            #region Selected
+            public abstract class selected : IBqlField { }
+            [PXBool()]
+            [PXUIField(DisplayName = "Selected")]
+            [PXDefault(false, PersistingCheck = PXPersistingCheck.Nothing)]
+            public virtual bool? Selected { get; set; }
+            #endregion
+
+            #region OrderType
+            public abstract class orderType : PX.Data.IBqlField { }
+            [PXDBString(2, IsKey = true, IsFixed = true, BqlField = typeof(SOOrder.orderType))]
+            [PXSelector(typeof(Search2<
+                SOOrderType.orderType,
+                InnerJoin<SOOrderTypeOperation,
+                    On<SOOrderTypeOperation.orderType, Equal<SOOrderType.orderType>,
+                    And<SOOrderTypeOperation.operation, Equal<SOOrderType.defaultOperation>>>>,
+                Where<SOOrderType.requireShipping, Equal<boolFalse>,
+                    Or<FeatureInstalled<FeaturesSet.inventory>>>>))]
+            [PXUIField(DisplayName = "Order Type", Enabled = false)]
+            public virtual string OrderType { get; set; }
+            #endregion
+
+            #region ShipmentType
+
+            public abstract class shipmentType : PX.Data.IBqlField { }
+            [PXDBString(10, BqlField = typeof(SOLineExt.usrConfirmShipment))]
+            [PXUIField(DisplayName = "Shipment Type")]
+            [DispatchAttrib.List]
+            public virtual string ShipmentType { get; set; }
+
+            #endregion
+
+            #region ActionLineItem
+
+            public abstract class actionLineItem : PX.Data.IBqlField { }
+            [PXString(10)]
+            [PXUIField(DisplayName = "Action")]
+            [RequestTypeV2.List]
+            public virtual string ActionLineItem { get; set; }
+
+            #endregion
+
+            #region SOOrderNbr
+            public abstract class orderNbr : PX.Data.IBqlField { }
+            [PXDBString(15, IsKey = true, BqlField = typeof(SOOrder.orderNbr))]
+            [PXUIField(DisplayName = "Order Nbr", Enabled = false)]
+            public virtual String OrderNbr { get; set; }
+            #endregion
+
+            #region SOLineNbr
+            public abstract class lineNbr : PX.Data.IBqlField { }
+            [PXDBInt(IsKey = true, BqlField = typeof(SOLine.lineNbr))]
+            [PXUIField(DisplayName = "Line Nbr", Enabled = false)]
+            public virtual int? LineNbr { get; set; }
+            #endregion
+
+            #region CustomerID
+            public abstract class customerID : IBqlField { }
+            [PXDBInt(BqlField = typeof(SOLine.customerID))]
+            [PXUIField(DisplayName = "Customer ID")]
+            public virtual int? CustomerID { get; set; }
+            #endregion
+
+            #region CustomerName
+            public abstract class customerName : IBqlField { }
+            [PXDBString(50, BqlField = typeof(Customer.acctName))]
+            [PXUIField(DisplayName = "Customer Name")]
+            public virtual string CustomerName { get; set; }
+            #endregion
+
+            #region DeliveryAddress
+
+            public abstract class deliveryAddress : IBqlField { }
+            [PXDBString(100, BqlField = typeof(SOAddress.addressLine1))]
+            [PXUIField(DisplayName = "Delivery Address")]
+            public virtual string DeliveryAddress { get; set; }
+
+            #endregion
+
+            #region City
+
+            public abstract class city : IBqlField { }
+            [PXDBString(50, IsUnicode = true, BqlField = typeof(SOAddress.city))]
+            [PXUIField(DisplayName = "City", Enabled = false)]
+            public virtual string City { get; set; }
+
+            #endregion
+
+            #region Warehouse
+
+            public abstract class warehouse : IBqlField { }
+            [PXDBInt(BqlField = typeof(INSite.siteID))]
+            [PXUIField(DisplayName = "Warehouse")]
+            [PXSelector(typeof(Search<INSite.siteID>), SubstituteKey = typeof(INSite.descr))]
+            public virtual int? Warehouse { get; set; }
+
+            #endregion
+
+            #region NewWarehouse 
+
+            public abstract class newWarehouse : IBqlField { }
+            [SiteAvail(typeof(SORerouting.inventoryID), BqlField = typeof(SOLineExt.usrNewSiteID))]
+            [PXParent(typeof(Select<
+                SOOrderSite,
+                Where<SOOrderSite.orderType, Equal<Current<SOLine.orderType>>,
+                    And<SOOrderSite.orderNbr, Equal<Current<SOLine.orderNbr>>,
+                    And<SOOrderSite.siteID, Equal<Current2<SOLine.siteID>>>>>>), LeaveChildren = true, ParentCreate = true)]
+            [PXDefault(PersistingCheck = PXPersistingCheck.Nothing)]
+            [PXUIRequired(typeof(IIf<
+                Where<SOLine.lineType, NotEqual<SOLineType.miscCharge>>, True, False>))]
+            [InterBranchRestrictor(typeof(
+                                                                                                                                Where2<SameOrganizationBranch<INSite.branchID, Current<SOOrder.branchID>>,
+                                                                                                                                    Or<Current<SOOrder.behavior>, Equal<SOBehavior.qT>>>))]
+            [PXUIField(DisplayName = "Request Warehouse")]
+            [PXSelector(typeof(Search5<
+                INSite.siteID,
+                LeftJoin<INSiteStatus,
+                    On<INSiteStatus.siteID, Equal<INSite.siteID>>>,
+                Aggregate<
+                    GroupBy<INSite.siteCD>>>), typeof(INSite.siteCD), typeof(INSiteStatus.qtyHardAvail), SubstituteKey = typeof(INSite.siteCD))]
+            public virtual int? NewWarehouse { get; set; }
+
+            #endregion
+
+            #region RejectWhse
+            public abstract class rejectWhse : IBqlField { }
+            [PXDBInt(BqlField = typeof(SOLineExt.usrRejectWhse))]
+            [PXUIField(DisplayName = "Reject Warehouse")]
+            [PXSelector(typeof(Search<INSite.siteID>),
+            typeof(INSite.siteCD),
+            SubstituteKey = typeof(INSite.siteCD))]
+            public virtual int? RejectWhse { get; set; }
+            #endregion
+
+            #region lastModifiedbyIDRequestor
+            public abstract class requestorID : IBqlField { }
+            [PXDBGuid(BqlField = typeof(SOLine.lastModifiedByID))]
+            [PXUIField(DisplayName = "Requestor ID")]
+            public virtual Guid? RequestorID { get; set; }
+
+            #endregion
+
+            #region RejectDesc
+
+            public abstract class rejectDesc : IBqlField { }
+            [PXDBString(256, BqlField = typeof(SOLineExt.usrDescReason))]
+            [PXUIField(DisplayName = "Reason for Rejection")]
+            public virtual string RejectDesc { get; set; }
+
+            #endregion
+
+            #region InventoryID
+
+            public abstract class inventoryID : IBqlField { }
+            [PXDBInt(BqlField = typeof(SOLine.inventoryID))]
+            [PXUIField(DisplayName = "Inventory ID")]
+            [PXSelector(typeof(Search<InventoryItem.inventoryID>), SubstituteKey = typeof(InventoryItem.inventoryCD))]
+            public virtual int? InventoryID { get; set; }
+
+            #endregion
+
+            #region ItemName
+            public abstract class itemName : IBqlField { }
+            [PXDBString(256, BqlField = typeof(InventoryItem.descr))]
+            [PXUIField(DisplayName = "Item Description")]
+            public virtual string ItemName { get; set; }
+            #endregion
+
+            #region OrderQty
+            public abstract class orderQty : IBqlField { }
+            [PXDBDecimal(BqlField = typeof(SOLine.orderQty))]
+            [PXUIField(DisplayName = "Order Qty")]
+            public virtual Decimal? OrderQty { get; set; }
+            #endregion
+
+            #region RequestType
+
+            public abstract class requestedType : IBqlField { }
+            [PXDBString(2,BqlField = typeof(SOLineExt.usrRequestType))]
+            [PXUIField(DisplayName = "Request Type")]
+            [RequestTypeV2.List]
+            public virtual string RequestedType { get; set; }
+
+            #endregion
+
+            #region RequestStatus
+            public abstract class rerouteStatus : IBqlField { }
+            [PXDBString(10, BqlField = typeof(SOLineExt.usrRerouteStatus))]
+            [PXUIField(DisplayName = "Request Status")]
+            [GridStatus.List]
+            public virtual string RerouteStatus { get; set; }
+
+            #endregion
+
+            #region StockOnHand
+            public abstract class stockOnHand : IBqlField { }
+            [PXDBQuantity(BqlField = typeof(INSiteStatus.qtyHardAvail))]
+            [PXDefault(TypeCode.Decimal, "0.0", PersistingCheck = PXPersistingCheck.Nothing)]
+            [PXUIField(DisplayName = "Available Qty")]
+
+            public virtual Decimal? StockOnHand { get; set; }
+            #endregion
+
+            #region OrderDate
+            public abstract class orderDate : IBqlField { }
+            [PXDBDate(BqlField = typeof(SOOrder.orderDate))]
+            [PXUIField(DisplayName = "Order Date")]
+            public virtual DateTime? OrderDate { get; set; }
+            #endregion
+
+            #region Requested Date
+            public abstract class requestedDate : IBqlField { }
+            [PXDBDate(BqlField = typeof(SOLine.requestDate))]
+            [PXUIField(DisplayName = "Requested Date")]
+            public virtual DateTime? RequestedDate { get; set; }
+            #endregion
+
+            #region ForeCastDate
+            public abstract class foreCastDate : IBqlField { }
+            [PXDBDate(BqlField = typeof(SOLineExt.usrForeCastDate))]
+            [PXUIField(DisplayName = "Forecast Date")]
+            public virtual DateTime? ForeCastDate { get; set; }
+            #endregion
+
+            #region ForecastConfirmed
+
+            public abstract class forecastConfirmed : IBqlField { }
+            [PXDBBool(BqlField = typeof(SOLineExt.usrForecastConfirmed))]
+            [PXUIField(DisplayName = "Forecast Confirmed")]
+            public virtual bool? ForecastConfirmed { get; set; }
+
+            #endregion
+            
+            /* JOHN October 23, 2020 revisions */
+            #region PickQty
+
+            public abstract class pickQty : IBqlField { }
+            [PXDBDecimal(BqlField = typeof(SOLineExt.usrForecastPickQty))]
+            [PXUIField(DisplayName = "Pick Qty.")]
+            public virtual Decimal? PickQty { get; set; }
+
+            #endregion
+
+            #region Order Status
+
+            public abstract class orderStatus : IBqlField { }
+            [PXDBString(1, IsFixed = true, BqlField = typeof(SOOrder.status))]
+            [PXUIField(DisplayName = "Order Status", Visibility = PXUIVisibility.SelectorVisible, Enabled = false)]
+            [SOOrderStatus.List()]
+            public virtual string OrderStatus { get; set; }
+            #endregion
+
+            #region Barcode
+
+            public abstract class barcode : IBqlField { }
+            [PXDBString(50, BqlField = typeof(InventoryItemExt.usrBarcode))]
+            [PXUIField(DisplayName = "Barcode", Enabled = false)]
+            public virtual string Barcode { get; set; }
+            #endregion
+
+            #region VendorID
+
+            public abstract class vendorID : IBqlField { }
+            [PXDBInt(BqlField = typeof(SOLine.vendorID))]
+            [PXUIField(DisplayName = "Request Vendor")]
+            [PXSelector(typeof(Search<
+                BAccount.bAccountID,
+                Where<BAccount.bAccountID, Equal<Current<vendorID>>>>), SubstituteKey = typeof(BAccount.acctName))]
+            [PXDefault(typeof(Search<
+                INItemSiteSettings.preferredVendorID,
+                Where<INItemSiteSettings.inventoryID, Equal<Current<inventoryID>>, 
+                    And<INItemSiteSettings.siteID, Equal<Current<warehouse>>>>>))]
+            [PXFormula(typeof(Default<SORerouting.warehouse>))]
+            public virtual Int32? VendorID { get; set; }
+
+            #endregion
+
+            #region RequestQty
+
+            public abstract class requestQty : IBqlField { }
+            [PXDecimal()]
+            [PXUIField(DisplayName = "Request Qty", Enabled = true)]
+            [PXDefault(TypeCode.Decimal, "0.00", PersistingCheck = PXPersistingCheck.Nothing)]
+            public virtual Decimal? RequestQty { get; set; }
+
+            #endregion
+
+            #region Picker
+            [PXInt()]
+            [PXUIField(DisplayName = "Picker")]
+            [PXSelector(typeof(EPEmployee.bAccountID),
+                typeof(EPEmployee.acctCD),
+                typeof(EPEmployee.acctName), SubstituteKey = typeof(EPEmployee.acctName))]
+            public virtual int? Picker { get; set; }
+            public abstract class picker : PX.Data.BQL.BqlInt.Field<picker> { }
+            #endregion
+
+            #region CustomerLocationID
+
+            [LocationID(typeof(
+                        Where<Location.bAccountID,Equal<Current<customerID>>,
+                            And<Location.isActive,Equal<True>>>), BqlField = typeof(SOOrder.customerLocationID),DescriptionField = typeof(Location.descr))]
+                public virtual Int32? CustomerLocationID { get; set; }
+            #endregion
+        }
+        #endregion
+
+        public PXFilter<Filters> MyFilters;
+        public PXSelectJoin<
+            SOOrder,
+            LeftJoin<SOLine,
+                On<SOLine.orderType, Equal<SOOrder.orderType>,
+                And<SOLine.orderNbr, Equal<SOOrder.orderNbr>>>,
+            LeftJoin<ARTran,
+                On<ARTran.sOOrderType, Equal<SOLine.orderType>,
+                And<ARTran.sOOrderNbr, Equal<SOLine.orderNbr>,
+                And<ARTran.sOOrderLineNbr, Equal<SOLine.lineNbr>>>>,
+            LeftJoin<ARInvoice,
+                On<ARInvoice.docType, Equal<ARTran.tranType>,
+                And<ARInvoice.refNbr, Equal<ARTran.refNbr>>>,
+            LeftJoin<SOAddress,
+                On<SOAddress.addressID, Equal<SOOrder.shipAddressID>>>>>>>
+            CustomerOrder;
+        public PXFilteredProcessing<SORerouting, Filters>
+            RerouteGrid;
+
+        #region IEnumerable
+
+        public virtual IEnumerable customerOrder()
+        {
+            var filter = MyFilters.Current;
+            PXSelectBase<SOOrder> query = new PXSelectJoinGroupBy<
+            SOOrder,
+            LeftJoin<SOLine,
+                On<SOLine.orderType, Equal<SOOrder.orderType>,
+                And<SOLine.orderNbr, Equal<SOOrder.orderNbr>>>,
+            LeftJoin<ARTran,
+                On<ARTran.sOOrderType, Equal<SOLine.orderType>,
+                And<ARTran.sOOrderNbr, Equal<SOLine.orderNbr>,
+                And<ARTran.sOOrderLineNbr, Equal<SOLine.lineNbr>>>>,
+            LeftJoin<ARInvoice,
+                On<ARInvoice.docType, Equal<ARTran.tranType>,
+                And<ARInvoice.refNbr, Equal<ARTran.refNbr>>>,
+            LeftJoin<SOShippingAddress, On<SOShippingAddress.customerID, Equal<SOOrder.customerID>>,
+            LeftJoin<SOOrderType,On<SOOrderType.orderType,Equal<SOOrder.orderType>>>>>>>,
+                Where2<
+                    Where<SOOrder.status, Equal<SOOrderStatus.open>,
+                        Or<SOOrder.status, Equal<SOOrderStatus.backOrder>>>,
+                    And2<
+                        Where<SOLineExt.usrConfirmShipment, IsNotNull,
+                        And<SOLineExt.usrSchedulingType, NotEqual<ShippingStatus.forPicking>,
+                        And<Where<SOLineExt.usrShippingStatus,NotEqual<ShippingStatus.forServiceCall>,
+                        Or<SOLineExt.usrForecastConfirmed,Equal<True>>>>>>,
+                        And<
+                            Where<SOOrderTypeExt.usrDispatch,Equal<True>,
+                            And<SOLine.openQty,Greater<decimal0>>>>>>, Aggregate<GroupBy<SOOrder.orderNbr,GroupBy<SOOrder.orderType>>>>(this);
+
+            if (filter.DeliveryDateTo != null && filter.DeliveryDateFrom != null)
+            {
+                query
+                    .WhereAnd<
+                    Where<SOOrder.requestDate, Between<Current<Filters.deliveryDateFrom>, Current<Filters.deliveryDateTo>>>>();
+            }
+            if (filter.CustomerName != null)
+            {
+                query
+                    .WhereAnd<
+                    Where<SOOrder.customerID, Equal<Current<Filters.customerName>>>>();
+            }
+            if(filter.CustomerLocationID != null)
+            {
+                query
+                    .WhereAnd<
+                    Where<SOOrder.customerLocationID, Equal<Current<Filters.customerLocationID>>>>();
+            }
+            if (filter.OrderNbr != null)
+            {
+                query
+                    .WhereAnd<
+                    Where<SOOrder.orderNbr, Equal<Current<Filters.orderNbr>>>>();
+            }
+            if (filter.ShippingType != null)
+            {
+                query
+                    .WhereAnd<
+                    Where<SOLineExt.usrConfirmShipment, Equal<Current<Filters.shippingType>>>>();
+            }
+            
+            if (filter.InvoiceNbr != null)
+            {
+                query
+                    .WhereAnd<
+                    Where<ARInvoice.refNbr, Equal<Current<Filters.invoiceNbr>>>>();
+            }
+            foreach (PXResult<SOOrder,SOLine,ARTran,ARInvoice,SOShippingAddress,SOOrderType> line in query.Select())
+            {
+                SOOrder order = line.GetItem<SOOrder>();
+                SOLine soLine = line.GetItem<SOLine>();
+                PXResult<SOOrder, SOLine, ARTran, ARInvoice, SOShippingAddress, SOOrderType> rLine = line;
+                 var soLineExt = PXCache<SOLine>.GetExtension<SOLineExt>(soLine);
+                foreach (SOOrder cacheRecord in Caches[typeof(SOOrder)].Cached)
+                {
+                    if (cacheRecord.OrderType == order.OrderType && cacheRecord.OrderNbr == order.OrderNbr)
+                    {
+                        CustomerOrder.Cache.SetValueExt<SOOrder.selected>(line, cacheRecord.Selected);
+                    }
+                }
+                yield return line;
+            }
+            
+        }
+        protected IEnumerable rerouteGrid()
+        {
+            PXSelectBase<SORerouting> query = new PXSelect<SORerouting>(this);
+
+            foreach (SOOrder ordrs in CustomerOrder.Cache.Updated)
+            {
+                if (ordrs.Selected == true)
+                {
+                    foreach (SORerouting rts in query.Select().RowCast<SORerouting>().Where(d => ordrs.OrderNbr == d.OrderNbr && ordrs.OrderType == d.OrderType))
+                    {
+                        yield return rts;
+                    }
+                }
+                else
+                {
+                    yield return null;
+                }
+            }
+        }
+        #endregion
+
+        #region Actions
+
+
+        public PXAction<SOOrder> ViewCustomer;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "View Customer Order")]
+        public IEnumerable viewCustomer(PXAdapter adapter)
+        {
+
+            RerouteGrid.AskExt();
+
+            return adapter.Get();
+        }
+
+        public PXAction<SOOrder> ProcessBtn;
+        [PXProcessButton()]
+        [PXUIField(DisplayName = "Process")]
+        public IEnumerable processBtn(PXAdapter adapter)
+        {
+            DispatchLanding graph = PXGraph.CreateInstance<DispatchLanding>();
+            return ProcessRequest(adapter, false, graph);
+        }
+        private IEnumerable ProcessRequest(PXAdapter adapter, bool all, DispatchLanding graph)
+        {
+
+            RerouteGrid.SetSelected<SORerouting.selected>();
+
+            RerouteGrid.SetProcessDelegate(list => RequestLine(list, graph));
+
+            foreach (var record in this.Actions[all ? "ProcessAll" : "Process"].Press(adapter))
+                yield return record;
+        }
+
+
+
+        #endregion
+        #region EventHandlers
+
+        protected void SORerouting_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+            //var mastCurrent = MyFilters.Current;
+            var row = e.Row as SORerouting;
+            if (row == null) { return; }
+
+            if (row.Selected == true)
+            {
+                if (row.ActionLineItem == null)
+                {
+                    if (row.NewWarehouse == null && row.ActionLineItem == RequestTypeV2.Reroute)
+                    {
+                        sender.RaiseExceptionHandling<SORerouting.newWarehouse>(row, row.NewWarehouse, new PXSetPropertyException("This field is Required", PXErrorLevel.Warning));
+                    }
+                    else if (row.ActionLineItem == RequestTypeV2.Transfer)
+                    {
+                        if(row.NewWarehouse == null)
+                            sender.RaiseExceptionHandling<SORerouting.newWarehouse>(row, row.NewWarehouse, new PXSetPropertyException("This field is Required", PXErrorLevel.Warning));
+                        if(row.RequestQty == null)
+                            sender.RaiseExceptionHandling<SORerouting.requestQty>(row, row.RequestQty, new PXSetPropertyException("This field is Required", PXErrorLevel.Warning));
+                    }
+                    else if (row.ActionLineItem == RequestTypeV2.PO)
+                    {
+                        if(row.VendorID == null)
+                            sender.RaiseExceptionHandling<SORerouting.vendorID>(row, row.VendorID, new PXSetPropertyException("This field is Required", PXErrorLevel.Warning));
+                    }
+                   
+                }
+
+                PXUIFieldAttribute.SetEnabled<SORerouting.actionLineItem>(sender, row, row.RerouteStatus != MyStatus.Pending);
+                PXUIFieldAttribute.SetEnabled<SORerouting.foreCastDate>(sender, row, false);
+                PXUIFieldAttribute.SetEnabled<SORerouting.newWarehouse>(sender,row,row.ActionLineItem == RequestTypeV2.Reroute || row.ActionLineItem == RequestTypeV2.Transfer);
+                PXUIFieldAttribute.SetEnabled<SORerouting.requestQty>(sender, row, row.ActionLineItem == RequestTypeV2.Transfer || row.ActionLineItem == RequestTypeV2.PO);
+                PXUIFieldAttribute.SetEnabled<SORerouting.vendorID>(sender, row, row.ActionLineItem == RequestTypeV2.PO);
+                PXUIFieldAttribute.SetEnabled<SORerouting.picker>(sender, row, row.ActionLineItem == RequestTypeV2.ForPicking);
+                PXUIFieldAttribute.SetEnabled<SORerouting.pickQty>(sender, row, row.ActionLineItem == RequestTypeV2.ForPicking);
+            }
+        }
+
+        protected void SORerouting_ActionLineItem_FieldUpdated(PXCache sender, PXFieldUpdatedEventArgs e)
+        {
+            var row = e.Row as SORerouting;
+            if(row == null) { return; }
+            if(row.ActionLineItem == RequestTypeV2.Reroute)
+            {
+                foreach (SORerouting line in RerouteGrid.Cache.Updated.RowCast<SORerouting>().Where(d => d.OrderNbr == row.OrderNbr && d.OrderType == row.OrderType))
+                {
+                    sender.SetValue<SORerouting.actionLineItem>(line, RequestTypeV2.Reroute);
+                    sender.SetValue<SORerouting.requestQty>(line, line.OrderQty);
+                    RerouteGrid.View.RequestRefresh();
+                }
+            }
+        }
+
+        /* JOHN October 23, 2020
+         * Pick qty. input in scheduling to be carried over to Pick List Qty.
+         */
+        protected void SORerouting_PickQty_FieldVerifying(PXCache cache, PXFieldVerifyingEventArgs e)
+        {
+            var row = (SORerouting)e.Row;
+            if (row == null) return;
+
+            Decimal? newValue = (Decimal?)e.NewValue;
+            if (row.OrderQty < newValue)
+                throw new PXSetPropertyException("Pick qty. cannot be greater than the order qty.");
+        }
+        #endregion
+
+        #region Method
+        public void RequestLine(List<SORerouting> lst, DispatchLanding graph)
+        {
+            SOOrderEntry soGraph = PXGraph.CreateInstance<SOOrderEntry>();
+            POOrderEntry POGraph = PXGraph.CreateInstance<POOrderEntry>();
+            foreach (SORerouting lines in lst)
+            {
+                SOLine selectLine = PXSelect<
+                    SOLine,
+                    Where<SOLine.orderType, Equal<Required<SOLine.orderType>>,
+                        And<SOLine.orderNbr, Equal<Required<SOLine.orderNbr>>,
+                        And<SOLine.lineNbr, Equal<Required<SOLine.lineNbr>>>>>>
+                    .Select(graph, lines.OrderType, lines.OrderNbr, lines.LineNbr);
+               
+                if (lines.ActionLineItem == RequestTypeV2.ForServiceCall)
+                {
+                    PXDatabase.Update<SOLine>(
+                        new PXDataFieldAssign<SOLineExt.usrShippingStatus>(ShippingStatus.ForServiceCall),
+                        new PXDataFieldRestrict<SOLine.orderType>(selectLine.OrderType),
+                        new PXDataFieldRestrict<SOLine.orderNbr>(selectLine.OrderNbr),
+                        new PXDataFieldRestrict<SOLine.lineNbr>(selectLine.LineNbr));
+                    
+                }else if(lines.ActionLineItem == RequestTypeV2.StockArrival)
+                {
+                    soGraph.Transactions.Cache.SetValueExt<SOLineExt.usrShippingStatus>(selectLine, ShippingStatus.StockArrival);
+                    soGraph.Transactions.Update(selectLine);
+                    soGraph.Persist();
+                }
+                else if(lines.ActionLineItem == RequestTypeV2.CustomerAdvise)
+                {
+                    soGraph.Transactions.Cache.SetValueExt<SOLineExt.usrShippingStatus>(selectLine, ShippingStatus.CustomerAdvise);
+                    soGraph.Transactions.Update(selectLine);
+                    soGraph.Persist();
+
+                }
+                else if (lines.ActionLineItem == RequestTypeV2.Reroute)
+                {
+                    if (lines.NewWarehouse == null) { throw new PXException("Request Warehouse field is empty"); }
+                    else
+                    {
+                        soGraph.Transactions.Cache.SetValueExt<SOLineExt.usrNewSiteID>(selectLine, lines.NewWarehouse);
+                        soGraph.Transactions.Cache.SetValueExt<SOLineExt.usrRerouteStatus>(selectLine, MyStatus.Pending);
+                        soGraph.Transactions.Cache.SetValueExt<SOLineExt.usrRequestType>(selectLine, RequestTypeV2.Reroute);
+                        soGraph.Transactions.Cache.SetValueExt<SOLineExt.usrShippingStatus>(selectLine, RequestTypeV2.Reroute);
+                        soGraph.Transactions.Cache.SetValueExt<SOLineExt.usrOldSiteID>(selectLine, lines.Warehouse);
+                        soGraph.Transactions.Cache.SetValueExt<SOLineExt.usrRerouteTransferRequestDate>(selectLine, DateTime.Now);
+                        soGraph.Transactions.Update(selectLine);
+                        soGraph.Persist();
+                    }
+                }else if (lines.ActionLineItem == RequestTypeV2.Transfer)
+                {
+                    if (lines.NewWarehouse == null && lines.RequestQty == null) { throw new PXException("New Warhouse field and Request Qty field is empty"); }
+                    else if (lines.NewWarehouse == null) { throw new PXException("New Warehouse field is empty"); }
+                    else if (lines.RequestQty == null) { throw new PXException("Request Qty field is empty"); }
+                    else
+                    {
+                        soGraph.Transactions.Cache.SetValueExt<SOLineExt.usrNewSiteID>(selectLine, lines.NewWarehouse);
+                        soGraph.Transactions.Cache.SetValueExt<SOLineExt.usrRerouteStatus>(selectLine, MyStatus.Pending);
+                        soGraph.Transactions.Cache.SetValueExt<SOLineExt.usrRequestType>(selectLine, RequestTypeV2.Transfer);
+                        soGraph.Transactions.Cache.SetValueExt<SOLineExt.usrShippingStatus>(selectLine, RequestTypeV2.Transfer);
+                        soGraph.Transactions.Cache.SetValueExt<SOLineExt.usrOldSiteID>(selectLine, lines.Warehouse);
+                        soGraph.Transactions.Cache.SetValueExt<SOLineExt.usrRequestQty>(selectLine, lines.RequestQty);
+                        soGraph.Transactions.Cache.SetValueExt<SOLineExt.usrRerouteTransferRequestDate>(selectLine, DateTime.Now);
+                        soGraph.Transactions.Update(selectLine);
+                        soGraph.Persist();
+                    }
+                }else if (lines.ActionLineItem == RequestTypeV2.PO)
+                {
+                    if (lines.VendorID == null) { throw new PXException("Vendor is empty"); }
+                    using (PXTransactionScope trn = new PXTransactionScope())
+                    {
+                        try
+                        {
+                            soGraph.Transactions.Cache.SetValueExt<SOLineExt.usrShippingStatus>(selectLine, RequestType.PO);
+                            soGraph.Transactions.Cache.SetValueExt<SOLineExt.usrRerouteStatus>(selectLine, MyStatus.Pending);
+                            soGraph.Transactions.Cache.SetValueExt<SOLineExt.usrRequestQty>(selectLine, lines.RequestQty);
+                            soGraph.Transactions.Update(selectLine);
+                            soGraph.Persist();
+                           
+                            var poHead = POGraph.Document.Insert(new POOrder()
+                            {
+                                OrderType = POOrderType.RegularOrder
+                            });
+                            poHead = POGraph.Document.Update(poHead);
+                            POGraph.Document.Cache.SetValueExt<POOrder.vendorID>(poHead, lines.VendorID);
+                            POLine poLine = (POLine)POGraph.Transactions.Cache.CreateInstance();
+                            poLine.InventoryID = lines.InventoryID;
+                            poLine.OrderQty = lines.RequestQty;
+                            poLine.SiteID = lines.Warehouse;
+                            POGraph.Transactions.Insert(poLine);
+                            
+                            trn.Complete();
+                        }
+                        catch (Exception ex)
+                        {
+                            throw new PXException(ex.Message);
+                        }
+                    }
+               }
+                else if (lines.ActionLineItem == RequestTypeV2.ForPicking)
+                {
+
+                    if (lines.PickQty > lines.OrderQty)
+                        throw new PXException("Pick qty. cannot be greater than order qty.");
+                        PXDatabase.Update<SOLine>(
+                    new PXDataFieldAssign<SOLineExt.usrShippingStatus>(ShippingStatus.ForPicking),
+                    new PXDataFieldAssign<SOLineExt.usrSchedulingType>(ShippingStatus.ForPicking),
+                    new PXDataFieldAssign<SOLineExt.usrForecastPickQty>(lines.PickQty),
+                    new PXDataFieldRestrict<SOLine.orderType>(selectLine.OrderType),
+                    new PXDataFieldRestrict<SOLine.orderNbr>(selectLine.OrderNbr),
+                    new PXDataFieldRestrict<SOLine.lineNbr>(selectLine.LineNbr));               
+                }
+            }
+            POGraph.Persist();
+            
+
+        }
+
+
+        #endregion
+
+        #region LinkCommand
+
+        public PXAction<SOOrder> MySOOrder;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "MySO", Visible = false)]
+        public virtual void mySOOrder()
+        {
+            var graph = PXGraph.CreateInstance<SOOrderEntry>();
+
+            graph.Document.Current = graph.Document.Search<SOOrder.orderNbr>(this.CustomerOrder.Current.OrderNbr, this.CustomerOrder.Current.OrderType);
+            throw new PXRedirectRequiredException(graph, "SOOrder Redirect")
+            {
+                Mode = PXBaseRedirectException.WindowMode.NewWindow
+            };
+        }
+        public PXAction<SOOrder> MyCustomerSOOrder;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "MySO", Visible = false)]
+        public virtual void myCustomerSOOrder()
+        {
+            var graph = PXGraph.CreateInstance<SOOrderEntry>();
+
+            graph.Document.Current = graph.Document.Search<SOOrder.orderNbr>(this.RerouteGrid.Current.OrderNbr, this.RerouteGrid.Current.OrderType);
+            throw new PXRedirectRequiredException(graph, "SOOrder Redirect")
+            {
+                Mode = PXBaseRedirectException.WindowMode.NewWindow
+            };
+        }
+        public PXAction<SOOrder> MyInvoice;
+        [PXButton(CommitChanges = true)]
+        [PXUIField(DisplayName = "myInvoice", Visible = false)]
+        public virtual void myInvoice()
+        {
+            var graph = PXGraph.CreateInstance<SOInvoiceEntry>();
+
+            ARTran mySelect = PXSelect<
+                ARTran,
+                Where
+                <ARTran.sOOrderNbr, Equal<Required<ARTran.sOOrderNbr>>,
+                    And<Where<ARTran.sOOrderType, Equal<Required<ARTran.sOOrderType>>>>>>
+                .Select(this, CustomerOrder.Current.OrderNbr, CustomerOrder.Current.OrderType);
+            graph.Document.Current = graph.Document.Search<ARInvoice.refNbr>(mySelect.RefNbr, mySelect.TranType);
+            throw new PXRedirectRequiredException(graph, "Invoice Redirect")
+            {
+                Mode = PXBaseRedirectException.WindowMode.NewWindow
+            };
+        }
+
+
+        #endregion
+
+
+    }
+}]]></CDATA>
+</Graph>

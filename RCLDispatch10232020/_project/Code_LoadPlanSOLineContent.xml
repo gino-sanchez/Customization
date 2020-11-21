@@ -1,0 +1,68 @@
+﻿<Graph ClassName="LoadPlanSOLineContent" Source="#CDATA" IsNew="True" FileType="NewDac">
+    <CDATA name="Source"><![CDATA[using System;
+using PX.Data;
+using PX.Objects.SO;
+
+namespace Dispatch
+{
+  [Serializable]
+  public class LoadPlanSOLineContent : IBqlTable
+  {
+    #region RecordID
+    [PXDBIdentity(IsKey = true)]
+    [PXUIField(DisplayName = "Record ID")]
+    public virtual int? RecordID { get; set; }
+    public abstract class recordID : PX.Data.BQL.BqlInt.Field<recordID> { }
+    #endregion
+
+    #region SOOrderNbr
+    [PXDBString(15, IsUnicode = true, InputMask = "")]
+    [PXUIField(DisplayName = "SOOrder Nbr")]
+    public virtual string SOOrderNbr { get; set; }
+    public abstract class sOOrderNbr : PX.Data.BQL.BqlString.Field<sOOrderNbr> { }
+        #endregion
+
+    #region SOOrderType
+    [PXDBString(2, IsFixed = true, InputMask = "")]
+    [PXUIField(DisplayName = "SOOrder Type")]
+    public virtual string SOOrderType { get; set; }
+    public abstract class sOOrderType : PX.Data.BQL.BqlString.Field<sOOrderType> { }
+    #endregion
+
+    #region SOOrderLineNbr
+    [PXDBInt()]
+    [PXUIField(DisplayName = "SOOrder Line Nbr")]
+    public virtual int? SOOrderLineNbr { get; set; }
+    public abstract class sOOrderLineNbr : PX.Data.BQL.BqlInt.Field<sOOrderLineNbr> { }
+    #endregion
+
+    #region TripTicketNbr
+    [PXDBString(15, IsUnicode = true, InputMask = "")]
+    [PXUIField(DisplayName = "Trip Ticket Nbr")]
+    [PXDBDefault(typeof(LPLoadPlanMaster.tripTIcketNbr))]
+    public virtual string TripTicketNbr { get; set; }
+    public abstract class tripTicketNbr : PX.Data.BQL.BqlString.Field<tripTicketNbr> { }
+    #endregion
+
+    #region TripTicketLineNbr
+    [PXDBInt()]
+    [PXUIField(DisplayName = "Trip Ticket Line Nbr")]
+    public virtual int? TripTicketLineNbr { get; set; }
+    public abstract class tripTicketLineNbr : PX.Data.BQL.BqlInt.Field<tripTicketLineNbr> { }
+    #endregion
+
+    #region LoadQty
+    [PXDBDecimal()]
+    [PXUIField(DisplayName = "Load Qty")]
+    [PXParent(typeof(Select<
+        SOLine,
+        Where<SOLine.orderNbr,Equal<Current<LoadPlanSOLineContent.sOOrderNbr>>,
+            And<SOLine.orderType,Equal<Current<LoadPlanSOLineContent.sOOrderType>>,
+            And<SOLine.lineNbr,Equal<Current<LoadPlanSOLineContent.sOOrderLineNbr>>>>>>))]
+    [PXFormula(null,typeof(SubCalc<SOLineExt.usrAvailableLoadQty>))]
+    public virtual Decimal? LoadQty { get; set; }
+    public abstract class loadQty : PX.Data.BQL.BqlDecimal.Field<loadQty> { }
+    #endregion
+  }
+}]]></CDATA>
+</Graph>

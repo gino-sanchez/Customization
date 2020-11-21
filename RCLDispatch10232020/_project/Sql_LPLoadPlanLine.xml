@@ -1,0 +1,50 @@
+﻿<Sql TableName="LPLoadPlanLine" TableSchemaXml="#CDATA">
+    <CDATA name="TableSchemaXml"><![CDATA[<table name="LPLoadPlanLine">
+  <col name="CompanyID" type="Int" default="Zero" />
+  <col name="SOOrderNbr" type="VarChar(15)" />
+  <col name="SOOrderType" type="Char(2)" />
+  <col name="SOLineNbr" type="Int" />
+  <col name="LineNbr" type="Int" />
+  <col name="Zone" type="VarChar(20)" nullable="true" />
+  <col name="TripTicketNbr" type="NVarChar(15)" />
+  <col name="tstamp" type="Timestamp" />
+  <col name="CreatedByID" type="UniqueIdentifier" />
+  <col name="CreatedByScreenID" type="Char(8)" />
+  <col name="CreatedDateTime" type="DateTime" />
+  <col name="LastModifiedByID" type="UniqueIdentifier" />
+  <col name="LastModifiedByScreenID" type="Char(8)" />
+  <col name="LastModifiedDateTime" type="DateTime" />
+  <col name="ItemQty" type="Decimal(19,6)" nullable="true" />
+  <col name="RecordID" type="Int" identity="true" />
+  <col name="IsCancelled" type="Bit" nullable="true" />
+  <col name="IsConfirmed" type="Bit" nullable="true" />
+  <col name="CustomerID" type="Int" nullable="true" />
+  <col name="InventoryID" type="Int" nullable="true" />
+  <col name="SiteID" type="Int" nullable="true" />
+  <col name="LocationID" type="Int" nullable="true" />
+  <col name="TransferRefNbr" type="NVarChar(15)" nullable="true" />
+  <col name="ShipmentNbr" type="NVarChar(15)" nullable="true" />
+  <col name="UnitKGS" type="Decimal(19,6)" nullable="true" />
+  <col name="UnitCBM" type="Decimal(19,6)" nullable="true" />
+  <col name="TotalUnitKGS" type="Decimal(19,6)" nullable="true" />
+  <col name="TotalUnitCBM" type="Decimal(19,6)" nullable="true" />
+  <col name="OldTripTicketNbr" type="NVarChar(15)" nullable="true" />
+  <col name="HasNewTripTicketNbr" type="Bit" nullable="true" />
+  <col name="ForecastDate" type="DateTime" nullable="true" />
+  <col name="BufferQty" type="Decimal(19,6)" nullable="true" />
+  <col name="LineCntr" type="Int" nullable="true" />
+  <col name="UsrIsVerified" type="Bit" nullable="true" />
+  <col name="NoteID" type="UniqueIdentifier" nullable="true" />
+  <col name="ItemDesc" type="NVarChar(200)" nullable="true" />
+  <col name="UOM" type="NVarChar(6)" nullable="true" />
+  <index name="LPLoadPlanLine_NoteID" unique="true">
+    <col name="NoteID" />
+    <col name="CompanyID" />
+  </index>
+  <index name="PK_LPLoadPlanLine_1" clustered="true" primary="true" unique="true">
+    <col name="CompanyID" />
+    <col name="LineNbr" />
+    <col name="TripTicketNbr" />
+  </index>
+</table>]]></CDATA>
+</Sql>

@@ -1,0 +1,20 @@
+﻿<Graph ClassName="DTMFPlateNoMaint" Source="#CDATA" IsNew="True" FileType="NewGraph">
+    <CDATA name="Source"><![CDATA[using System;
+using PX.Data;
+
+namespace Dispatch
+{
+	public class DTMFPlateNoMaint : PXGraph<DTMFPlateNoMaint>
+	{
+
+		public PXSave<PlateNoMaint> Save;
+		public PXCancel<PlateNoMaint> Cancel;
+
+
+		public PXSelect<PlateNoMaint> PlateNos;
+
+
+
+	}
+}]]></CDATA>
+</Graph>
