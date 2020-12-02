@@ -1,0 +1,495 @@
+﻿<Graph ClassName="P2PPOReceiptEntry" Source="#CDATA" IsNew="True" FileType="NewGraph">
+    <CDATA name="Source"><![CDATA[using System;
+using System.Collections.Generic;
+using System.Collections;
+using System.Text;
+using PX.Common;
+using PX.Data;
+using PX.Objects.CM;
+using PX.Objects.GL;
+using PX.Objects.CS;
+using PX.Objects.IN;
+using PX.Objects.AP;
+using PX.Objects.AR;
+using PX.Objects.CR;
+using PX.Objects.PM;
+using PX.Objects.TX;
+using PX.Objects.EP;
+using SOOrder = PX.Objects.SO.SOOrder;
+using SOLine4 = PX.Objects.SO.SOLine4;
+using PX.Objects.SO;
+using System.Linq;
+using CRLocation = PX.Objects.CR.Standalone.Location;
+using SiteStatus = PX.Objects.IN.Overrides.INDocumentRelease.SiteStatus;
+using LocationStatus = PX.Objects.IN.Overrides.INDocumentRelease.LocationStatus;
+using LotSerialStatus = PX.Objects.IN.Overrides.INDocumentRelease.LotSerialStatus;
+using ItemLotSerial = PX.Objects.IN.Overrides.INDocumentRelease.ItemLotSerial;
+using SiteLotSerial = PX.Objects.IN.Overrides.INDocumentRelease.SiteLotSerial;
+using PX.Objects.AP.MigrationMode;
+using PX.Objects.Common;
+using PX.CS.Contracts.Interfaces;
+using PX.Data.DependencyInjection;
+using PX.LicensePolicy;
+using PX.TaxProvider;
+using PX.Objects.GL.FinPeriods.TableDefinition;
+using PX.Objects.GL.FinPeriods;
+using PX.Objects.Common.Extensions;
+using PX.Objects.PO.LandedCosts;
+using System.Runtime.Serialization;
+using PX.Data.ReferentialIntegrity.Attributes;
+using PX.Objects;
+using PX.Objects.PO;
+using PX.Objects.RQ;
+
+namespace PX.Objects.PO
+{
+  public class P2PPOReceiptEntry_Extension : PXGraphExtension<POReceiptEntry>
+  {
+        #region Event Handlers
+        protected virtual void POReceipt_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+            var row = e.Row as POReceipt;
+            if (row == null) return;
+            var rowExt = sender.GetExtension<POReceiptExt>(row);
+            PXUIFieldAttribute.SetEnabled<POReceiptExt.usrDocumentClass>(sender,row,false);
+            PXUIFieldAttribute.SetVisible<POReceiptExt.usrDocumentClass>(sender, row, row.ReceiptType == POReceiptType.POReturn || row.ReceiptType == POReceiptType.POReceipt);
+            if (row.ReceiptType == POReceiptType.POReturn || row.ReceiptType == POReceiptType.POReceipt)
+            {
+                if (row.VendorID != null)
+                {
+                    if (rowExt.UsrDocumentClass == null)
+                    {
+                        sender.RaiseExceptionHandling<POReceiptExt.usrDocumentClass>(row, null, new PXSetPropertyException("Document Class is empty", PXErrorLevel.Warning));
+                    }
+                }
+            }
+        }
+        protected virtual void POReceiptLine_RowInserting(PXCache sender, PXRowInsertingEventArgs e)
+        {
+            var row = e.Row as POReceiptLine;
+            if (row == null) return;
+            var doc = Base.Document.Current;
+            var docExt = PXCache<POReceipt>.GetExtension<POReceiptExt>(doc);
+            POOrder poOrder = PXSelect<POOrder,Where<POOrder.orderNbr,Equal<Required<POOrder.orderNbr>>,And<POOrder.orderType,Equal<Required<POOrder.orderType>>>>>.Select(Base, row.PONbr, row.POType);
+            if(poOrder != null)
+            {
+                var poOrderExt = PXCache<POOrder>.GetExtension<POOrderExt>(poOrder);
+                PXTrace.WriteInformation(poOrderExt.UsrDocumentClass);
+                Base.Document.Cache.SetValueExt<POReceiptExt.usrDocumentClass>(doc,poOrderExt.UsrDocumentClass);
+                Base.Document.Update(Base.Document.Current);
+            }
+        }
+        protected virtual void POReceipt_RowPersisting(PXCache sender, PXRowPersistingEventArgs e)
+        {
+            var row = e.Row as POReceipt;
+            if (row == null) return;
+            var rowExt = sender.GetExtension<POReceiptExt>(row);
+            RQRequestClass requestClass = PXSelect<
+               RQRequestClass,
+               Where<RQRequestClass.reqClassID, Equal<Required<RQRequestClass.reqClassID>>>>
+               .Select(Base, rowExt.UsrDocumentClass);
+            if(requestClass != null)
+            {
+                var reqClassExt = PXCache<RQRequestClass>.GetExtension<RQRequestClassExt>(requestClass);
+                if ((bool)reqClassExt.UsrEnableLimit == true)
+                {
+                    if (Base.transactions.Select().Count > reqClassExt.UsrLimitPerLine)
+                    {
+                        throw new PXException("Line item exceeds the limit on Document Class");
+                    }
+                }
+            }
+        }
+        protected virtual void POReceiptLine_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+            var row = e.Row as POReceiptLine;
+            if (row == null) return;
+            var doc = Base.Document.Current;
+            var docExt = PXCache<POReceipt>.GetExtension<POReceiptExt>(doc);
+            if (docExt.UsrDocumentClass != null)
+            {
+                RQRequestClass reqClass = PXSelect<
+                    RQRequestClass,
+                    Where<RQRequestClass.reqClassID, Equal<Required<RQRequestClass.reqClassID>>>>
+                    .Select(Base, docExt.UsrDocumentClass);
+                if (reqClass != null)
+                {
+                    var reqClassExt = PXCache<RQRequestClass>.GetExtension<RQRequestClassExt>(reqClass);
+                    if (reqClassExt.UsrEnableLimit == true)
+                    {
+                        sender.AllowInsert = Base.transactions.Select().Count != reqClassExt.UsrLimitPerLine;
+                        if (Base.transactions.Select().Count > reqClassExt.UsrLimitPerLine) { sender.RaiseExceptionHandling<POLine.branchID>(row, null, new PXSetPropertyException("Line item exceeds the limit on Document Class", PXErrorLevel.RowWarning)); }
+                    }
+                }
+            }
+        }
+
+        #endregion
+
+        #region OverrideAction
+
+        public delegate IEnumerable AddPOOrderLineDelegate(PXAdapter adapter);
+        [PXOverride]
+        public IEnumerable AddPOOrderLine(PXAdapter adapter, AddPOOrderLineDelegate baseMethod)
+        {
+            List<POReceiptEntry.POLineS> lst = new List<POReceiptEntry.POLineS>();
+            foreach(POReceiptEntry.POLineS line in Base.poLinesSelection.Cache.Updated)
+            {
+                if(line.Selected == true)
+                {
+                    if (!lst.Contains(line)) lst.Add(line);
+                   
+                }
+                if ((bool)!addPOLineIsDocClassSame(lst))
+                {
+                    Base.poLinesSelection.Cache.RaiseExceptionHandling<POReceiptEntry.POLineS.selected>(line,null, new PXSetPropertyException("Selected items must have the same Document Class",PXErrorLevel.RowError));
+                    line.Selected = false;
+                }
+            }
+            
+            return baseMethod(adapter);
+        }
+        public delegate IEnumerable AddPOOrderLine2Delegate(PXAdapter adapter);
+        [PXOverride]
+        public IEnumerable AddPOOrderLine2(PXAdapter adapter, AddPOOrderLine2Delegate baseMethod)
+        {
+            List<POReceiptEntry.POLineS> lst = new List<POReceiptEntry.POLineS>();
+            foreach (POReceiptEntry.POLineS line in Base.poLinesSelection.Cache.Updated)
+            {
+                if (line.Selected == true)
+                {
+                    if (!lst.Contains(line)) lst.Add(line);
+
+                }
+                if ((bool)!addPOLineIsDocClassSame(lst))
+                {
+                    Base.poLinesSelection.Cache.RaiseExceptionHandling<POReceiptEntry.POLineS.selected>(line, null, new PXSetPropertyException("Selected items must have the same Document Class", PXErrorLevel.RowError));
+                    line.Selected = false;
+                }
+            }
+
+            return baseMethod(adapter);
+        }
+
+        public delegate IEnumerable AddPOOrderDelegate(PXAdapter adapter);
+        [PXOverride]
+        public IEnumerable AddPOOrder(PXAdapter adapter, AddPOOrderDelegate baseMethod)
+        {
+            List<POReceiptEntry.POOrderS> lst = new List<POReceiptEntry.POOrderS>();
+            foreach (POReceiptEntry.POOrderS line in Base.openOrders.Cache.Updated)
+            {
+                if(line.Selected == true)
+                {
+                    if (!lst.Contains(line)) lst.Add(line);
+                }
+                if ((bool)!addPOOrderIsDocClassSame(lst))
+                {
+                    Base.openOrders.Cache.RaiseExceptionHandling<POReceiptEntry.POOrderS.selected>(line,null, new PXSetPropertyException("Selected items must have the same Document Class", PXErrorLevel.RowError));
+                    line.Selected = false;
+                }
+            }
+            return baseMethod(adapter);
+
+
+        }
+        public delegate IEnumerable AddPOOrder2Delegate(PXAdapter adapter);
+        [PXOverride]
+        public IEnumerable AddPOOrder2(PXAdapter adapter, AddPOOrder2Delegate baseMethod)
+        {
+            List<POReceiptEntry.POOrderS> lst = new List<POReceiptEntry.POOrderS>();
+            foreach (POReceiptEntry.POOrderS line in Base.openOrders.Cache.Updated)
+            {
+                if (line.Selected == true)
+                {
+                    if (!lst.Contains(line)) lst.Add(line);
+                }
+                if ((bool)!addPOOrderIsDocClassSame(lst))
+                {
+                    Base.openOrders.Cache.RaiseExceptionHandling<POReceiptEntry.POOrderS.selected>(line, null, new PXSetPropertyException("Selected items must have the same Document Class", PXErrorLevel.RowError));
+                    line.Selected = false;
+                }
+            }
+            return baseMethod(adapter);
+        }
+
+        public delegate IEnumerable AddPOReceiptLineReturn2Delegate(PXAdapter adapter);
+        [PXOverride]
+        public IEnumerable AddPOReceiptLineReturn2(PXAdapter adapter, AddPOReceiptLineReturn2Delegate baseMethod)
+        {
+            List<POReceiptLineReturn> lst = new List<POReceiptLineReturn>();
+            foreach (POReceiptLineReturn line in Base.poReceiptLineReturn.Cache.Updated)
+            {
+                if (line.Selected == true)
+                {
+                    POReceipt receipt = PXSelect<POReceipt, Where<POReceipt.receiptNbr, Equal<Required<POReceipt.receiptNbr>>, And<POReceipt.receiptType, Equal<POReceiptType.poreceipt>>>>.Select(Base, line.ReceiptNbr);
+                    var receiptExt = PXCache<POReceipt>.GetExtension<POReceiptExt>(receipt);
+                    if (receiptExt.UsrDocumentClass == null)
+                    {
+                        line.Selected = false;
+                        Base.poReceiptLineReturn.Cache.RaiseExceptionHandling<POReceiptLineReturn.selected>(line, null, new PXSetPropertyException("Request class is empty", PXErrorLevel.RowWarning));
+                    }
+                    else
+                    {
+                        if (!lst.Contains(line)) lst.Add(line);
+                    }
+                }
+                if ((bool)!addPOLineReturnIsDocClassSame(lst))
+                {
+                    Base.poReceiptLineReturn.Cache.RaiseExceptionHandling<POReceiptLineReturn.selected>(line, null, new PXSetPropertyException("Selected items must have the same Document Class", PXErrorLevel.RowError));
+                    line.Selected = false;
+                }
+            }
+            return baseMethod(adapter);
+        }
+
+        public delegate IEnumerable AddPOReceiptLineReturnDelegate(PXAdapter adapter);
+        [PXOverride]
+        public IEnumerable AddPOReceiptLineReturn(PXAdapter adapter, AddPOReceiptLineReturnDelegate baseMethod)
+        {
+            List<POReceiptLineReturn> lst = new List<POReceiptLineReturn>();
+            foreach(POReceiptLineReturn line in Base.poReceiptLineReturn.Cache.Updated)
+            {
+                if(line.Selected == true)
+                {
+                    POReceipt receipt = PXSelect<POReceipt, Where<POReceipt.receiptNbr, Equal<Required<POReceipt.receiptNbr>>, And<POReceipt.receiptType, Equal<POReceiptType.poreceipt>>>>.Select(Base, line.ReceiptNbr);
+                    var receiptExt = PXCache<POReceipt>.GetExtension<POReceiptExt>(receipt);
+                    if (receiptExt.UsrDocumentClass == null)
+                    {
+                        line.Selected = false;
+                        Base.poReceiptLineReturn.Cache.RaiseExceptionHandling<POReceiptLineReturn.selected>(line, null, new PXSetPropertyException("Request class is empty", PXErrorLevel.RowWarning));
+                    }
+                    else
+                    {
+                        if (!lst.Contains(line)) lst.Add(line);
+                    }
+                }
+                if ((bool)!addPOLineReturnIsDocClassSame(lst))
+                {
+                    Base.poReceiptLineReturn.Cache.RaiseExceptionHandling<POReceiptLineReturn.selected>(line, null, new PXSetPropertyException("Selected items must have the same Document Class", PXErrorLevel.RowError));
+                    line.Selected = false;
+                }
+            }
+            return baseMethod(adapter);
+        }
+
+        public delegate IEnumerable AddPOReceiptReturn2Delegate(PXAdapter adapter);
+        [PXOverride]
+        public IEnumerable AddPOReceiptReturn2(PXAdapter adapter, AddPOReceiptReturn2Delegate baseMethod)
+        {
+            List<POReceiptReturn> lst = new List<POReceiptReturn>();
+            foreach (POReceiptReturn line in Base.poReceiptReturn.Cache.Updated)
+            {
+                
+                if (line.Selected == true)
+                {
+                    POReceipt receipt = PXSelect<POReceipt, Where<POReceipt.receiptNbr, Equal<Required<POReceipt.receiptNbr>>, And<POReceipt.receiptType, Equal<POReceiptType.poreceipt>>>>.Select(Base, line.ReceiptNbr);
+                    var receiptExt = PXCache<POReceipt>.GetExtension<POReceiptExt>(receipt);
+                    if (receiptExt.UsrDocumentClass == null)
+                    {
+                        line.Selected = false;
+                        Base.poReceiptReturn.Cache.RaiseExceptionHandling<POReceiptLineReturn.selected>(line, null, new PXSetPropertyException("Request class is empty", PXErrorLevel.RowWarning));
+                    }
+                    else
+                    {
+                        if (!lst.Contains(line)) lst.Add(line);
+                    }
+                }
+                if ((bool)!addPOReturnIsDocClassSame(lst))
+                {
+                    Base.poReceiptReturn.Cache.RaiseExceptionHandling<POReceiptReturn.selected>(line, null, new PXSetPropertyException("Selected items must have the same Document Class", PXErrorLevel.RowError));
+                    line.Selected = false;
+                }
+            }
+            return baseMethod(adapter);
+        }
+
+        public delegate IEnumerable AddPOReceiptReturnDelegate(PXAdapter adapter);
+        [PXOverride]
+        public IEnumerable AddPOReceiptReturn(PXAdapter adapter, AddPOReceiptReturnDelegate baseMethod)
+        {
+            List<POReceiptReturn> lst = new List<POReceiptReturn>();
+            foreach(POReceiptReturn line in Base.poReceiptReturn.Cache.Updated)
+            {
+                if(line.Selected == true)
+                {
+                    POReceipt receipt = PXSelect<POReceipt, Where<POReceipt.receiptNbr, Equal<Required<POReceipt.receiptNbr>>, And<POReceipt.receiptType, Equal<POReceiptType.poreceipt>>>>.Select(Base, line.ReceiptNbr);
+                    var receiptExt = PXCache<POReceipt>.GetExtension<POReceiptExt>(receipt);
+                    if (receiptExt.UsrDocumentClass == null) {
+                        line.Selected = false;
+                        Base.poReceiptReturn.Cache.RaiseExceptionHandling<POReceiptLineReturn.selected>(line, null, new PXSetPropertyException("Request class is empty", PXErrorLevel.RowWarning));
+                    }
+                    if (!lst.Contains(line)) lst.Add(line);
+                }
+                if ((bool)!addPOReturnIsDocClassSame(lst))
+                {
+                    Base.poReceiptReturn.Cache.RaiseExceptionHandling<POReceiptReturn.selected>(line,null,new PXSetPropertyException("Selected items must have the same Document Class",PXErrorLevel.RowError));
+                    line.Selected = false;
+                }
+            }
+            return baseMethod(adapter);
+        }
+
+
+        #endregion
+        #region Methods
+
+        public bool? addPOLineIsDocClassSame(List<POReceiptEntry.POLineS> line)
+        {
+            bool isSame = true;
+            List<RQRequestClass> rqClass = new List<RQRequestClass>();
+            var rqClassGrpBy = rqClass.GroupBy(d => d.ReqClassID);
+            var doc = Base.Document.Current;
+            var docExt = PXCache<POReceipt>.GetExtension<POReceiptExt>(doc);
+            
+            foreach (POReceiptEntry.POLineS item in line)
+            {
+                POOrder ord = PXSelect<POOrder, Where<POOrder.orderNbr, Equal<Required<POOrder.orderNbr>>, And<POOrder.orderType, Equal<Required<POOrder.orderType>>>>>.Select(Base, item.OrderNbr, item.OrderType);
+                var ordExt = PXCache<POOrder>.GetExtension<POOrderExt>(ord);
+                RQRequestClass rqDocClass = PXSelect<RQRequestClass, Where<RQRequestClass.reqClassID, Equal<Required<RQRequestClass.reqClassID>>>>.Select(Base,ordExt.UsrDocumentClass);
+                if (!rqClass.Contains(rqDocClass)) { rqClass.Add(rqDocClass); }
+                
+            }
+            if(rqClassGrpBy.Count() == 1)
+            {
+                isSame = true;
+                
+                foreach (var items in rqClassGrpBy)
+                {
+                    
+                    var classID = items.Key;
+                    if (docExt.UsrDocumentClass == null)
+                    {
+                        Base.Document.Cache.SetValueExt<POReceiptExt.usrDocumentClass>(Base.Document.Current, classID);
+                        Base.Document.Update(Base.Document.Current);
+                    }
+                    else if (docExt.UsrDocumentClass != classID)
+                    {
+                        isSame = false;
+                    }
+                }
+            }
+            if (rqClassGrpBy.Count() > 1) { isSame = false; }
+
+
+            return isSame;
+        }
+
+        public bool? addPOOrderIsDocClassSame(List<POReceiptEntry.POOrderS> line)
+        {
+            bool isSame = true;
+
+            List<RQRequestClass> rqClass = new List<RQRequestClass>();
+            var rqClassGrpBy = rqClass.GroupBy(d => d.ReqClassID);
+            var doc = Base.Document.Current;
+            var docExt = PXCache<POReceipt>.GetExtension<POReceiptExt>(doc);
+
+            foreach (POReceiptEntry.POOrderS item in line)
+            {
+                POOrder ord = PXSelect<POOrder, Where<POOrder.orderNbr, Equal<Required<POOrder.orderNbr>>, And<POOrder.orderType, Equal<Required<POOrder.orderType>>>>>.Select(Base, item.OrderNbr, item.OrderType);
+                var ordExt = PXCache<POOrder>.GetExtension<POOrderExt>(ord);
+                RQRequestClass rqDocClass = PXSelect<RQRequestClass, Where<RQRequestClass.reqClassID, Equal<Required<RQRequestClass.reqClassID>>>>.Select(Base, ordExt.UsrDocumentClass);
+                if (!rqClass.Contains(rqDocClass)) { rqClass.Add(rqDocClass); }
+
+            }
+            if (rqClassGrpBy.Count() == 1)
+            {
+                isSame = true;
+
+                foreach (var items in rqClassGrpBy)
+                {
+
+                    var classID = items.Key;
+                    if (docExt.UsrDocumentClass == null)
+                    {
+                        Base.Document.Cache.SetValueExt<POReceiptExt.usrDocumentClass>(Base.Document.Current, classID);
+                        Base.Document.Update(Base.Document.Current);
+                    }
+                    else if (docExt.UsrDocumentClass != classID)
+                    {
+                        isSame = false;
+                    }
+                }
+            }
+            if (rqClassGrpBy.Count() > 1) { isSame = false; }
+
+            return isSame; 
+        }
+
+        public bool? addPOReturnIsDocClassSame(List<POReceiptReturn> line)
+        {
+            bool isSame = true;
+            List<RQRequestClass> rqClass = new List<RQRequestClass>();
+            var rqClassGrpBy = rqClass.GroupBy(d => d.ReqClassID);
+            
+            var doc = Base.Document.Current;
+            var docExt = PXCache<POReceipt>.GetExtension<POReceiptExt>(doc);
+            foreach (POReceiptReturn item in line)
+            {
+                POReceipt poReceipt = PXSelect<POReceipt, Where<POReceipt.receiptNbr, Equal<Required<POReceipt.receiptNbr>>, And<POReceipt.receiptType, Equal<Required<POReceipt.receiptType>>>>>.Select(Base, item.ReceiptNbr, item.ReceiptType);
+                var poReceiptExt = PXCache<POReceipt>.GetExtension<POReceiptExt>(poReceipt);
+                RQRequestClass rqDocClass = PXSelect<RQRequestClass, Where<RQRequestClass.reqClassID, Equal<Required<RQRequestClass.reqClassID>>>>.Select(Base,poReceiptExt.UsrDocumentClass);
+                if (!rqClass.Contains(rqDocClass)) {
+                    rqClass.Add(rqDocClass); }
+
+            }
+            if (rqClassGrpBy.Count() == 1)
+            {
+                isSame = true;
+                foreach (var items in rqClassGrpBy)
+                {
+                    var classID = items.Key;
+                    if (docExt.UsrDocumentClass == null)
+                    {
+                        Base.Document.Cache.SetValueExt<POReceiptExt.usrDocumentClass>(Base.Document.Current, classID);
+                        Base.Document.Update(Base.Document.Current);
+                    }
+                    else if (docExt.UsrDocumentClass != classID)
+                    {
+                        isSame = false;
+                    }
+                }
+            }
+            if (rqClassGrpBy.Count() > 1) { isSame = false; }
+            
+            return isSame;
+        }
+        public bool? addPOLineReturnIsDocClassSame(List<POReceiptLineReturn> line)
+        {
+            bool isSame = true;
+            List<RQRequestClass> rqClass = new List<RQRequestClass>();
+            var rqClassGrpBy = rqClass.GroupBy(d => d.ReqClassID);
+            var doc = Base.Document.Current;
+            var docExt = PXCache<POReceipt>.GetExtension<POReceiptExt>(doc);
+            foreach (POReceiptLineReturn item in line)
+            {
+                POReceipt poReceipt = PXSelect<POReceipt, Where<POReceipt.receiptNbr, Equal<Required<POReceipt.receiptNbr>>, And<POReceipt.receiptType, Equal<Required<POReceipt.receiptType>>>>>.Select(Base, item.ReceiptNbr, item.ReceiptType);
+                var poReceiptExt = PXCache<POReceipt>.GetExtension<POReceiptExt>(poReceipt);
+                RQRequestClass rqDocClass = PXSelect<RQRequestClass, Where<RQRequestClass.reqClassID, Equal<Required<RQRequestClass.reqClassID>>>>.Select(Base, poReceiptExt.UsrDocumentClass);
+                if (!rqClass.Contains(rqDocClass)) { rqClass.Add(rqDocClass); }
+
+            }
+            if (rqClassGrpBy.Count() == 1)
+            {
+                isSame = true;
+                foreach (var items in rqClassGrpBy)
+                {
+                    var classID = items.Key;
+                    if (docExt.UsrDocumentClass == null)
+                    {
+                        Base.Document.Cache.SetValueExt<POReceiptExt.usrDocumentClass>(Base.Document.Current, classID);
+                        Base.Document.Update(Base.Document.Current);
+                    }
+                    else if (docExt.UsrDocumentClass != classID)
+                    {
+                        isSame = false;
+                    }
+                }
+            }
+            if (rqClassGrpBy.Count() > 1) { isSame = false; }
+            return isSame;
+        }
+
+        #endregion
+    }
+}]]></CDATA>
+</Graph>

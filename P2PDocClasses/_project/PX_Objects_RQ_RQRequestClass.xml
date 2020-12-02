@@ -1,0 +1,38 @@
+﻿<DAC type="PX.Objects.RQ.RQRequestClass">
+    <Field FieldName="UsrLimitPerLine" TypeName="int" MapDbTable="RQRequestClass" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBInt]
+[PXUIField(DisplayName="Line Item Limit")]
+[PXDefault(0,PersistingCheck = PXPersistingCheck.Nothing)]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrEnableLimit" TypeName="bool" MapDbTable="RQRequestClass" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBBool]
+[PXUIField(DisplayName="Enable Limit")]
+[PXDefault(false,PersistingCheck = PXPersistingCheck.Nothing)]]]></CDATA>
+    </Field>
+    <Field FieldName="UsrSecondaryType" TypeName="string" MapDbTable="RQRequestClass" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBString(2)]
+[PXUIField(DisplayName="Secondary Type")]
+using PX.Objects.PO;
+        [PXStringList(
+          new string[]
+          {
+        POTypes.CustomerOrder,
+        POTypes.Stocking,
+        POTypes.NonTrade,
+        POTypes.Service,
+        POTypes.Trade,
+        POTypes.FixedAsset,
+        POTypes.DirectDelivery
+          },
+          new string[]
+          {
+        POTypes.UI.CustomerOrder,
+        POTypes.UI.Stocking,
+        POTypes.UI.NonTrade,
+        POTypes.UI.Service,
+        POTypes.UI.Trade,
+        POTypes.UI.FixedAsset,
+         POTypes.UI.DirectDelivery
+        })]]]></CDATA>
+    </Field>
+</DAC>

@@ -1,0 +1,8 @@
+﻿<DAC type="PX.Objects.RQ.RQRequisition">
+    <Field FieldName="UsrDocumentClass" TypeName="string" MapDbTable="RQRequisition" TextAttributes="#CDATA" StorageName="AddColumn">
+        <CDATA name="TextAttributes"><![CDATA[[PXDBString(10)]
+[PXUIField(DisplayName="Request Class")]
+[PXSelector(typeof(Search<RQRequestClass.reqClassID,Where<RQRequestClassExtPB.isPurchaseReq, Equal<True>>>))]
+[PXDefault()]]]></CDATA>
+    </Field>
+</DAC>

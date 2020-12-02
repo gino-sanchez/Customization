@@ -1,0 +1,106 @@
+﻿<Graph ClassName="P2PRQRequestEntry" Source="#CDATA" IsNew="True" FileType="NewGraph">
+    <CDATA name="Source"><![CDATA[using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using PX.Data;
+using PX.Objects.PO;
+using PX.Objects.CS;
+using PX.Objects.AP;
+using PX.Objects.EP;
+using PX.Objects.CR;
+using System.Collections;
+using PX.Data.DependencyInjection;
+using PX.LicensePolicy;
+using PX.Objects.IN;
+using PX.Objects.AR;
+using PX.Objects.GL;
+using PX.Objects.CM;
+using PX.Objects.GL.FinPeriods;
+using PX.Objects.GL.FinPeriods.TableDefinition;
+using PX.TM;
+using PX.Objects;
+using PX.Objects.RQ;
+
+namespace PX.Objects.RQ
+{
+  public class RQRequestEntry_Extension : PXGraphExtension<RQRequestEntry>
+  {
+        #region Selects
+
+        public PXSelect<RQRequestClass,Where<RQRequestClass.reqClassID,Equal<Current<RQRequest.reqClassID>>>> RQClasses;
+
+        #endregion
+
+        #region ActionOverride
+
+        public delegate IEnumerable AddInvSelBySiteDelegate(PXAdapter adapter);
+        [PXOverride]
+        public IEnumerable AddInvSelBySite(PXAdapter adapter, AddInvSelBySiteDelegate baseMethod)
+        {
+            var rqSetup = RQClasses.Current;
+            List<RQSiteStatusSelected> lst = new List<RQSiteStatusSelected>();
+
+            foreach(RQSiteStatusSelected line in Base.sitestatus.Cache.Updated)
+            {
+                if (line.Selected == true)
+                {
+                    if (!lst.Contains(line))
+                    {
+                        lst.Add(line);
+                    }
+                }
+            }
+            PXTrace.WriteInformation(lst.Count.ToString());
+            if ((bool)EnabledLimit(lst, rqSetup)) { return baseMethod(adapter); }
+            else return baseMethod(adapter);
+        }
+
+        #endregion
+
+        #region Method
+
+        public bool? EnabledLimit(List<RQSiteStatusSelected> lineItem,RQRequestClass limit)
+        {
+            var limitExt = PXCache<RQRequestClass>.GetExtension<RQRequestClassExt>(limit);
+            if(limitExt.UsrEnableLimit == true)
+            {
+                if ((lineItem.Count + Base.Lines.Select().Count) > limitExt.UsrLimitPerLine) {
+                    PXTrace.WriteInformation(Base.Lines.Select().Count.ToString());
+                    throw new PXException("Selected line item exceeds the limit on Request Class"); }
+                return true;
+            }
+            return false;
+        }
+
+        #endregion
+
+        #region Event Handlers
+
+        protected virtual void RQRequestLine_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+            var row = e.Row as RQRequestLine;
+            if (row == null) return;
+            var rqSetup = RQClasses.Current;
+            var rqSetupExt = PXCache<RQRequestClass>.GetExtension<RQRequestClassExt>(rqSetup);
+            if (rqSetupExt.UsrEnableLimit == true)
+            {
+                sender.AllowInsert = rqSetupExt.UsrLimitPerLine != Base.Lines.Select().Count;
+                if(Base.Lines.Select().Count > rqSetupExt.UsrLimitPerLine)
+                {
+                    sender.RaiseExceptionHandling<RQRequestLine.selected>(row,null,new PXSetPropertyException("Line item exceeds the limit on Request Class",PXErrorLevel.RowWarning));
+                }
+            }
+        }
+        #endregion
+
+        #region CacheAttached
+
+        [PXMergeAttributes(Method =MergeMethod.Append)]
+        [PXRestrictor(typeof(Where<RQRequestClassExtPB.isPurchaseReq, Equal<True>>), null)]
+        protected virtual void RQRequest_ReqClassID_CacheAttached(PXCache sender) { }
+
+        #endregion
+    }
+}]]></CDATA>
+</Graph>

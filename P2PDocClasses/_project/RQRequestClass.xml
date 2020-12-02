@@ -1,0 +1,5 @@
+﻿<Table TableName="RQRequestClass">
+    <Column TableName="RQRequestClass" ColumnName="UsrLimitPerLine" ColumnType="int" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="RQRequestClass" ColumnName="UsrEnableLimit" ColumnType="bool" AllowNull="True" MaxLength="25" DecimalPrecision="2" IsNewColumn="True" IsUnicode="True" />
+    <Column TableName="RQRequestClass" ColumnName="UsrSecondaryType" ColumnType="string" AllowNull="True" MaxLength="2" DecimalPrecision="2" DecimalLength="2" IsNewColumn="True" IsUnicode="True" />
+</Table>

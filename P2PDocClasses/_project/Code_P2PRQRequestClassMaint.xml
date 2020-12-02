@@ -1,0 +1,27 @@
+﻿<Graph ClassName="P2PRQRequestClassMaint" Source="#CDATA" IsNew="True" FileType="NewGraph">
+    <CDATA name="Source"><![CDATA[using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using PX.Data;
+using PX.Objects.IN;
+using PX.Objects;
+using PX.Objects.RQ;
+
+namespace PX.Objects.RQ
+{
+  public class P2PRQRequestClassMaint_Extension : PXGraphExtension<RQRequestClassMaint>
+  {
+    #region Event Handlers
+        public virtual void RQRequestClass_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+            var row = e.Row as RQRequestClass;
+            if (row == null) return;
+            var rowExt = sender.GetExtension<RQRequestClassExt>(row);
+            var enableLimit = rowExt.UsrEnableLimit == true;
+            PXUIFieldAttribute.SetEnabled<RQRequestClassExt.usrLimitPerLine>(sender,row,enableLimit);
+        }
+    #endregion
+    }
+}]]></CDATA>
+</Graph>

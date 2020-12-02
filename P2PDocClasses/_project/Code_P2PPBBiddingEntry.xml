@@ -1,0 +1,204 @@
+﻿<Graph ClassName="P2PPBBiddingEntry" Source="#CDATA" IsNew="True" FileType="NewGraph">
+    <CDATA name="Source"><![CDATA[using System;
+using PX.Objects;
+using PX.Data;
+using System.Collections;
+using PX.Objects.RQ;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace PBBidding
+{
+  public class P2PPBBiddingEntry_Extension : PXGraphExtension<PBBiddingEntry>
+  {
+    #region Event Handlers
+        protected virtual void PBBid_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+            var row = e.Row as PBBid;
+            if (row == null) return;
+            var rowExt = sender.GetExtension<PBBidExt>(row);
+            if(Base.Allocations.Select().Count > 0)
+            {
+                if (rowExt.UsrDocumentClass == null) { sender.RaiseExceptionHandling<PBBidExt.usrDocumentClass>(row,null, new PXSetPropertyException("Document class is Empty",PXErrorLevel.Warning)); }
+            }
+        }
+
+        protected virtual void RQRequestLineSelect_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+            var row = e.Row as RQRequestLineSelect;
+            if (row == null) return;
+            if ((bool)!SelectedVerificationDocClass(row)) { sender.RaiseExceptionHandling<RQRequestLineSelect.selected>(row,null,new PXSetPropertyException("Selected items must have the same Document Class",PXErrorLevel.RowError)); }
+
+
+        }
+
+        protected virtual void PBBid_RowPersisting(PXCache sender, PXRowPersistingEventArgs e)
+        {
+            var row = e.Row as PBBid;
+            if (row == null) return;
+            var doc = Base.Bidding.Current;
+            var docExt = PXCache<PBBid>.GetExtension<PBBidExt>(doc);
+            RQRequestClass requestClass = PXSelect<
+                 RQRequestClass,
+                 Where<RQRequestClass.reqClassID, Equal<Required<RQRequestClass.reqClassID>>>>
+                 .Select(Base, docExt.UsrDocumentClass);
+            if(requestClass != null)
+            {
+                var reqClassExt = PXCache<RQRequestClass>.GetExtension<RQRequestClassExt>(requestClass);
+                if(reqClassExt.UsrEnableLimit == true)
+                {
+                    if (Base.Allocations.Select().Count > reqClassExt.UsrLimitPerLine) { throw new PXException("Line item exceeds the limit on Document Class"); }
+                }
+            }
+
+        }
+
+        protected virtual void PBRequestAlloc_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+            var row = e.Row as PBRequestAlloc;
+            if (row == null) return;
+            var doc = Base.Bidding.Current;
+            var docExt = PXCache<PBBid>.GetExtension<PBBidExt>(doc);
+            RQRequestClass requestClass = PXSelect<
+                 RQRequestClass,
+                 Where<RQRequestClass.reqClassID, Equal<Required<RQRequestClass.reqClassID>>>>
+                 .Select(Base, docExt.UsrDocumentClass);
+            if (requestClass != null)
+            {
+                var reqClassExt = PXCache<RQRequestClass>.GetExtension<RQRequestClassExt>(requestClass);
+                if (reqClassExt.UsrEnableLimit == true) 
+                {
+                    if (Base.Allocations.Select().Count > reqClassExt.UsrLimitPerLine) { sender.RaiseExceptionHandling<PBRequestAlloc.inventoryID>(row,row.InventoryID, new PXSetPropertyException("Line item exceeds the limit on Document Class",PXErrorLevel.RowWarning)); }
+                }
+            }
+        }
+        #endregion
+
+        #region Override Action
+
+        public delegate IEnumerable addRequestLineDelegate(PXAdapter adapter);
+        [PXOverride]
+        public IEnumerable addRequestLine(PXAdapter adapter, addRequestLineDelegate baseMethod)
+        {
+            List<RQRequestLineSelect> lst = new List<RQRequestLineSelect>();
+            foreach(RQRequestLineSelect line in Base.SourceRequests.Cache.Updated)
+            {
+                if(line.Selected == true)
+                {
+                    if (!lst.Contains(line)) lst.Add(line);
+                }
+                if ((bool)!IsLineSameAsDoc(lst))
+                {
+                    Base.SourceRequests.Cache.RaiseExceptionHandling<RQRequestLineSelect.selected>(line, false, new PXSetPropertyException("Selected items must have the same Document Class", PXErrorLevel.RowError));
+                    line.Selected = false;
+                }
+            }
+            return baseMethod(adapter);
+        }
+
+
+        #endregion
+
+        #region Method
+
+        public bool? IsLineSameAsDoc(List<RQRequestLineSelect> line)
+        {
+            bool isSame = true;
+            var doc = Base.Bidding.Current;
+            var docExt = PXCache<PBBid>.GetExtension<PBBidExt>(doc);
+            List<RQRequestClass> rqClass = new List<RQRequestClass>();
+            var rqClassGroupBy = rqClass.GroupBy(d => d.ReqClassID);
+
+            foreach(RQRequestLineSelect item in line)
+            {
+                RQRequest rqReq = PXSelect<RQRequest,Where<RQRequest.orderNbr,Equal<Required<RQRequest.orderNbr>>>>.Select(Base,item.OrderNbr);
+                RQRequestClass rqClassID = PXSelect<
+                    RQRequestClass,
+                    Where<RQRequestClass.reqClassID, Equal<Required<RQRequestClass.reqClassID>>>>.Select(Base,rqReq.ReqClassID);
+                if (!rqClass.Contains(rqClassID)) rqClass.Add(rqClassID);
+            }
+            
+            if(rqClassGroupBy.Count() == 1)
+            {
+                isSame = true;
+                foreach(var grp in rqClassGroupBy)
+                {
+                    var classID = grp.Key;
+                    if (docExt.UsrDocumentClass == null)
+                    {
+                        Base.Bidding.Cache.SetValueExt<PBBidExt.usrDocumentClass>(doc, classID);
+                        Base.Bidding.Update(doc);
+                    }
+                    else if (docExt.UsrDocumentClass != classID)
+                    {
+                        isSame = false;
+                    }
+                }
+            }
+            if (rqClassGroupBy.Count() > 1) { isSame = false; }
+            return isSame;
+        }
+
+        public bool? SelectedVerificationDocClass(RQRequestLineSelect line)
+        {
+            bool isSame = true;
+            var doc = Base.Bidding.Current;
+            var docExt = PXCache<PBBid>.GetExtension<PBBidExt>(doc);
+            List<RQRequestClass> rqClass = new List<RQRequestClass>();
+            var rqClassGroupBy = rqClass.GroupBy(d => d.ReqClassID);
+            
+                RQRequest rqReq = PXSelect<RQRequest, Where<RQRequest.orderNbr, Equal<Required<RQRequest.orderNbr>>>>.Select(Base, line.OrderNbr);
+                RQRequestClass rqClassID = PXSelect<
+                    RQRequestClass,
+                    Where<RQRequestClass.reqClassID, Equal<Required<RQRequestClass.reqClassID>>>>.Select(Base, rqReq.ReqClassID);
+                if (!rqClass.Contains(rqClassID)) rqClass.Add(rqClassID);
+            
+            if (rqClassGroupBy.Count() == 1)
+            {
+                isSame = true;
+                foreach (var grp in rqClassGroupBy)
+                {
+                    var classID = grp.Key;
+                    if (docExt.UsrDocumentClass == null) isSame = true;
+                    else if (docExt.UsrDocumentClass != classID)
+                    {
+                        isSame = false;
+                    }
+                }
+            }
+            if (rqClassGroupBy.Count() > 1) { isSame = false; }
+            return isSame;
+        }
+
+        #endregion
+
+        #region CacheAttached
+
+        [PXMergeAttributes(Method = MergeMethod.Append)]
+        [PXRestrictor(typeof(Where<RQRequestClassExtPB.isPurchaseReq, Equal<True>>), null)]
+        protected virtual void RQRequestLineFilter_ReqClassID_CacheAttached(PXCache sender) { }
+        #endregion
+
+        #region Override IEnumerable
+
+        //--Uncomment if needed also 
+        //protected IEnumerable sourceRequests()
+        //{
+        //    PXView select = new PXView(Base, false, Base.SourceRequests.View.BqlSelect);
+        //    //select.Join<InnerJoin<RQRequestClass, On<RQRequestClass.reqClassID, Equal<RQRequest.reqClassID>>>>();
+        //    select.WhereAnd<Where<RQRequestClassExtPB.isPurchaseReq, Equal<True>>>();
+        //    Int32 totalRow = 0;
+        //    Int32 startrow = PXView.StartRow;
+        //    List<object> result = select.Select(PXView.Currents, PXView.Parameters,
+        //      PXView.Searches, PXView.SortColumns, PXView.Descendings,
+        //      PXView.Filters, ref startrow, PXView.MaximumRows, ref totalRow);
+        //    PXView.StartRow = 0;
+
+
+        //    return result;
+        //}
+
+        #endregion
+    }
+}]]></CDATA>
+</Graph>

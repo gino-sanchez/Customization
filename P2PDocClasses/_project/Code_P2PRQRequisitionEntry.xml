@@ -1,0 +1,241 @@
+﻿<Graph ClassName="P2PRQRequisitionEntry" Source="#CDATA" IsNew="True" FileType="NewGraph">
+    <CDATA name="Source"><![CDATA[using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using PX.Data;
+using PX.Objects.PO;
+using PX.Objects.AP;
+using PX.Objects.CR;
+using PX.Objects.CM;
+using PX.Objects.CS;
+using System.Collections;
+using PX.Data.DependencyInjection;
+using PX.LicensePolicy;
+using PX.Objects.EP;
+using PX.Objects.IN;
+using PX.Objects.SO;
+using PX.Objects.AR;
+using PX.Objects.Common.Extensions;
+using PX.Objects.GL;
+using PX.TM;
+using PX.Objects;
+using PX.Objects.RQ;
+
+namespace PX.Objects.RQ
+{
+  public class P2PRQRequisitionEntry_Extension : PXGraphExtension<RQRequisitionEntry>
+  {
+        #region OverrideMethod
+
+        protected IEnumerable sourceRequests()
+        {
+            PXView select = new PXView(Base, false, Base.SourceRequests.View.BqlSelect);
+            select.Join<InnerJoin<RQRequestClass, On<RQRequestClass.reqClassID, Equal<RQRequest.reqClassID>>>>();
+            select.WhereAnd<Where<RQRequestClassExtPB.isPurchaseReq, Equal<True>>>();
+            Int32 totalRow = 0;
+            Int32 startrow = PXView.StartRow;
+            List<object> result = select.Select(PXView.Currents, PXView.Parameters,
+              PXView.Searches, PXView.SortColumns, PXView.Descendings,
+              PXView.Filters, ref startrow, PXView.MaximumRows, ref totalRow);
+            PXView.StartRow = 0;
+            
+
+            return result;
+        }
+
+        #endregion
+        #region Event Handlers
+        public virtual void RQRequisitionLine_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+            var row = e.Row as RQRequisitionLine;
+            if (row == null) return;
+            
+                PXTrace.WriteInformation("hello");
+                var document = Base.Document.Current;
+                var docExt = PXCache<RQRequisition>.GetExtension<RQRequisitionExt>(document);
+                RQRequestClass docClass = PXSelect<RQRequestClass, Where<RQRequestClass.reqClassID, Equal<Required<RQRequestClass.reqClassID>>>>.Select(Base, docExt.UsrDocumentClass);
+                if (docClass != null)
+                {
+                    var docClassExt = PXCache<RQRequestClass>.GetExtension<RQRequestClassExt>(docClass);
+                    if (docClassExt.UsrEnableLimit == true)
+                    {
+                        sender.AllowInsert = docClassExt.UsrLimitPerLine != Base.Lines.Select().Count;
+                        if(Base.Lines.Select().Count > docClassExt.UsrLimitPerLine)
+                        {
+                            sender.RaiseExceptionHandling<RQRequisitionLine.selected>(row, null, new PXSetPropertyException("Line item exceeds the limit on Document Class",PXErrorLevel.RowWarning)); ;
+                        }
+                    }
+                }
+        }
+
+        public virtual void RQRequisitionLine_RowPersisting(PXCache sender, PXRowPersistingEventArgs e)
+        {
+            var row = e.Row as RQRequisitionLine;
+            if (row == null) return;
+            var document = Base.Document.Current;
+            var docExt = PXCache<RQRequisition>.GetExtension<RQRequisitionExt>(document);
+            RQRequestClass docClass = PXSelect<RQRequestClass, Where<RQRequestClass.reqClassID, Equal<Required<RQRequestClass.reqClassID>>>>.Select(Base, docExt.UsrDocumentClass);
+            if(docClass != null)
+            {
+                var docClassExt = PXCache<RQRequestClass>.GetExtension<RQRequestClassExt>(docClass);
+                if (docClassExt.UsrEnableLimit == true)
+                {
+                    if (Base.Lines.Select().Count > docClassExt.UsrLimitPerLine)
+                    {
+                        throw new PXException("Line item exceeds the limit on Document Class");
+                    }
+                }
+            }
+        }
+
+        public virtual void RQRequisition_UsrDocumentClass_FieldUpdated(PXCache sender, PXFieldUpdatedEventArgs e)
+        {
+            var row = e.Row as RQRequisition;
+            if (row == null) return;
+            var rowExt = sender.GetExtension<RQRequisitionExt>(row);
+            if(rowExt.UsrDocumentClass != e.OldValue)
+            {
+                if(Base.Lines.Select().Count > 0)
+                {
+                    foreach(RQRequisitionLine line in Base.Lines.Select())
+                    {
+                        Base.Lines.Delete(line);
+                    }
+                }
+            }
+           
+        }
+        #endregion
+        #region Methods
+
+        public bool? IsDocClassNotSame(RQRequestLineSelect line, RQRequisition docClass)
+        {
+            List<RQRequestLineSelect> req = new List<RQRequestLineSelect>();
+            var docClassExt = PXCache<RQRequisition>.GetExtension<RQRequisitionExt>(docClass);
+            RQRequest rqLine = PXSelect<RQRequest, Where<RQRequest.orderNbr,Equal<Required<RQRequest.orderNbr>>,And<RQRequest.reqClassID,Equal<Required<RQRequest.reqClassID>>>>>.Select(Base,line.OrderNbr,docClassExt.UsrDocumentClass);
+            if (rqLine != null)
+            {
+                PXTrace.WriteInformation("Umabot");
+                RQRequestClass rqClass = PXSelect<RQRequestClass, Where<RQRequestClass.reqClassID, Equal<Required<RQRequestClass.reqClassID>>>>.Select(Base,rqLine.ReqClassID);
+                var rqClassExt = PXCache<RQRequestClass>.GetExtension<RQRequestClassExt>(rqClass);
+                if (rqClassExt.UsrEnableLimit == true)
+                {
+                    PXTrace.WriteInformation("Umabot me");
+                    if (!req.Contains(line)) { req.Add(line); }
+                    if ((req.Count + Base.Lines.Select().Count) > rqClassExt.UsrLimitPerLine) {
+                        Base.SourceRequests.Cache.Clear();
+                        throw new PXException("Selected line item exceeds the limit on Document Class"); }
+                }
+                return false;
+            }
+            return true;
+        }
+
+
+        #endregion
+
+        #region OvverrideAction
+
+        public delegate IEnumerable addRequestLineDelegate(PXAdapter adapter);
+        [PXOverride]
+        public IEnumerable addRequestLine(PXAdapter adapter, addRequestLineDelegate baseMethod)
+        {
+            var document = Base.Document.Current;
+            var docExt = PXCache<RQRequisition>.GetExtension<RQRequisitionExt>(document);
+            List<RQRequest> rqReq = new List<RQRequest>();
+            var rqReqGrpByClass = rqReq.GroupBy(d => d.ReqClassID);
+            
+            foreach(RQRequestLineSelect line in Base.SourceRequests.Cache.Updated)
+            {
+                if (line.Selected == true)
+                {
+                    RQRequest rq = PXSelect<RQRequest, Where<RQRequest.orderNbr, Equal<Required<RQRequest.orderNbr>>>>.Select(Base, line.OrderNbr);
+                    if ((bool)IsDocClassNotSame(line, document)) {
+                        
+                        if (docExt.UsrDocumentClass == null) { rqReq.Add(rq); }
+                        else if (docExt.UsrDocumentClass != null)
+                        {
+                            Base.SourceRequests.Cache.Clear();
+                            throw new PXException("Selected RefNbr # " + rq.OrderNbr + ". The Request Class must be same on Document Class");
+                        }
+                    }
+                }
+            }
+            foreach (var items in rqReqGrpByClass) {
+                var classID = items.Key;
+                if (rqReqGrpByClass.Count() > 1) {
+                    Base.SourceRequests.Cache.Clear();
+                    throw new PXException("Selected items must have the same request class"); }
+                else if (rqReqGrpByClass.Count() == 1) {
+                    Base.Document.Cache.SetValueExt<RQRequisitionExt.usrDocumentClass>(document,classID);
+                    Base.Document.Update(document);
+                }
+            }
+            
+            return baseMethod(adapter);
+        }
+
+        public delegate IEnumerable AddInvSelBySiteDelegate(PXAdapter adapter);
+        [PXOverride]
+        public IEnumerable AddInvSelBySite(PXAdapter adapter, AddInvSelBySiteDelegate baseMethod)
+        {
+            List<RQSiteStatusSelected> lst = new List<RQSiteStatusSelected>();
+            var doc = Base.Document.Current;
+            var docExt = PXCache<RQRequisition>.GetExtension<RQRequisitionExt>(doc);
+            RQRequestClass rqClass = PXSelect<RQRequestClass,Where<RQRequestClass.reqClassID,Equal<Required<RQRequestClass.reqClassID>>>>.Select(Base,docExt.UsrDocumentClass);
+            if (rqClass == null) throw new PXException("Doc Class is empty");
+            var rqClassExt = PXCache<RQRequestClass>.GetExtension<RQRequestClassExt>(rqClass);
+            foreach(RQSiteStatusSelected line in Base.sitestatus.Cache.Updated)
+            {
+                if(line.Selected == true)
+                {
+                    if (!lst.Contains(line))
+                    {
+                        lst.Add(line);
+                    }
+                }
+            }
+            if (rqClassExt.UsrEnableLimit == true)
+            {
+                if ((lst.Count() + Base.Lines.Select().Count) > rqClassExt.UsrLimitPerLine) { throw new PXException("Line item exceeds the limit on Document Class"); }
+            }
+            return baseMethod(adapter);
+        }
+
+        public delegate IEnumerable CreatePOOrderDelegate(PXAdapter adapter);
+        [PXOverride]
+        public IEnumerable CreatePOOrder(PXAdapter adapter, CreatePOOrderDelegate baseMethod)
+        {
+            foreach(RQRequisition line in baseMethod(adapter))
+            {
+                baseMethod(adapter);
+                var doc = Base.Document.Current;
+                var docExt = PXCache<RQRequisition>.GetExtension<RQRequisitionExt>(doc);
+                var graph = PXGraph.CreateInstance<POOrderEntry>();
+                foreach (RQRequisitionOrder selectPO in PXSelect<RQRequisitionOrder, Where<RQRequisitionOrder.reqNbr, Equal<Required<RQRequisitionOrder.reqNbr>>>>.Select(Base, doc.ReqNbr))
+                {
+                    if (selectPO != null)
+                    {
+                        graph.Document.Current = graph.Document.Search<POOrder.orderNbr>(selectPO.OrderNbr, selectPO.OrderType);
+                        graph.Document.Cache.SetValueExt<POOrderExt.usrDocumentClass>(graph.Document.Current, docExt.UsrDocumentClass);
+                        graph.Document.Update(graph.Document.Current);
+                        graph.Persist();
+                    }
+                }
+                yield return line;
+            }
+        }
+
+
+        #endregion
+
+        #region Cache Attached
+        [PXMergeAttributes(Method = MergeMethod.Append)]
+        //[PXSelector(typeof(Search<RQRequestClass.reqClassID>))]
+        [PXRestrictor(typeof(Where<RQRequestClassExtPB.isPurchaseReq, Equal<True>>), null)]
+        protected virtual void RQRequestLineFilter_ReqClassID_CacheAttached(PXCache sender) { }
+        #endregion
+    }
+}]]></CDATA>
+</Graph>

@@ -1,0 +1,393 @@
+﻿<Graph ClassName="P2PPOOrderEntry" Source="#CDATA" IsNew="True" FileType="NewGraph">
+    <CDATA name="Source"><![CDATA[using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using PX.Common;
+using PX.Data;
+using PX.Objects.GL;
+using PX.Objects.CM;
+using PX.Objects.CS;
+using PX.Objects.CR;
+using PX.Objects.TX;
+using PX.Objects.IN;
+using PX.Objects.EP;
+using PX.Objects.AP;
+using PX.Objects.AR;
+using PX.Objects.SO;
+using PX.TM;
+using SOOrder = PX.Objects.SO.SOOrder;
+using SOLine = PX.Objects.SO.SOLine;
+using PX.CS.Contracts.Interfaces;
+using PX.Data.DependencyInjection;
+using PX.Data.ReferentialIntegrity.Attributes;
+using PX.LicensePolicy;
+using PX.Objects.PM;
+using CRLocation = PX.Objects.CR.Standalone.Location;
+using PX.Objects.AP.MigrationMode;
+using PX.Objects.Common;
+using PX.Objects.Common.Discount;
+using Microsoft.Practices.ServiceLocation;
+using PX.Objects;
+using PX.Objects.PO;
+using PX.Objects.RQ;
+using static PX.Objects.PO.POOrderEntry;
+using P2PDocClasses;
+
+namespace PX.Objects.PO
+{
+  public class P2PPOOrderEntry_Extension : PXGraphExtension<POOrderEntry>
+  {
+        #region Selects
+
+        public PXSelectJoin<
+            POItemSwap,
+            LeftJoin<POLine,
+                On<POLine.orderNbr,Equal<POItemSwap.orderNbr>,
+                And<POLine.orderType,Equal<POItemSwap.orderType>,
+                And<POLine.lineNbr,Equal<POItemSwap.lineNbr>>>>>,
+            Where<POItemSwap.orderNbr,Equal<Current<POOrder.orderNbr>>,
+                And<POItemSwap.orderType,Equal<Current<POOrder.orderType>>>>> 
+            ItemSwapping;
+        //public PXSelect<POLine,Where<POLine.orderNbr,Equal<Current<POOrder.orderNbr>>,And<POLine.orderType,Equal<Current<POOrder.orderType>>,And<POLine.receivedQty,Greater<decimal0>>>>> lineItemSwapping;
+        public PXSelect<
+            InventorySwapping,
+            Where<InventorySwapping.orderNbr,Equal<Current<POOrder.orderNbr>>,
+                And<InventorySwapping.orderType,Equal<Current<POOrder.orderType>>>>> 
+            InventorySwap;
+
+        #region Projection
+        [PXProjection(typeof(Select<POLine>))]
+        [Serializable]
+        public class InventorySwapping : IBqlTable
+        {
+            public abstract class selected : IBqlField { }
+            [PXBool()]
+            [PXUIField(DisplayName = "Selected")]
+            [PXDefault(false,PersistingCheck = PXPersistingCheck.Nothing)]
+            public virtual bool? Selected { get; set; }
+            public abstract class orderNbr : IBqlField { }
+            [PXDBString(15,IsKey = true,IsUnicode = true,BqlField = typeof(POLine.orderNbr))]
+            [PXUIField(DisplayName = "Order Nbr",Visible = false)]
+            public virtual string OrderNbr { get; set; }
+
+            public abstract class orderType : IBqlField { }
+            [PXDBString(2,IsFixed = true,BqlField = typeof(POLine.orderType))]
+            [PXUIField(DisplayName = "Order Type",Visible = false)]
+            public virtual string OrderType { get; set; }
+
+            public abstract class lineNbr : IBqlField { }
+            [PXDBInt(IsKey = true,BqlField = typeof(POLine.lineNbr))]
+            [PXUIField(DisplayName ="LineNbr")]
+            public virtual int? LineNbr { get; set; }
+    
+            public abstract class inventoryID : IBqlField { }
+            [POLineInventoryItem(Filterable = true,BqlField = typeof(POLine.inventoryID))]
+            public virtual int? InventoryID { get; set; }
+
+            public abstract class uOM : IBqlField { }
+            [INUnit(typeof(POLine.inventoryID), DisplayName = "UOM",BqlField = typeof(POLine.uOM))]
+            public virtual string UOM { get; set; }
+
+            public abstract class receivedQty : IBqlField { }
+            [PXDBQuantity(typeof(POLine.uOM),typeof(POLine.baseCompletedQty),BqlField = typeof(POLine.receivedQty))]
+            [PXUIField(DisplayName = "Purchase Qty")]
+            public virtual Decimal? ReceivedQty { get; set; }
+        }
+        #endregion
+        #endregion
+        #region Event Handlers
+
+        protected virtual void InventorySwapping_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+            var row = e.Row as InventorySwapping;
+            if (row == null) return;
+            PXUIFieldAttribute.SetEnabled(sender,row,false);
+            PXUIFieldAttribute.SetEnabled<InventorySwapping.selected>(sender,row,true);
+        }
+        protected virtual void POItemSwap_SwapQty_FieldUpdated(PXCache sender, PXFieldUpdatedEventArgs e)
+        {
+            var row = e.Row as POItemSwap;
+            if (row == null) return;
+            POLine selectpoLine = PXSelect<
+                POLine, 
+                Where<POLine.orderNbr,Equal<Required<POLine.orderNbr>>,
+                    And<POLine.orderType,Equal<Required<POLine.orderType>>,
+                    And<POLine.lineNbr,Equal<Required<POLine.lineNbr>>>>>>
+                .Select(Base,row.OrderNbr,row.OrderType,row.LineNbr);
+            if(row.SwapQty > selectpoLine.ReceivedQty)
+            {
+                sender.RaiseExceptionHandling<POItemSwap.swapQty>(row,selectpoLine.ReceivedQty,new PXSetPropertyException("Swap Qty must not be greater than received qty",PXErrorLevel.Warning));
+                sender.SetValueExt<POItemSwap.swapQty>(row, selectpoLine.ReceivedQty);
+            }
+        }
+        protected virtual void POOrder_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+            var row = e.Row as POOrder;
+            if (row == null) return;
+            var rowExt = sender.GetExtension<POOrderExt>(row);
+            if (row.VendorID != null)
+            {
+                if (rowExt.UsrDocumentClass == null) { sender.RaiseExceptionHandling<POOrderExt.usrDocumentClass>(row, null, new PXSetPropertyException("Document Class is Empty", PXErrorLevel.Warning)); }
+            }
+            PXUIFieldAttribute.SetEnabled<POOrderExt.usrDocumentClass>(sender,row,row.RQReqNbr == null);
+            PXUIFieldAttribute.SetEnabled<POOrderExtVP.usrPOType>(sender, row, false);
+            Swapping.SetEnabled(row.Status == POOrderStatus.Completed);
+        }
+
+        protected virtual void POLine_RowSelected(PXCache sender, PXRowSelectedEventArgs e,PXRowSelected baseMethod)
+        {
+            var row = e.Row as POLine;
+            if (row == null) return;
+            var poDoc = Base.Document.Current;
+            var poDocExt = PXCache<POOrder>.GetExtension<POOrderExt>(poDoc);
+            if(poDocExt.UsrDocumentClass != null)
+            {
+                RQRequestClass reqClass = PXSelect<
+                    RQRequestClass,
+                    Where<RQRequestClass.reqClassID,Equal<Required<RQRequestClass.reqClassID>>>>
+                    .Select(Base,poDocExt.UsrDocumentClass);
+                if(reqClass != null)
+                {
+                    var reqClassExt = PXCache<RQRequestClass>.GetExtension<RQRequestClassExt>(reqClass);
+                    if(reqClassExt.UsrEnableLimit == true)
+                    {
+                        sender.AllowInsert = Base.Transactions.Select().Count != reqClassExt.UsrLimitPerLine;
+                        if (Base.Transactions.Select().Count > reqClassExt.UsrLimitPerLine) { sender.RaiseExceptionHandling<POLine.branchID>(row, null, new PXSetPropertyException("Line item exceeds the limit on Document Class", PXErrorLevel.RowWarning)); }
+                    }
+                }
+            }
+
+        }
+        protected virtual void POOrder_RowPersisting(PXCache sender, PXRowPersistingEventArgs e)
+        {
+            var row = e.Row as POOrder;
+            if (row == null) return;
+            var rowExt = sender.GetExtension<POOrderExt>(row);
+            RQRequestClass requestClass = PXSelect<
+                RQRequestClass,
+                Where<RQRequestClass.reqClassID, Equal<Required<RQRequestClass.reqClassID>>>>
+                .Select(Base, rowExt.UsrDocumentClass);
+            if (requestClass != null)
+            {
+                var reqClassExt = PXCache<RQRequestClass>.GetExtension<RQRequestClassExt>(requestClass);
+                if (reqClassExt.UsrEnableLimit == true)
+                {
+                    if (Base.Transactions.Select().Count > reqClassExt.UsrLimitPerLine) { throw new PXException("Line item exceeds the limit on Document Class"); }
+                }
+            }
+        }
+        protected virtual void POOrder_UsrDocumentClass_FieldUpdated(PXCache sender, PXFieldUpdatedEventArgs e)
+        {
+            var row = e.Row as POOrder;
+            if (row == null) return;
+            var rowExt = sender.GetExtension<POOrderExt>(row);
+            var rowExtVP = sender.GetExtension<POOrderExtVP>(row);
+            if(rowExt.UsrDocumentClass != null)
+            {
+                RQRequestClass selectRQClassType = PXSelect<RQRequestClass,Where<RQRequestClass.reqClassID,Equal<Required<RQRequestClass.reqClassID>>>>.Select(Base,rowExt.UsrDocumentClass);
+                if(selectRQClassType != null)
+                {
+                    var rqClassExt = PXCache<RQRequestClass>.GetExtension<RQRequestClassExt>(selectRQClassType);
+                    sender.SetValue<POOrderExtVP.usrPOType>(row,rqClassExt.UsrSecondaryType);
+                }
+            }
+        }
+        #endregion
+
+        #region Method
+
+        public bool? IsLineSameDocClass(List<POOrderEntry.POLineS> lst)
+        {
+            
+            var doc = Base.Document.Current;
+            var docExt = PXCache<POOrder>.GetExtension<POOrderExt>(doc);
+            bool? isSame = true;
+            List<RQRequestClass> poLines = new List<RQRequestClass>();
+            var grpByDocClass = poLines.GroupBy(d => d.ReqClassID);
+            foreach (POOrderEntry.POLineS item in lst)
+            {
+                POOrder selectOrder = PXSelect<
+                    POOrder, 
+                    Where<POOrder.orderNbr, Equal<Required<POOrder.orderNbr>>, 
+                        And<POOrder.orderType, Equal<Required<POOrder.orderType>>>>>
+                    .Select(Base, item.OrderNbr, item.OrderType);
+                var selectOrderExt = PXCache<POOrder>.GetExtension<POOrderExt>(selectOrder);
+                RQRequestClass rqClass = PXSelect<
+                    RQRequestClass, 
+                    Where<RQRequestClass.reqClassID, Equal<Required<RQRequestClass.reqClassID>>>>
+                    .Select(Base, selectOrderExt.UsrDocumentClass);
+                if (!poLines.Contains(rqClass))
+                {
+                    poLines.Add(rqClass);
+                }
+            }
+            if (grpByDocClass.Count() == 1)
+            {
+                isSame = true;
+                foreach (var item in grpByDocClass)
+                {
+                    var classID = item.Key;
+                    if (docExt.UsrDocumentClass == null)
+                    {
+                        Base.Document.Cache.SetValueExt<POOrderExt.usrDocumentClass>(Base.Document.Current, classID);
+                        Base.Document.Update(Base.Document.Current);
+                    }
+                    else if (docExt.UsrDocumentClass != classID)
+                    {
+                        isSame = false;
+                    }
+                }
+            }
+            if(grpByDocClass.Count() > 1) { isSame = false; }
+            
+        return isSame;
+        }
+
+        public bool? IsOrderSameDocClass(List<POOrderEntry.POOrderS> lst)
+        {
+            bool? isSame = true;
+            var doc = Base.Document.Current;
+            var docExt = PXCache<POOrder>.GetExtension<POOrderExt>(doc);
+            List<RQRequestClass> poOrder = new List<RQRequestClass>();
+            var poOrderGrbByClassID = poOrder.GroupBy(d => d.ReqClassID);
+            foreach(POOrderEntry.POOrderS item in lst)
+            {
+                POOrder selectOrder = PXSelect<
+                    POOrder,
+                    Where<POOrder.orderNbr,Equal<Required<POOrder.orderNbr>>,
+                        And<POOrder.orderType,Equal<Required<POOrder.orderType>>>>>
+                    .Select(Base,item.OrderNbr,item.OrderType);
+                var orderExt = PXCache<POOrder>.GetExtension<POOrderExt>(selectOrder);
+                RQRequestClass rqClass = PXSelect<
+                    RQRequestClass, 
+                    Where<RQRequestClass.reqClassID,Equal<Required<RQRequestClass.reqClassID>>>>
+                    .Select(Base,orderExt.UsrDocumentClass);
+                if (!poOrder.Contains(rqClass))
+                {
+                    poOrder.Add(rqClass);
+                }
+            }
+            if(poOrderGrbByClassID.Count() == 1)
+            {
+                isSame = true;
+                foreach (var item in poOrderGrbByClassID)
+                {
+                    var classID = item.Key;
+                    if(docExt.UsrDocumentClass == null)
+                    {
+                        Base.Document.Cache.SetValueExt<POOrderExt.usrDocumentClass>(doc,classID);
+                        Base.Document.Update(doc);
+                    }
+                    else if(docExt.UsrDocumentClass != classID)
+                    {
+                        isSame = false;
+                    }
+                }
+            }
+            if (poOrderGrbByClassID.Count() > 1) { isSame = false; }
+            return isSame;
+        }
+
+        #endregion
+        #region Constructor
+
+        public override void Initialize()
+        {
+            Base.action.AddMenuAction(Swapping);
+        }
+
+        #endregion
+
+        #region Action Override
+
+        public delegate IEnumerable AddPOOrderLineDelegate(PXAdapter adapter);
+        [PXOverride]
+        public IEnumerable AddPOOrderLine(PXAdapter adapter, AddPOOrderLineDelegate baseMethod)
+        {
+            List<POOrderEntry.POLineS> lst = new List<POOrderEntry.POLineS>();
+            foreach (POOrderEntry.POLineS item in Base.poLinesSelection.Cache.Updated)
+            {
+                if (item.Selected == true)
+                {
+                    if (!lst.Contains(item)) lst.Add(item);
+                }
+                if ((bool)!IsLineSameDocClass(lst))
+                {
+                    Base.poLinesSelection.Cache.RaiseExceptionHandling<POOrderEntry.POLineS.selected>(item,item.Selected, new PXSetPropertyException("Selected items must have the same Document Class",PXErrorLevel.RowError));
+                    item.Selected = false;
+                }
+            }
+            lst.Clear();
+            return baseMethod(adapter);
+        }
+
+        public delegate IEnumerable AddPOOrderDelegate(PXAdapter adapter);
+        [PXOverride]
+        public IEnumerable AddPOOrder(PXAdapter adapter, AddPOOrderDelegate baseMethod)
+        {
+            List<POOrderEntry.POOrderS> lst = new List<POOrderS>();
+            foreach(POOrderEntry.POOrderS item in Base.openOrders.Cache.Updated)
+            {
+                if(item.Selected == true)
+                {
+                    if (!lst.Contains(item)) lst.Add(item);
+                }
+                if ((bool)!IsOrderSameDocClass(lst))
+                {
+                    Base.openOrders.Cache.RaiseExceptionHandling<POOrderEntry.POOrderS.selected>(item, item.Selected, new PXSetPropertyException("Selected orders must have the same Document Class",PXErrorLevel.RowError));
+                    item.Selected = false;
+                    Base.openOrders.Cache.Update(item);
+                }
+            }
+            lst.Clear();
+            return baseMethod(adapter);
+        }
+
+
+        #endregion
+        #region Actions
+
+        public PXAction<POOrder> Swapping;
+        [PXButton]
+        [PXUIField(DisplayName = "Item Swapping")]
+        public virtual IEnumerable swapping(PXAdapter adapter)
+        {
+            
+            if (InventorySwap.AskExt() == WebDialogResult.OK)
+            {
+                bool? inserted = false;
+                foreach (InventorySwapping item in InventorySwap.Cache.Updated)
+                {   
+                    if(item.Selected == true)
+                    {
+                        foreach (POItemSwap insert in ItemSwapping.Select())
+                        {
+                            var insertedAlready = insert.OrderNbr == item.OrderNbr && insert.OrderType == item.OrderType && insert.LineNbr == item.LineNbr;
+                            if (insertedAlready)
+                            {
+                                inserted = true;//sent
+                            }
+                        }
+                        if (inserted == false)
+                        {
+                            var insertSwap = ItemSwapping.Insert(new POItemSwap()
+                            {
+                                OrderNbr = item.OrderNbr,
+                                OrderType = item.OrderType,
+                                LineNbr = item.LineNbr
+                            });
+                        }
+                    }
+                    item.Selected = false;
+                    InventorySwap.Update(item);
+                }
+            }
+            return adapter.Get();
+        }
+
+        #endregion
+
+    }
+}]]></CDATA>
+</Graph>

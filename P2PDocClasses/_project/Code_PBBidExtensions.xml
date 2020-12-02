@@ -1,0 +1,22 @@
+﻿<Graph ClassName="PBBidExtensions" Source="#CDATA" IsNew="True" FileType="NewFile">
+    <CDATA name="Source"><![CDATA[using PBBidding;
+using PX.Data;
+using PX.Objects.RQ;
+using PX.Objects;
+using System;
+
+namespace PBBidding
+{
+  public class PBBidExt : PXCacheExtension<PBBidding.PBBid>
+  {
+    #region UsrDocumentClass
+    [PXDBString(10)]
+    [PXUIField(DisplayName="Request Class")]
+
+[PXSelector(typeof(Search<RQRequestClass.reqClassID,Where<RQRequestClassExtPB.isPurchaseReq, Equal<True>>>))]
+    public virtual string UsrDocumentClass { get; set; }
+    public abstract class usrDocumentClass : PX.Data.BQL.BqlString.Field<usrDocumentClass> { }
+    #endregion
+  }
+}]]></CDATA>
+</Graph>
